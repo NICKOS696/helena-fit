@@ -30,7 +30,7 @@ services:
       JWT_EXPIRES_IN: 7d
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       PORT: 3000
-      NODE_ENV: production
+      NODE_ENV: development
       UPLOAD_DIR: ./uploads
       MAX_FILE_SIZE: 10485760
       TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
@@ -46,7 +46,7 @@ services:
       - "3000:3000"
     networks:
       - helena-fit-network
-    command: sh -c "npx prisma migrate deploy && npm run start:prod"
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
 
 volumes:
   postgres_data:

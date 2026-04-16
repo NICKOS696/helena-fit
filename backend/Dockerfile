@@ -18,11 +18,8 @@ COPY . .
 # Генерируем Prisma Client
 RUN npx prisma generate
 
-# Собираем приложение
-RUN npm run build
-
 # Открываем порт
 EXPOSE 3000
 
-# Запускаем приложение
-CMD ["npm", "run", "start:prod"]
+# Команда запуска будет в docker-compose.yml
+CMD ["npm", "run", "start:dev"]
