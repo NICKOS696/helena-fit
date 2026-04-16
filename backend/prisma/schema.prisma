@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  telegramId    String   @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  phoneNumber   String?
+  photoUrl      String?
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workoutAccess WorkoutCollectionAccess[]
+  recipeAccess  RecipeCollectionAccess[]
+  transactions  Transaction[]
+
+  @@map("users")
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+}
+
+model WorkoutCollection {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  coverImage  String?
+  price       Int
+  discount    Int?     @default(0)
+  discountType DiscountType? @default(PERCENTAGE)
+  discountEndDate DateTime?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workouts    Workout[]
+  userAccess  WorkoutCollectionAccess[]
+  newsLinks   NewsWorkoutLink[]
+  sections    WorkoutSection[] @relation("CollectionSections")
+
+  @@map("workout_collections")
+}
+
+model Workout {
+  id          String   @id @default(uuid())
+  collectionId String
+  title       String
+  description String?
+  coverImage  String?
+  calories    Int?
+  duration    Int?
+  rutubeUrl   String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  collection  WorkoutCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@map("workouts")
+}
+
+model WorkoutSection {
+  id           String   @id @default(uuid())
+  collectionId String
+  title        String
+  description  String?
+  type         SectionType @default(VIDEO) 
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection   WorkoutCollection @relation("CollectionSections", fields: [collectionId], references: [id], onDelete: Cascade)
+  items        WorkoutSectionItem[]
+
+  @@map("workout_sections")
+}
+
+model WorkoutSectionItem {
+  id          String   @id @default(uuid())
+  sectionId   String
+  title       String
+  description String?
+  coverImage  String?
+  
+  // Для видео тренировок
+  calories    Int?
+  duration    Int?
+  rutubeUrl   String?
+  
+  // Для текстового контента
+  content     String?  @db.Text
+  
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  section     WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@map("workout_section_items")
+}
+
+enum SectionType {
+  VIDEO        
+  TEXT_FOLDER  
+}
+
+model RecipeCollection {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  coverImage  String?
+  price       Int
+  discount    Int?     @default(0)
+  discountType DiscountType? @default(PERCENTAGE)
+  discountEndDate DateTime?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipes     Recipe[]
+  userAccess  RecipeCollectionAccess[]
+  newsLinks   NewsRecipeLink[]
+
+  @@map("recipe_collections")
+}
+
+model Recipe {
+  id            String   @id @default(uuid())
+  collectionId  String
+  title         String
+  description   String?
+  coverImage    String?
+  category      RecipeCategory
+  cookingTime   Int?
+  ingredients   Json
+  instructions  String
+  caloriesPer100g Int?
+  proteinPer100g  Float?
+  fatPer100g      Float?
+  carbsPer100g    Float?
+  caloriesPerServing Int?
+  proteinPerServing  Float?
+  fatPerServing      Float?
+  carbsPerServing    Float?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  collection    RecipeCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@map("recipes")
+}
+
+enum RecipeCategory {
+  BREAKFAST
+  LUNCH
+  SNACK
+  DINNER
+  SALAD
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+model WorkoutCollectionAccess {
+  id           String   @id @default(uuid())
+  userId       String
+  collectionId String
+  grantedAt    DateTime @default(now())
+  grantedBy    String?
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   WorkoutCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collectionId])
+  @@map("workout_collection_access")
+}
+
+model RecipeCollectionAccess {
+  id           String   @id @default(uuid())
+  userId       String
+  collectionId String
+  grantedAt    DateTime @default(now())
+  grantedBy    String?
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   RecipeCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collectionId])
+  @@map("recipe_collection_access")
+}
+
+model News {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  excerpt     String?
+  bannerImage String?
+  status      NewsStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workoutLinks NewsWorkoutLink[]
+  recipeLinks  NewsRecipeLink[]
+
+  @@map("news")
+}
+
+enum NewsStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model NewsWorkoutLink {
+  id          String   @id @default(uuid())
+  newsId      String
+  collectionId String
+
+  news        News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  collection  WorkoutCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([newsId, collectionId])
+  @@map("news_workout_links")
+}
+
+model NewsRecipeLink {
+  id          String   @id @default(uuid())
+  newsId      String
+  collectionId String
+
+  news        News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  collection  RecipeCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([newsId, collectionId])
+  @@map("news_recipe_links")
+}
+
+model Transaction {
+  id                  String   @id @default(uuid())
+  userId              String
+  type                TransactionType
+  itemType            ItemType
+  itemId              String
+  amount              Int
+  status              TransactionStatus @default(PENDING)
+  paymentMethod       String?
+  paymentId           String?
+  paymeTransactionId  String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  PURCHASE
+  REFUND
+}
+
+enum ItemType {
+  WORKOUT_COLLECTION
+  RECIPE_COLLECTION
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  email     String   @unique
+  role      AdminRole @default(ADMIN)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+}

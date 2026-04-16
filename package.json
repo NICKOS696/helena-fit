@@ -1,0 +1,26 @@
+{
+  "name": "helena-fit",
+  "version": "1.0.0",
+  "description": "Telegram Mini App фитнес/wellness платформа",
+  "private": true,
+  "workspaces": [
+    "telegram-app",
+    "admin-panel",
+    "backend"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd telegram-app && npm install && cd ../admin-panel && npm install && cd ../backend && npm install",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:telegram": "cd telegram-app && npm run dev",
+    "dev:admin": "cd admin-panel && npm run dev",
+    "build:all": "cd telegram-app && npm run build && cd ../admin-panel && npm run build && cd ../backend && npm run build"
+  },
+  "keywords": [
+    "telegram",
+    "mini-app",
+    "fitness",
+    "wellness"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}

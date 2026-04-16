@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: helena-fit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      POSTGRES_DB: helena_fit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - helena-fit-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: helena-fit-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres123}@postgres:5432/helena_fit?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      PORT: 3000
+      NODE_ENV: production
+      UPLOAD_DIR: ./uploads
+      MAX_FILE_SIZE: 10485760
+      TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
+      ADMIN_PANEL_URL: ${ADMIN_PANEL_URL}
+      PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID}
+      PAYME_TEST_KEY: ${PAYME_TEST_KEY}
+      PAYME_PROD_KEY: ${PAYME_PROD_KEY}
+      PAYME_ENDPOINT: ${PAYME_ENDPOINT}
+      PAYME_CALLBACK_URL: ${PAYME_CALLBACK_URL}
+    volumes:
+      - ./backend/uploads:/app/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - helena-fit-network
+    command: sh -c "npx prisma migrate deploy && npm run start:prod"
+
+volumes:
+  postgres_data:
+
+networks:
+  helena-fit-network:
+    driver: bridge
