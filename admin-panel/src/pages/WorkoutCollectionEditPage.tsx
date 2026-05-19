@@ -3,17 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminWorkoutsApi } from '@/lib/api'
 import { ArrowLeft, Plus, Edit, Trash2, X } from 'lucide-react'
+import { ImageUpload } from '@/components/ImageUpload'
+import { RichTextEditor } from '@/components/RichTextEditor'
 
 export const WorkoutCollectionEditPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   
-  const [showWorkoutModal, setShowWorkoutModal] = useState(false)
   const [showCollectionModal, setShowCollectionModal] = useState(false)
   const [showSectionModal, setShowSectionModal] = useState(false)
   const [showSectionItemModal, setShowSectionItemModal] = useState(false)
-  const [editingWorkout, setEditingWorkout] = useState<any>(null)
   const [editingSection, setEditingSection] = useState<any>(null)
   const [editingSectionItem, setEditingSectionItem] = useState<any>(null)
   const [currentSection, setCurrentSection] = useState<any>(null)
@@ -42,15 +42,7 @@ export const WorkoutCollectionEditPage = () => {
     duration: '',
     rutubeUrl: '',
     content: '',
-  })
-  
-  const [workoutForm, setWorkoutForm] = useState({
-    title: '',
-    description: '',
-    coverImage: '',
-    calories: '',
-    duration: '',
-    rutubeUrl: '',
+    order: '0',
   })
 
   const { data, isLoading } = useQuery({
@@ -63,32 +55,6 @@ export const WorkoutCollectionEditPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-workout-collection', id] })
       setShowCollectionModal(false)
-    },
-  })
-
-  const createWorkoutMutation = useMutation({
-    mutationFn: (data: any) => adminWorkoutsApi.createWorkout(id!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-workout-collection', id] })
-      setShowWorkoutModal(false)
-      resetWorkoutForm()
-    },
-  })
-
-  const updateWorkoutMutation = useMutation({
-    mutationFn: ({ workoutId, data }: { workoutId: string; data: any }) =>
-      adminWorkoutsApi.updateWorkout(workoutId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-workout-collection', id] })
-      setShowWorkoutModal(false)
-      resetWorkoutForm()
-    },
-  })
-
-  const deleteWorkoutMutation = useMutation({
-    mutationFn: (workoutId: string) => adminWorkoutsApi.deleteWorkout(workoutId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-workout-collection', id] })
     },
   })
 
@@ -175,18 +141,6 @@ export const WorkoutCollectionEditPage = () => {
     updateCollectionMutation.mutate(data)
   }
 
-  const resetWorkoutForm = () => {
-    setWorkoutForm({
-      title: '',
-      description: '',
-      coverImage: '',
-      calories: '',
-      duration: '',
-      rutubeUrl: '',
-    })
-    setEditingWorkout(null)
-  }
-
   const resetSectionForm = () => {
     setSectionForm({
       title: '',
@@ -206,6 +160,7 @@ export const WorkoutCollectionEditPage = () => {
       duration: '',
       rutubeUrl: '',
       content: '',
+      order: '0',
     })
     setEditingSectionItem(null)
   }
@@ -253,6 +208,7 @@ export const WorkoutCollectionEditPage = () => {
         duration: item.duration?.toString() || '',
         rutubeUrl: item.rutubeUrl || '',
         content: item.content || '',
+        order: item.order?.toString() || '0',
       })
     } else {
       resetSectionItemForm()
@@ -270,6 +226,7 @@ export const WorkoutCollectionEditPage = () => {
       duration: sectionItemForm.duration ? parseInt(sectionItemForm.duration) : null,
       rutubeUrl: sectionItemForm.rutubeUrl || null,
       content: sectionItemForm.content || null,
+      order: sectionItemForm.order ? parseInt(sectionItemForm.order) : 0,
     }
 
     if (editingSectionItem) {
@@ -283,41 +240,6 @@ export const WorkoutCollectionEditPage = () => {
         sectionId: currentSection.id,
         data,
       })
-    }
-  }
-
-  const handleOpenWorkoutModal = (workout?: any) => {
-    if (workout) {
-      setEditingWorkout(workout)
-      setWorkoutForm({
-        title: workout.title,
-        description: workout.description || '',
-        coverImage: workout.coverImage || '',
-        calories: workout.calories?.toString() || '',
-        duration: workout.duration?.toString() || '',
-        rutubeUrl: workout.rutubeUrl || '',
-      })
-    } else {
-      resetWorkoutForm()
-    }
-    setShowWorkoutModal(true)
-  }
-
-  const handleSubmitWorkout = (e: React.FormEvent) => {
-    e.preventDefault()
-    const data = {
-      title: workoutForm.title,
-      description: workoutForm.description,
-      coverImage: workoutForm.coverImage || null,
-      calories: workoutForm.calories ? parseInt(workoutForm.calories) : null,
-      duration: workoutForm.duration ? parseInt(workoutForm.duration) : null,
-      rutubeUrl: workoutForm.rutubeUrl || null,
-    }
-
-    if (editingWorkout) {
-      updateWorkoutMutation.mutate({ workoutId: editingWorkout.id, data })
-    } else {
-      createWorkoutMutation.mutate(data)
     }
   }
 
@@ -446,212 +368,6 @@ export const WorkoutCollectionEditPage = () => {
         )}
       </div>
 
-      {/* Старые тренировки (для обратной совместимости) - показываем только если нет разделов */}
-      {(!collection.sections || collection.sections.length === 0) && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Тренировки (старый формат) ({collection.workouts?.length || 0})
-            </h2>
-            <button
-              onClick={() => handleOpenWorkoutModal()}
-              className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:opacity-90"
-            >
-              <Plus className="w-5 h-5" />
-              Добавить тренировку
-            </button>
-          </div>
-
-        {collection.workouts?.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">
-            Тренировок пока нет. Добавьте первую тренировку!
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {collection.workouts?.map((workout: any) => (
-              <div key={workout.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold mb-2">{workout.title}</h3>
-                    {workout.description && (
-                      <p className="text-gray-600 mb-2">{workout.description}</p>
-                    )}
-                    <div className="flex gap-4 text-sm text-gray-500">
-                      {workout.calories && <span>🔥 {workout.calories} ккал</span>}
-                      {workout.duration && <span>⏱ {workout.duration} мин</span>}
-                    </div>
-                    {workout.rutubeUrl && (
-                      <p className="text-sm text-primary mt-2">📹 Видео добавлено</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenWorkoutModal(workout)}
-                      className="p-2 text-primary hover:bg-primary/10 rounded"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('Удалить тренировку?')) {
-                          deleteWorkoutMutation.mutate(workout.id)
-                        }
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        </div>
-      )}
-
-      {showWorkoutModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">
-                {editingWorkout ? 'Редактировать тренировку' : 'Новая тренировка'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowWorkoutModal(false)
-                  resetWorkoutForm()
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitWorkout} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Название тренировки *
-                </label>
-                <input
-                  type="text"
-                  value={workoutForm.title}
-                  onChange={(e) => setWorkoutForm({ ...workoutForm, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Описание
-                </label>
-                <textarea
-                  value={workoutForm.description}
-                  onChange={(e) => setWorkoutForm({ ...workoutForm, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на обложку
-                </label>
-                <input
-                  type="url"
-                  value={workoutForm.coverImage}
-                  onChange={(e) => setWorkoutForm({ ...workoutForm, coverImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Вставьте ссылку на изображение с IMG.ru, Imgur или другого хостинга
-                </p>
-                {workoutForm.coverImage && (
-                  <div className="mt-2">
-                    <img
-                      src={workoutForm.coverImage}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Калории (ккал)
-                  </label>
-                  <input
-                    type="number"
-                    value={workoutForm.calories}
-                    onChange={(e) => setWorkoutForm({ ...workoutForm, calories: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Длительность (мин)
-                  </label>
-                  <input
-                    type="number"
-                    value={workoutForm.duration}
-                    onChange={(e) => setWorkoutForm({ ...workoutForm, duration: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на видео Rutube
-                </label>
-                <input
-                  type="url"
-                  value={workoutForm.rutubeUrl}
-                  onChange={(e) => setWorkoutForm({ ...workoutForm, rutubeUrl: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="https://rutube.ru/video/..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Вставьте ссылку на видео с Rutube
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="submit"
-                  disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending}
-                  className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
-                >
-                  {createWorkoutMutation.isPending || updateWorkoutMutation.isPending
-                    ? 'Сохранение...'
-                    : editingWorkout
-                    ? 'Сохранить'
-                    : 'Создать'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowWorkoutModal(false)
-                    resetWorkoutForm()
-                  }}
-                  className="px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Отмена
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {showCollectionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -691,18 +407,11 @@ export const WorkoutCollectionEditPage = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на обложку
-                </label>
-                <input
-                  type="url"
-                  value={collectionForm.coverImage}
-                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-              </div>
+              <ImageUpload
+                label="Обложка сборника"
+                value={collectionForm.coverImage}
+                onChange={(url) => setCollectionForm({ ...collectionForm, coverImage: url })}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -898,18 +607,11 @@ export const WorkoutCollectionEditPage = () => {
 
               {currentSection.type === 'VIDEO' ? (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ссылка на обложку
-                    </label>
-                    <input
-                      type="url"
-                      value={sectionItemForm.coverImage}
-                      onChange={(e) => setSectionItemForm({ ...sectionItemForm, coverImage: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                      placeholder="https://i.imgur.com/example.jpg"
-                    />
-                  </div>
+                  <ImageUpload
+                    label="Обложка тренировки"
+                    value={sectionItemForm.coverImage}
+                    onChange={(url) => setSectionItemForm({ ...sectionItemForm, coverImage: url })}
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -951,19 +653,27 @@ export const WorkoutCollectionEditPage = () => {
                   </div>
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Содержимое (текст)
-                  </label>
-                  <textarea
-                    value={sectionItemForm.content}
-                    onChange={(e) => setSectionItemForm({ ...sectionItemForm, content: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono"
-                    rows={15}
-                    placeholder="Введите текст рекомендаций, плана питания и т.д."
-                  />
-                </div>
+                <RichTextEditor
+                  label="Содержимое (текст)"
+                  value={sectionItemForm.content}
+                  onChange={(value) => setSectionItemForm({ ...sectionItemForm, content: value })}
+                  placeholder="Введите текст рекомендаций, плана питания и т.д."
+                />
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Порядок отображения
+                </label>
+                <input
+                  type="number"
+                  value={sectionItemForm.order || 0}
+                  onChange={(e) => setSectionItemForm({ ...sectionItemForm, order: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">Чем меньше число, тем выше в списке</p>
+              </div>
 
               <div className="flex gap-2 pt-4">
                 <button

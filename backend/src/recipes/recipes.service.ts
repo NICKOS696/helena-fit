@@ -18,6 +18,7 @@ export class RecipesService {
         discount: true,
         discountType: true,
         discountEndDate: true,
+        isInDevelopment: true,
         _count: {
           select: { recipes: true },
         },
@@ -29,6 +30,7 @@ export class RecipesService {
         ...c,
         recipeCount: c._count.recipes,
         hasAccess: false,
+        finalPrice: this.calculateFinalPrice(c.price, c.discount, c.discountType, c.discountEndDate),
       }));
     }
 
@@ -63,6 +65,8 @@ export class RecipesService {
     }
 
     let hasAccess = false;
+    let favoriteIds: Set<string> = new Set();
+    
     if (userId) {
       const access = await this.prisma.recipeCollectionAccess.findUnique({
         where: {
@@ -73,6 +77,13 @@ export class RecipesService {
         },
       });
       hasAccess = !!access;
+
+      // Получаем избранные рецепты
+      const favorites = await this.prisma.favoriteRecipe.findMany({
+        where: { userId },
+        select: { recipeId: true },
+      });
+      favoriteIds = new Set(favorites.map((f) => f.recipeId));
     }
 
     return {
@@ -85,7 +96,10 @@ export class RecipesService {
         collection.discountEndDate,
       ),
       recipes: hasAccess
-        ? collection.recipes
+        ? collection.recipes.map((r) => ({
+            ...r,
+            isFavorite: favoriteIds.has(r.id),
+          }))
         : collection.recipes.map((r) => ({
             id: r.id,
             title: r.title,
@@ -93,12 +107,15 @@ export class RecipesService {
             category: r.category,
             cookingTime: r.cookingTime,
             locked: true,
+            isFavorite: false,
           })),
     };
   }
 
   async getRecipe(collectionId: string, recipeId: string, userId?: string) {
     let hasAccess = false;
+    let isFavorite = false;
+    
     if (userId) {
       const access = await this.prisma.recipeCollectionAccess.findUnique({
         where: {
@@ -109,6 +126,15 @@ export class RecipesService {
         },
       });
       hasAccess = !!access;
+
+      // Проверяем избранное
+      const favorite = await this.prisma.favoriteRecipe.findFirst({
+        where: {
+          userId,
+          recipeId,
+        },
+      });
+      isFavorite = !!favorite;
     }
 
     // Для тестирования разрешаем просмотр, но помечаем как locked
@@ -123,6 +149,7 @@ export class RecipesService {
     return {
       ...recipe,
       locked: !hasAccess,
+      isFavorite,
     };
   }
 

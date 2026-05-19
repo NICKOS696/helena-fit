@@ -18,8 +18,13 @@ export class WorkoutsService {
         discount: true,
         discountType: true,
         discountEndDate: true,
-        _count: {
-          select: { workouts: true },
+        isInDevelopment: true,
+        sections: {
+          select: {
+            items: {
+              select: { id: true },
+            },
+          },
         },
       },
     });
@@ -27,7 +32,8 @@ export class WorkoutsService {
     if (!userId) {
       return collections.map((c) => ({
         ...c,
-        workoutCount: c._count.workouts,
+        workoutCount: c.sections.reduce((total, section) => total + section.items.length, 0),
+        sections: undefined, // Убираем sections из ответа
         hasAccess: false,
       }));
     }
@@ -41,7 +47,8 @@ export class WorkoutsService {
 
     return collections.map((c) => ({
       ...c,
-      workoutCount: c._count.workouts,
+      workoutCount: c.sections.reduce((total, section) => total + section.items.length, 0),
+      sections: undefined, // Убираем sections из ответа
       hasAccess: accessIds.has(c.id),
       finalPrice: this.calculateFinalPrice(c.price, c.discount, c.discountType, c.discountEndDate),
     }));

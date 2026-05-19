@@ -9,6 +9,7 @@ export interface CreateRecipeCollectionDto {
   discount?: number;
   discountType?: 'PERCENTAGE' | 'FIXED';
   discountEndDate?: Date;
+  isInDevelopment?: boolean;
   order?: number;
 }
 
@@ -16,7 +17,7 @@ export interface CreateRecipeDto {
   title: string;
   description?: string;
   coverImage?: string;
-  category: 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER' | 'SALAD';
+  category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD';
   cookingTime?: number;
   ingredients: any;
   instructions: string;

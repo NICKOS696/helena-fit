@@ -1,22 +1,69 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { workoutsApi, paymeApi } from '@/lib/api'
+import { workoutsApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
-import { ArrowLeft, Flame, Clock, Lock } from 'lucide-react'
+import { ArrowLeft, Flame, Clock, Lock, ChevronDown } from 'lucide-react'
 import { getRutubeEmbedUrl } from '@/utils/video'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export const WorkoutCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId)
+      } else {
+        newSet.add(sectionId)
+      }
+      return newSet
+    })
+  }
+
+  const [isPollingPayment, setIsPollingPayment] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['workout-collection', id],
     queryFn: () => workoutsApi.getCollection(id!),
   })
+
+  // После клика "Купить" запускаем прямой опрос API каждые 2 сек
+  // Когда hasAccess становится true - перезагружаем страницу
+  useEffect(() => {
+    if (!isPollingPayment || !id) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await workoutsApi.getCollection(id)
+        if (res.data?.hasAccess) {
+          window.location.reload()
+        }
+      } catch {}
+    }, 2000)
+    // Автостоп через 10 минут
+    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(stopTimeout)
+    }
+  }, [isPollingPayment, id])
+
+  // Отправляем просмотр при загрузке страницы
+  useEffect(() => {
+    if (id) {
+      analyticsApi.trackView({
+        itemType: 'WORKOUT_COLLECTION',
+        itemId: id,
+      }).catch(() => {
+        // Игнорируем ошибки трекинга
+      })
+    }
+  }, [id])
 
   if (isLoading) {
     return (
@@ -40,12 +87,15 @@ export const WorkoutCollectionPage = () => {
         amount: collection.finalPrice,
       })
       
-      // Открываем страницу оплаты Payme через Telegram WebApp API
+      // Открываем страницу оплаты Payme
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(response.data.paymentUrl)
       } else {
         window.open(response.data.paymentUrl, '_blank')
       }
+
+      // Запускаем опрос статуса оплаты
+      setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
       alert('Ошибка при создании платежа. Попробуйте еще раз.')
@@ -69,7 +119,7 @@ export const WorkoutCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-48 object-cover rounded-lg"
+            className="w-full h-64 object-cover object-top rounded-lg"
           />
         )}
         
@@ -98,8 +148,8 @@ export const WorkoutCollectionPage = () => {
           </Card>
         )}
 
-        {/* Что входит */}
-        {collection.sections && collection.sections.length > 0 && (
+        {/* Что входит - только если нет доступа */}
+        {!collection.hasAccess && collection.sections && collection.sections.length > 0 && (
           <Card>
             <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Что входит:</h2>
             
@@ -139,14 +189,28 @@ export const WorkoutCollectionPage = () => {
           </Card>
         )}
 
-        {/* Разделы - скрыто, показываем только "Что входит" */}
-        {false && collection.sections && collection.sections.length > 0 && (
-          <div className="space-y-4">
+        {/* Разделы - показываем если есть доступ */}
+        {collection.hasAccess && collection.sections && collection.sections.length > 0 && (
+          <div className="space-y-3">
             {collection.sections.map((section: any) => (
-              <div key={section.id}>
-                <h2 className="text-lg font-bold text-gray-800 mb-3">{section.title}</h2>
+              <div key={section.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* Заголовок раздела - кликабельный */}
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className="w-full bg-white p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <h2 className="text-lg font-bold text-gray-800">{section.title}</h2>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-gray-600 transition-transform ${
+                      expandedSections.has(section.id) ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
                 
-                {section.type === 'VIDEO' ? (
+                {/* Контент раздела - показываем только если развёрнут */}
+                {expandedSections.has(section.id) && (
+                  <div className="p-4 bg-gray-50">
+                    {section.type === 'VIDEO' ? (
                   // Видео тренировки
                   <div className="space-y-3">
                     {section.items.map((item: any) => (
@@ -155,7 +219,7 @@ export const WorkoutCollectionPage = () => {
                           <img
                             src={item.coverImage}
                             alt={item.title}
-                            className="w-full h-40 object-cover rounded-lg mb-3"
+                            className="w-full h-40 object-cover object-top rounded-lg mb-3"
                           />
                         )}
                         <h3 className="text-lg font-bold text-text-primary mb-2">{item.title}</h3>
@@ -221,6 +285,8 @@ export const WorkoutCollectionPage = () => {
                     ))}
                   </div>
                 )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -235,7 +301,7 @@ export const WorkoutCollectionPage = () => {
                 <img
                   src={workout.coverImage}
                   alt={workout.title}
-                  className="w-full h-40 object-cover rounded-lg mb-3"
+                  className="w-full h-40 object-cover object-top rounded-lg mb-3"
                 />
               )}
               <h3 className="text-lg font-bold text-text-primary mb-2">{workout.title}</h3>

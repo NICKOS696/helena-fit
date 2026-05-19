@@ -3,18 +3,38 @@ import { useNavigate } from 'react-router-dom'
 import { workoutsApi, paymeApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { PriceDisplay } from '@/components/PriceDisplay'
 import { Lock } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import clsx from 'clsx'
 
 export const WorkoutsPage = () => {
   const navigate = useNavigate()
   const [loadingCollectionId, setLoadingCollectionId] = useState<string | null>(null)
+  const [isPollingPayment, setIsPollingPayment] = useState(false)
   
   const { data, isLoading } = useQuery({
     queryKey: ['workouts'],
     queryFn: () => workoutsApi.getCollections(),
   })
+
+  // После клика "Купить" опрос API каждые 2 сек
+  useEffect(() => {
+    if (!isPollingPayment) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await workoutsApi.getCollections()
+        const items = (res.data || []) as any[]
+        if (items.some((c: any) => c.hasAccess)) {
+          window.location.reload()
+        }
+      } catch {}
+    }, 2000)
+    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(stopTimeout)
+    }
+  }, [isPollingPayment])
 
   const handlePurchase = async (collection: any) => {
     try {
@@ -31,6 +51,9 @@ export const WorkoutsPage = () => {
       } else {
         window.open(response.data.paymentUrl, '_blank')
       }
+
+      // Запускаем опрос статуса оплаты
+      setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
       alert('Ошибка при создании платежа. Попробуйте еще раз.')
@@ -57,34 +80,39 @@ export const WorkoutsPage = () => {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">Тренировки</h1>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {collections.map((collection: any) => (
-          <Card key={collection.id} className="overflow-hidden p-0">
-            {/* Большая картинка */}
+          <Card key={collection.id} className={clsx("p-4 space-y-3", collection.isInDevelopment && "opacity-90")}>
+            {/* Картинка с закругленными углами */}
             {collection.coverImage && (
-              <div className="relative h-64">
+              <div className="relative rounded-xl overflow-hidden">
                 <img
                   src={collection.coverImage}
                   alt={collection.title}
-                  className="w-full h-full object-cover"
+                  className={clsx("w-full h-auto object-contain", collection.isInDevelopment && "grayscale-[40%]")}
                 />
-                {/* Заголовок поверх картинки */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <h3 className="text-xl font-bold text-white">{collection.title}</h3>
-                </div>
+                {collection.isInDevelopment && (
+                  <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
+                    <span>🛠️</span>
+                    <span>В разработке</span>
+                  </div>
+                )}
               </div>
             )}
             
-            <div className="p-4">
-              {/* Описание */}
-              {collection.description && (
-                <p className="text-text-secondary mb-4 leading-relaxed text-sm whitespace-pre-line">
-                  {collection.description}
-                </p>
-              )}
+            {/* Заголовок */}
+            <h3 className="text-xl font-bold text-text-primary">{collection.title}</h3>
+            
+            {/* Описание */}
+            {collection.description && (
+              <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line">
+                {collection.description}
+              </p>
+            )}
 
-              {/* Информация */}
-              <div className="flex items-center gap-4 mb-4 text-sm text-text-secondary">
+            {/* Информация */}
+            {!collection.isInDevelopment && (
+              <div className="flex items-center gap-4 text-sm text-text-secondary">
                 <span>📋 {collection.workoutCount} тренировок</span>
                 {!collection.hasAccess && collection.discount > 0 && (
                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
@@ -92,48 +120,54 @@ export const WorkoutsPage = () => {
                   </span>
                 )}
               </div>
+            )}
 
-              {/* Цена и кнопка */}
-              {collection.hasAccess ? (
-                <Button fullWidth onClick={() => navigate(`/workouts/${collection.id}`)}>
-                  Открыть сборник
-                </Button>
-              ) : (
-                <div className="space-y-3">
-                  {/* Цена крупно */}
-                  <div className="flex items-baseline gap-2">
-                    {collection.discount > 0 && (
-                      <span className="text-lg text-gray-400 line-through">
-                        {collection.price.toLocaleString()} сум
-                      </span>
-                    )}
-                    <span className="text-2xl font-bold text-primary">
-                      {collection.finalPrice.toLocaleString()} сум
+            {/* Кнопка / статус */}
+            {collection.isInDevelopment ? (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 text-center">
+                <div className="text-2xl mb-1">⏳</div>
+                <p className="font-bold text-yellow-900 text-sm">Скоро будет доступно</p>
+                <p className="text-xs text-yellow-700 mt-1">Этот сборник готовится для вас</p>
+              </div>
+            ) : collection.hasAccess ? (
+              <Button fullWidth onClick={() => navigate(`/workouts/${collection.id}`)}>
+                Открыть
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                {/* Цена крупно */}
+                <div className="flex items-baseline gap-2">
+                  {collection.discount > 0 && (
+                    <span className="text-lg text-gray-400 line-through">
+                      {collection.price.toLocaleString()} сум
                     </span>
-                  </div>
-
-                  {/* Кнопки */}
-                  <div className="flex gap-2">
-                    <Button
-                      fullWidth
-                      variant="outline"
-                      onClick={() => navigate(`/workouts/${collection.id}`)}
-                    >
-                      <Lock className="w-4 h-4 mr-2 inline" />
-                      Просмотр
-                    </Button>
-                    <Button 
-                      fullWidth 
-                      className="bg-primary"
-                      onClick={() => handlePurchase(collection)}
-                      disabled={loadingCollectionId === collection.id}
-                    >
-                      {loadingCollectionId === collection.id ? 'Загрузка...' : 'Купить'}
-                    </Button>
-                  </div>
+                  )}
+                  <span className="text-2xl font-bold text-primary">
+                    {collection.finalPrice.toLocaleString()} сум
+                  </span>
                 </div>
-              )}
-            </div>
+
+                {/* Кнопки */}
+                <div className="flex gap-2">
+                  <Button
+                    fullWidth
+                    variant="outline"
+                    onClick={() => navigate(`/workouts/${collection.id}`)}
+                  >
+                    <Lock className="w-4 h-4 mr-2 inline" />
+                    Просмотр
+                  </Button>
+                  <Button 
+                    fullWidth 
+                    className="bg-primary"
+                    onClick={() => handlePurchase(collection)}
+                    disabled={loadingCollectionId === collection.id}
+                  >
+                    {loadingCollectionId === collection.id ? 'Загрузка...' : 'Купить'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         ))}
       </div>

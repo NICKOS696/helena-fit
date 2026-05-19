@@ -1,19 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { recipesApi, paymeApi } from '@/lib/api'
+import { recipesApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
-import { ArrowLeft, Clock, Lock, Flame } from 'lucide-react'
+import { FavoriteButton } from '@/components/FavoriteButton'
+import { ArrowLeft, Clock, Lock, Flame, Heart } from 'lucide-react'
 import clsx from 'clsx'
 
 const categories = [
   { value: 'all', label: 'Все' },
   { value: 'BREAKFAST', label: 'Завтраки' },
-  { value: 'LUNCH', label: 'Обеды' },
+  { value: 'MAIN_COURSE', label: 'Вторые блюда' },
   { value: 'SNACK', label: 'Перекусы' },
-  { value: 'DINNER', label: 'Ужины' },
   { value: 'SALAD', label: 'Салаты' },
 ]
 
@@ -22,11 +22,47 @@ export const RecipeCollectionPage = () => {
   const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [isPollingPayment, setIsPollingPayment] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['recipe-collection', id, selectedCategory],
-    queryFn: () => recipesApi.getCollection(id!, selectedCategory === 'all' ? undefined : selectedCategory),
+    queryFn: () => {
+      const apiCategory = selectedCategory === 'all' || selectedCategory === 'favorites' 
+        ? undefined 
+        : selectedCategory
+      return recipesApi.getCollection(id!, apiCategory)
+    },
   })
+
+  // После клика "Купить" опрос API каждые 2 сек
+  useEffect(() => {
+    if (!isPollingPayment || !id) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await recipesApi.getCollection(id)
+        if (res.data?.hasAccess) {
+          window.location.reload()
+        }
+      } catch {}
+    }, 2000)
+    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(stopTimeout)
+    }
+  }, [isPollingPayment, id])
+
+  // Отправляем просмотр при загрузке страницы
+  useEffect(() => {
+    if (id) {
+      analyticsApi.trackView({
+        itemType: 'RECIPE_COLLECTION',
+        itemId: id,
+      }).catch(() => {
+        // Игнорируем ошибки трекинга
+      })
+    }
+  }, [id])
 
   const collection = data?.data
 
@@ -39,12 +75,15 @@ export const RecipeCollectionPage = () => {
         amount: collection.finalPrice,
       })
       
-      // Открываем страницу оплаты Payme через Telegram WebApp API
+      // Открываем страницу оплаты Payme
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(response.data.paymentUrl)
       } else {
         window.open(response.data.paymentUrl, '_blank')
       }
+
+      // Запускаем опрос статуса оплаты
+      setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
       alert('Ошибка при создании платежа. Попробуйте еще раз.')
@@ -83,7 +122,7 @@ export const RecipeCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-48 object-cover rounded-lg"
+            className="w-full h-64 object-cover object-top rounded-lg"
           />
         )}
         
@@ -113,7 +152,8 @@ export const RecipeCollectionPage = () => {
           </Card>
         )}
 
-        {/* Что входит */}
+        {/* Что входит - только если нет доступа */}
+        {!collection.hasAccess && (
         <Card>
           <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Что входит:</h2>
           <div className="space-y-1">
@@ -128,31 +168,113 @@ export const RecipeCollectionPage = () => {
             })}
           </div>
         </Card>
+        )}
 
-        {/* Categories - скрыто */}
-        {false && (
-        <div className="grid grid-cols-3 gap-2">
-          {categories.map((cat) => (
+        {/* Categories - показываем если есть доступ */}
+        {collection.hasAccess && (
+        <div className="flex flex-col gap-2">
+          {/* Первая строка: Все, Избранное, Перекусы */}
+          <div className="grid grid-cols-3 gap-2">
             <button
-              key={cat.value}
-              onClick={() => setSelectedCategory(cat.value)}
+              onClick={() => setSelectedCategory('all')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === cat.value
+                selectedCategory === 'all'
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-white text-text-primary border border-gray-200'
               )}
             >
-              {cat.label}
+              Все
             </button>
-          ))}
+            <button
+              onClick={() => setSelectedCategory('favorites')}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                selectedCategory === 'favorites'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-text-primary border border-gray-200'
+              )}
+            >
+              Избранное
+            </button>
+            <button
+              onClick={() => setSelectedCategory('SNACK')}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                selectedCategory === 'SNACK'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-text-primary border border-gray-200'
+              )}
+            >
+              Перекусы
+            </button>
+          </div>
+          {/* Вторая строка: Завтраки, Вторые блюда, Салаты */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setSelectedCategory('BREAKFAST')}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                selectedCategory === 'BREAKFAST'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-text-primary border border-gray-200'
+              )}
+            >
+              Завтраки
+            </button>
+            <button
+              onClick={() => setSelectedCategory('MAIN_COURSE')}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                selectedCategory === 'MAIN_COURSE'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-text-primary border border-gray-200'
+              )}
+            >
+              Вторые блюда
+            </button>
+            <button
+              onClick={() => setSelectedCategory('SALAD')}
+              className={clsx(
+                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                selectedCategory === 'SALAD'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-text-primary border border-gray-200'
+              )}
+            >
+              Салаты
+            </button>
+          </div>
         </div>
         )}
 
-        {/* Recipe Cards - скрыто */}
-        {false && (
-        <div className="grid grid-cols-2 gap-3">
-          {collection.recipes.map((recipe: any) => (
+        {/* Recipe Cards - показываем если есть доступ */}
+        {collection.hasAccess && collection.recipes && (() => {
+          const filteredRecipes = collection.recipes.filter((recipe: any) => {
+            // Фильтр по избранному
+            if (selectedCategory === 'favorites') {
+              return recipe.isFavorite
+            }
+            // Фильтр по категории
+            if (selectedCategory !== 'all') {
+              return recipe.category === selectedCategory
+            }
+            return true
+          })
+
+          if (filteredRecipes.length === 0 && selectedCategory === 'favorites') {
+            return (
+              <Card className="text-center py-12">
+                <Heart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-bold text-gray-600 mb-2">Нет избранных рецептов</h3>
+                <p className="text-sm text-gray-500">Добавьте рецепты в избранное, нажав на ❤️</p>
+              </Card>
+            )
+          }
+
+          return (
+            <div className="grid grid-cols-2 gap-3">
+              {filteredRecipes.map((recipe: any) => (
             <div
               key={recipe.id}
               onClick={() =>
@@ -177,6 +299,16 @@ export const RecipeCollectionPage = () => {
                 {recipe.locked && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Lock className="w-8 h-8 text-white" />
+                  </div>
+                )}
+                {/* Favorite Button */}
+                {!recipe.locked && (
+                  <div className="absolute top-2 right-2">
+                    <FavoriteButton 
+                      recipeId={recipe.id} 
+                      isFavorite={recipe.isFavorite || false}
+                      size="sm"
+                    />
                   </div>
                 )}
               </div>
@@ -206,7 +338,8 @@ export const RecipeCollectionPage = () => {
             </div>
           ))}
         </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )

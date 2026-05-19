@@ -41,6 +41,9 @@ export const recipesApi = {
     api.get(`/recipes/${id}`, { params: { category } }),
   getRecipe: (collectionId: string, recipeId: string) =>
     api.get(`/recipes/${collectionId}/recipe/${recipeId}`),
+  getFavorites: () => api.get('/recipes/favorites/all'),
+  addToFavorites: (recipeId: string) => api.post(`/recipes/favorites/${recipeId}`),
+  removeFromFavorites: (recipeId: string) => api.delete(`/recipes/favorites/${recipeId}`),
 }
 
 export const newsApi = {
@@ -55,4 +58,11 @@ export const paymeApi = {
     collectionType: 'WORKOUT' | 'RECIPE';
     amount: number;
   }) => api.post('/payme/create-payment', data),
+}
+
+export const analyticsApi = {
+  trackView: (data: {
+    itemType: 'WORKOUT_COLLECTION' | 'RECIPE_COLLECTION' | 'WORKOUT' | 'RECIPE' | 'NEWS';
+    itemId: string;
+  }) => api.post('/analytics/track', data),
 }

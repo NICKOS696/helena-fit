@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { recipesApi } from '@/lib/api'
+import { recipesApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import { ArrowLeft, Clock } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -15,6 +16,18 @@ export const RecipeDetailPage = () => {
     queryKey: ['recipe', collectionId, recipeId],
     queryFn: () => recipesApi.getRecipe(collectionId!, recipeId!),
   })
+
+  // Отправляем просмотр при загрузке страницы
+  useEffect(() => {
+    if (recipeId) {
+      analyticsApi.trackView({
+        itemType: 'RECIPE',
+        itemId: recipeId,
+      }).catch(() => {
+        // Игнорируем ошибки трекинга
+      })
+    }
+  }, [recipeId])
 
   if (isLoading) {
     return (
@@ -59,8 +72,16 @@ export const RecipeDetailPage = () => {
           <img
             src={recipe.coverImage}
             alt={recipe.title}
-            className="w-full h-64 object-cover"
+            className="w-full h-96 object-cover"
           />
+          {/* Favorite Button */}
+          <div className="absolute top-4 right-4">
+            <FavoriteButton 
+              recipeId={recipe.id} 
+              isFavorite={recipe.isFavorite || false}
+              size="md"
+            />
+          </div>
         </div>
       )}
 

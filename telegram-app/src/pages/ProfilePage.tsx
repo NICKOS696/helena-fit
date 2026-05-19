@@ -43,13 +43,13 @@ export const ProfilePage = () => {
           )}
           <div>
             <h2 className="text-xl font-bold text-text-primary">
-              {user?.first_name} {user?.last_name}
+              {user?.first_name || 'Пользователь'} {user?.last_name || ''}
             </h2>
-            {user?.username && (
-              <p className="text-text-secondary">@{user.username}</p>
-            )}
             {profile?.phoneNumber && (
-              <p className="text-text-secondary">{profile.phoneNumber}</p>
+              <p className="text-text-secondary text-sm">{profile.phoneNumber}</p>
+            )}
+            {user?.username && (
+              <p className="text-text-secondary text-sm">@{user.username}</p>
             )}
           </div>
         </div>

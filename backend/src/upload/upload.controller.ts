@@ -15,8 +15,10 @@ export class UploadController {
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   uploadImage(@UploadedFile() file: Express.Multer.File) {
+    // Возвращаем полный URL для использования в админке и приложении
+    const baseUrl = process.env.BASE_URL || 'https://helena-fit.ru';
     return {
-      url: `/uploads/${file.filename}`,
+      url: `${baseUrl}/uploads/${file.filename}`,
       filename: file.filename,
     };
   }

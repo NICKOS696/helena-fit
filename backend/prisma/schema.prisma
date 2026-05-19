@@ -22,6 +22,8 @@ model User {
   workoutAccess WorkoutCollectionAccess[]
   recipeAccess  RecipeCollectionAccess[]
   transactions  Transaction[]
+  contentViews  ContentView[]
+  favoriteRecipes FavoriteRecipe[]
 
   @@map("users")
 }
@@ -42,6 +44,7 @@ model WorkoutCollection {
   discountType DiscountType? @default(PERCENTAGE)
   discountEndDate DateTime?
   isActive    Boolean  @default(true)
+  isInDevelopment Boolean @default(false)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -127,6 +130,7 @@ model RecipeCollection {
   discountType DiscountType? @default(PERCENTAGE)
   discountEndDate DateTime?
   isActive    Boolean  @default(true)
+  isInDevelopment Boolean @default(false)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -161,15 +165,15 @@ model Recipe {
   updatedAt     DateTime @updatedAt
 
   collection    RecipeCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  favoritedBy   FavoriteRecipe[]
 
   @@map("recipes")
 }
 
 enum RecipeCategory {
   BREAKFAST
-  LUNCH
+  MAIN_COURSE
   SNACK
-  DINNER
   SALAD
 }
 
@@ -264,6 +268,10 @@ model Transaction {
   paymentMethod       String?
   paymentId           String?
   paymeTransactionId  String?  @unique
+  paymeCreateTime     BigInt?
+  paymePerformTime    BigInt?
+  paymeCancelTime     BigInt?
+  paymeReason         Int?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -306,4 +314,41 @@ enum AdminRole {
   SUPER_ADMIN
   ADMIN
   MODERATOR
+}
+
+model ContentView {
+  id          String   @id @default(uuid())
+  userId      String
+  itemType    ContentType
+  itemId      String
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([itemType, itemId])
+  @@index([createdAt])
+  @@map("content_views")
+}
+
+enum ContentType {
+  WORKOUT_COLLECTION
+  RECIPE_COLLECTION
+  WORKOUT
+  RECIPE
+  NEWS
+}
+
+model FavoriteRecipe {
+  id        String   @id @default(uuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@map("favorite_recipes")
 }

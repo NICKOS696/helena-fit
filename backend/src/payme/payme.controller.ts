@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Headers, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Get, Query, UseGuards, Request, HttpCode } from '@nestjs/common';
 import { PaymeService } from './payme.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -45,6 +45,7 @@ export class PaymeController {
    * POST /api/payme/callback
    */
   @Post('callback')
+  @HttpCode(200)
   async handleCallback(
     @Body() body: any,
     @Headers('authorization') authorization: string,

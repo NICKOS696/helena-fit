@@ -1,9 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: true,
+    rawBody: true,
+  });
+
+  // Увеличиваем лимит размера body до 50MB
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
+
+  // Раздача статических файлов из папки uploads
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   app.enableCors({
     origin: [

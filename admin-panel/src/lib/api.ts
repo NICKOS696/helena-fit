@@ -107,3 +107,16 @@ export const uploadApi = {
     })
   },
 }
+
+export const analyticsApi = {
+  getCollectionStats: () => 
+    api.get('/analytics/collection-stats'),
+  getRecipeStats: () => 
+    api.get('/analytics/recipe-stats'),
+  getContentStats: (type?: string) => 
+    api.get('/analytics/content-stats', { params: { type } }),
+  getOverallStats: () => 
+    api.get('/analytics/overall'),
+  getUserActivity: () => 
+    api.get('/analytics/user-activity'),
+}

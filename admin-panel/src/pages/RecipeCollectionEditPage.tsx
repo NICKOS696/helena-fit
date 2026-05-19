@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
 import { ArrowLeft, Plus, Edit, Trash2, X } from 'lucide-react'
+import { ImageUpload } from '@/components/ImageUpload'
 
 const categories = [
-  { value: 'BREAKFAST', label: 'Завтрак' },
-  { value: 'LUNCH', label: 'Обед' },
-  { value: 'SNACK', label: 'Перекус' },
-  { value: 'DINNER', label: 'Ужин' },
+  { value: 'BREAKFAST', label: 'Завтраки' },
+  { value: 'MAIN_COURSE', label: 'Вторые блюда' },
+  { value: 'SNACK', label: 'Перекусы' },
   { value: 'SALAD', label: 'Салаты' },
 ]
 
@@ -340,18 +340,11 @@ export const RecipeCollectionEditPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на обложку
-                </label>
-                <input
-                  type="url"
-                  value={recipeForm.coverImage}
-                  onChange={(e) => setRecipeForm({ ...recipeForm, coverImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-              </div>
+              <ImageUpload
+                label="Обложка сборника"
+                value={recipeForm.coverImage}
+                onChange={(url) => setRecipeForm({ ...recipeForm, coverImage: url })}
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -575,18 +568,11 @@ export const RecipeCollectionEditPage = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на обложку
-                </label>
-                <input
-                  type="url"
-                  value={collectionForm.coverImage}
-                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-              </div>
+              <ImageUpload
+                label="Обложка сборника"
+                value={collectionForm.coverImage}
+                onChange={(url) => setCollectionForm({ ...collectionForm, coverImage: url })}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

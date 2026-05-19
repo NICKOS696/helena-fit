@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
 import { Plus, Edit, Trash2, X } from 'lucide-react'
+import { ImageUpload } from '@/components/ImageUpload'
 
 export const RecipesPage = () => {
   const navigate = useNavigate()
@@ -15,6 +16,7 @@ export const RecipesPage = () => {
     price: '',
     discount: '',
     discountType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
+    isInDevelopment: false,
   })
 
   const queryClient = useQueryClient()
@@ -58,6 +60,7 @@ export const RecipesPage = () => {
       price: '',
       discount: '',
       discountType: 'PERCENTAGE',
+      isInDevelopment: false,
     })
     setEditingCollection(null)
   }
@@ -72,6 +75,7 @@ export const RecipesPage = () => {
         price: collection.price.toString(),
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
+        isInDevelopment: collection.isInDevelopment || false,
       })
     } else {
       resetForm()
@@ -88,6 +92,7 @@ export const RecipesPage = () => {
       price: parseInt(formData.price),
       discount: formData.discount ? parseInt(formData.discount) : 0,
       discountType: formData.discountType,
+      isInDevelopment: formData.isInDevelopment,
     }
 
     if (editingCollection) {
@@ -124,6 +129,11 @@ export const RecipesPage = () => {
                   alt={collection.title}
                   className="w-full h-48 object-cover rounded-lg mb-4"
                 />
+              )}
+              {collection.isInDevelopment && (
+                <span className="inline-block bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded mb-2">
+                  В разработке
+                </span>
               )}
               <h3 className="text-lg font-bold mb-2">{collection.title}</h3>
               <p className="text-sm text-gray-600 mb-2">{collection.description}</p>
@@ -201,33 +211,11 @@ export const RecipesPage = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на обложку
-                </label>
-                <input
-                  type="url"
-                  value={formData.coverImage}
-                  onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Вставьте ссылку на изображение с IMG.ru, Imgur или другого хостинга
-                </p>
-                {formData.coverImage && (
-                  <div className="mt-2">
-                    <img
-                      src={formData.coverImage}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+              <ImageUpload
+                label="Обложка сборника"
+                value={formData.coverImage}
+                onChange={(url) => setFormData({ ...formData, coverImage: url })}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -270,6 +258,19 @@ export const RecipesPage = () => {
                   <option value="PERCENTAGE">Процент (%)</option>
                   <option value="FIXED">Фиксированная сумма</option>
                 </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isInDevelopment"
+                  checked={formData.isInDevelopment}
+                  onChange={(e) => setFormData({ ...formData, isInDevelopment: e.target.checked })}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <label htmlFor="isInDevelopment" className="text-sm font-medium text-gray-700">
+                  В разработке (показывать пользователям как «скоро»)
+                </label>
               </div>
 
               <div className="flex gap-2 pt-4">

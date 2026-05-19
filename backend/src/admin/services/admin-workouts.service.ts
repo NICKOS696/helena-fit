@@ -9,6 +9,7 @@ export interface CreateWorkoutCollectionDto {
   discount?: number;
   discountType?: 'PERCENTAGE' | 'FIXED';
   discountEndDate?: Date;
+  isInDevelopment?: boolean;
   order?: number;
 }
 

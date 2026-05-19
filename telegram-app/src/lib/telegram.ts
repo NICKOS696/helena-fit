@@ -7,6 +7,12 @@ declare global {
         ready: () => void
         expand: () => void
         close: () => void
+        openLink: (url: string) => void
+        enableClosingConfirmation: () => void
+        disableClosingConfirmation: () => void
+        isClosingConfirmationEnabled: boolean
+        disableVerticalSwipes: () => void
+        isExpanded: boolean
         MainButton: {
           text: string
           color: string
@@ -47,6 +53,16 @@ export const initTelegram = () => {
   if (tg) {
     tg.ready()
     tg.expand()
+    
+    // Отключаем вертикальные свайпы (доступно с версии 7.7)
+    if (typeof tg.disableVerticalSwipes === 'function') {
+      tg.disableVerticalSwipes()
+    }
+    
+    // Включаем подтверждение закрытия (при свайпе вниз будет спрашивать)
+    if (typeof tg.enableClosingConfirmation === 'function') {
+      tg.enableClosingConfirmation()
+    }
   }
 }
 

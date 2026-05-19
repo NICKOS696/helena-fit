@@ -33,9 +33,10 @@ export const SectionItemPage = () => {
             <p className="text-gray-600 mb-4">{item.description}</p>
           )}
           
-          <div className="whitespace-pre-line text-gray-700 leading-relaxed">
-            {item.content}
-          </div>
+          <div 
+            className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: item.content }}
+          />
         </Card>
       </div>
     </div>

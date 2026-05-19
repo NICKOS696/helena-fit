@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminNewsApi, adminWorkoutsApi, adminRecipesApi } from '@/lib/api'
 import { Plus, Edit, Trash2, X } from 'lucide-react'
+import { ImageUpload } from '@/components/ImageUpload'
 
 export const NewsPage = () => {
   const queryClient = useQueryClient()
@@ -286,18 +287,11 @@ export const NewsPage = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ссылка на баннер
-                </label>
-                <input
-                  type="url"
-                  value={newsForm.bannerImage}
-                  onChange={(e) => setNewsForm({ ...newsForm, bannerImage: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  placeholder="https://i.imgur.com/example.jpg"
-                />
-              </div>
+              <ImageUpload
+                label="Баннер новости"
+                value={newsForm.bannerImage}
+                onChange={(url) => setNewsForm({ ...newsForm, bannerImage: url })}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

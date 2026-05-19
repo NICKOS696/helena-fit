@@ -28,10 +28,17 @@ export class AuthService {
           status: 'ACTIVE',
         },
       });
-    } else if (user.status === 'PENDING') {
+    } else {
+      // Обновляем данные пользователя при каждом входе
       user = await this.prisma.user.update({
         where: { id: user.id },
-        data: { status: 'ACTIVE' },
+        data: {
+          username: username || user.username,
+          firstName: first_name || user.firstName,
+          lastName: last_name || user.lastName,
+          photoUrl: photo_url || user.photoUrl,
+          status: 'ACTIVE',
+        },
       });
     }
 

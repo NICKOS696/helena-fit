@@ -1,11 +1,16 @@
-import { Controller, Get, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { RecipesService } from './recipes.service';
+import { FavoritesService } from './favorites.service';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('recipes')
 @UseGuards(OptionalJwtAuthGuard)
 export class RecipesController {
-  constructor(private recipesService: RecipesService) {}
+  constructor(
+    private recipesService: RecipesService,
+    private favoritesService: FavoritesService,
+  ) {}
 
   @Get()
   async getCollections(@Request() req) {
@@ -28,5 +33,26 @@ export class RecipesController {
     @Request() req,
   ) {
     return this.recipesService.getRecipe(collectionId, recipeId, req.user?.id);
+  }
+
+  @Get('favorites/all')
+  @UseGuards(JwtAuthGuard)
+  async getFavorites(@Request() req) {
+    const userId = req.user.id;
+    return this.favoritesService.getFavorites(userId);
+  }
+
+  @Post('favorites/:recipeId')
+  @UseGuards(JwtAuthGuard)
+  async addToFavorites(@Param('recipeId') recipeId: string, @Request() req) {
+    const userId = req.user.id;
+    return this.favoritesService.addToFavorites(userId, recipeId);
+  }
+
+  @Delete('favorites/:recipeId')
+  @UseGuards(JwtAuthGuard)
+  async removeFromFavorites(@Param('recipeId') recipeId: string, @Request() req) {
+    const userId = req.user.id;
+    return this.favoritesService.removeFromFavorites(userId, recipeId);
   }
 }
