@@ -148,8 +148,14 @@ export const WorkoutsPage = () => {
                   onClick={() => navigate(`/workouts/${collection.id}`)}
                   className="flex-1 flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
                 >
-                  <Edit className="w-4 h-4" />
                   Управление
+                </button>
+                <button
+                  onClick={() => handleOpenModal(collection)}
+                  className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                  title="Редактировать сборник"
+                >
+                  <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => {

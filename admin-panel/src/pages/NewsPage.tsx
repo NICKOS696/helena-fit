@@ -1,13 +1,24 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminNewsApi, adminWorkoutsApi, adminRecipesApi } from '@/lib/api'
-import { Plus, Edit, Trash2, X } from 'lucide-react'
+import { adminNewsApi, adminWorkoutsApi, adminRecipesApi, adminBroadcastApi } from '@/lib/api'
+import { Plus, Edit, Trash2, X, Send } from 'lucide-react'
 import { ImageUpload } from '@/components/ImageUpload'
 
 export const NewsPage = () => {
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editingNews, setEditingNews] = useState<any>(null)
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false)
+  const [broadcastForm, setBroadcastForm] = useState({ message: '', imageUrl: '' })
+  const [broadcastResult, setBroadcastResult] = useState<any>(null)
+
+  const broadcastMutation = useMutation({
+    mutationFn: (data: { message: string; imageUrl?: string }) =>
+      adminBroadcastApi.send(data),
+    onSuccess: (res) => {
+      setBroadcastResult(res.data)
+    },
+  })
   const [newsForm, setNewsForm] = useState({
     title: '',
     excerpt: '',
@@ -133,13 +144,26 @@ export const NewsPage = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Новости и акции</h1>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
-        >
-          <Plus className="w-5 h-5" />
-          Добавить новость
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setBroadcastForm({ message: '', imageUrl: '' })
+              setBroadcastResult(null)
+              setShowBroadcastModal(true)
+            }}
+            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:opacity-90"
+          >
+            <Send className="w-5 h-5" />
+            Рассылка в бот
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
+          >
+            <Plus className="w-5 h-5" />
+            Добавить новость
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -420,6 +444,137 @@ export const NewsPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showBroadcastModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Send className="w-6 h-6 text-blue-500" />
+                Рассылка в Telegram-бот
+              </h2>
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {broadcastResult ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-bold text-green-900 mb-2">✅ Рассылка завершена</h3>
+                  <p className="text-sm text-green-800">
+                    Всего пользователей: <b>{broadcastResult.total}</b>
+                  </p>
+                  <p className="text-sm text-green-800">
+                    Доставлено: <b>{broadcastResult.sent}</b>
+                  </p>
+                  <p className="text-sm text-red-700">
+                    Ошибок: <b>{broadcastResult.failed}</b>
+                  </p>
+                  {broadcastResult.errors && broadcastResult.errors.length > 0 && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-gray-600 cursor-pointer">
+                        Показать ошибки
+                      </summary>
+                      <ul className="mt-2 text-xs text-gray-700 space-y-1">
+                        {broadcastResult.errors.map((err: string, i: number) => (
+                          <li key={i}>• {err}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
+                >
+                  Закрыть
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!broadcastForm.message.trim()) return
+                  if (
+                    !confirm(
+                      'Отправить это сообщение всем пользователям бота? Это действие нельзя отменить.'
+                    )
+                  )
+                    return
+                  broadcastMutation.mutate({
+                    message: broadcastForm.message,
+                    imageUrl: broadcastForm.imageUrl || undefined,
+                  })
+                }}
+                className="space-y-4"
+              >
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+                  💡 Сообщение будет отправлено <b>всем пользователям</b>, у которых
+                  есть Telegram-аккаунт в системе. Поддерживается HTML:{' '}
+                  <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>,{' '}
+                  <code>&lt;a href=""&gt;</code>.
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Текст сообщения *
+                  </label>
+                  <textarea
+                    value={broadcastForm.message}
+                    onChange={(e) =>
+                      setBroadcastForm({ ...broadcastForm, message: e.target.value })
+                    }
+                    rows={8}
+                    placeholder="Здравствуйте! Сегодня появился новый сборник тренировок..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {broadcastForm.message.length} символов
+                    {broadcastForm.imageUrl
+                      ? ' (с фото лимит 1024)'
+                      : ' (без фото лимит 4096)'}
+                  </p>
+                </div>
+
+                <ImageUpload
+                  label="Картинка (необязательно)"
+                  value={broadcastForm.imageUrl}
+                  onChange={(url) =>
+                    setBroadcastForm({ ...broadcastForm, imageUrl: url })
+                  }
+                />
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="submit"
+                    disabled={
+                      broadcastMutation.isPending || !broadcastForm.message.trim()
+                    }
+                    className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                    {broadcastMutation.isPending
+                      ? 'Отправка...'
+                      : 'Отправить всем'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBroadcastModal(false)}
+                    className="px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

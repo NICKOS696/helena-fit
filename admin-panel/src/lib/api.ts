@@ -96,6 +96,11 @@ export const adminNewsApi = {
   deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
 }
 
+export const adminBroadcastApi = {
+  send: (data: { message: string; imageUrl?: string }) =>
+    api.post('/admin/broadcast', data),
+}
+
 export const uploadApi = {
   uploadImage: (file: File) => {
     const formData = new FormData()

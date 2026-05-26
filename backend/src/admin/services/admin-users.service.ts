@@ -35,8 +35,10 @@ export class AdminUsersService {
   }
 
   async createUser(telegramId: string) {
-    return this.prisma.user.create({
-      data: {
+    return this.prisma.user.upsert({
+      where: { telegramId },
+      update: {},
+      create: {
         telegramId,
         status: 'PENDING',
       },
