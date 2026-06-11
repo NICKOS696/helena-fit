@@ -10,10 +10,11 @@ export const Layout = () => {
         paddingBottom: 'calc(5rem + var(--app-safe-bottom))',
       }}
     >
-      {/* Непрозрачная заглушка safe-area сверху: в fullscreen не даёт контенту
-          «просвечивать» под кнопками Telegram при скролле. Высота 0 вне fullscreen. */}
+      {/* Брендовая полоса safe-area сверху: в fullscreen не даёт контенту
+          «просвечивать» под кнопками Telegram при скролле и читается как
+          намеренный топ-бар. Высота 0 вне fullscreen (вид не меняется). */}
       <div
-        className="fixed top-0 left-0 right-0 bg-white z-40"
+        className="fixed top-0 left-0 right-0 bg-gradient-to-r from-primary-light to-primary z-40"
         style={{ height: 'var(--app-safe-top)' }}
       />
       <Outlet />
