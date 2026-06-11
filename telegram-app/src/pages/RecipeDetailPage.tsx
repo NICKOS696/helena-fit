@@ -209,7 +209,9 @@ export const RecipeDetailPage = () => {
             {ingredientGroups.map((group: any, gi: number) => (
               <div key={gi}>
                 {group.title && (
-                  <h4 className="text-sm font-semibold text-primary mb-1">{group.title}</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1 mt-1">
+                    {group.title}
+                  </h4>
                 )}
                 <div>
                   {(group.items || []).map((ing: any, i: number) => (
@@ -233,13 +235,13 @@ export const RecipeDetailPage = () => {
         <Card>
           <h3 className="text-base font-bold text-gray-800 mb-4">Способ приготовления</h3>
           {steps.length > 0 ? (
-            <ol className="space-y-4">
+            <ol className="space-y-3">
               {steps.map((step: string, i: number) => (
                 <li key={i} className="flex gap-3">
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">
+                  <span className="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center">
                     {i + 1}
                   </span>
-                  <span className="text-gray-700 leading-relaxed pt-0.5">{step}</span>
+                  <span className="text-gray-700 leading-relaxed">{step}</span>
                 </li>
               ))}
             </ol>
