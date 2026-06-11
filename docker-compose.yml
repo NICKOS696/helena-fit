@@ -61,7 +61,9 @@ services:
     networks:
       - helena-fit-network
     # db push идемпотентен и без --accept-data-loss не удаляет данные (при дрейфе упадёт с ошибкой).
-    command: sh -c "npx prisma db push --skip-generate && npm run start:prod"
+    # nest build вкладывает выход в dist/src/ (т.к. компилируется prisma/seed.ts),
+    # поэтому точка входа — dist/src/main, а не dist/main.
+    command: sh -c "npx prisma db push --skip-generate && node dist/src/main"
     logging:
       driver: json-file
       options:
