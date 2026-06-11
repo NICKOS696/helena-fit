@@ -21,9 +21,35 @@ export const RecipeCollectionEditPage = () => {
   const [showCollectionModal, setShowCollectionModal] = useState(false)
   const [showRecipeModal, setShowRecipeModal] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState<any>(null)
-  const [ingredients, setIngredients] = useState<Array<{name: string, amount: string}>>([
-    { name: '', amount: '' }
+  // Ингредиенты с разделами: [{ title, items: [{name, amount}] }]
+  type IngItem = { name: string; amount: string }
+  type IngGroup = { title: string; items: IngItem[] }
+  const [ingredientGroups, setIngredientGroups] = useState<IngGroup[]>([
+    { title: '', items: [{ name: '', amount: '' }] },
   ])
+
+  const updateGroupTitle = (gi: number, title: string) =>
+    setIngredientGroups((gs) => gs.map((g, i) => (i === gi ? { ...g, title } : g)))
+  const updateItem = (gi: number, ii: number, field: keyof IngItem, value: string) =>
+    setIngredientGroups((gs) =>
+      gs.map((g, i) =>
+        i === gi
+          ? { ...g, items: g.items.map((it, j) => (j === ii ? { ...it, [field]: value } : it)) }
+          : g,
+      ),
+    )
+  const addItem = (gi: number) =>
+    setIngredientGroups((gs) =>
+      gs.map((g, i) => (i === gi ? { ...g, items: [...g.items, { name: '', amount: '' }] } : g)),
+    )
+  const removeItem = (gi: number, ii: number) =>
+    setIngredientGroups((gs) =>
+      gs.map((g, i) => (i === gi ? { ...g, items: g.items.filter((_, j) => j !== ii) } : g)),
+    )
+  const addGroup = () =>
+    setIngredientGroups((gs) => [...gs, { title: '', items: [{ name: '', amount: '' }] }])
+  const removeGroup = (gi: number) =>
+    setIngredientGroups((gs) => gs.filter((_, i) => i !== gi))
   const [collectionForm, setCollectionForm] = useState({
     title: '',
     description: '',
@@ -140,7 +166,7 @@ export const RecipeCollectionEditPage = () => {
       fatPerServing: '',
       carbsPerServing: '',
     })
-    setIngredients([{ name: '', amount: '' }])
+    setIngredientGroups([{ title: '', items: [{ name: '', amount: '' }] }])
     setEditingRecipe(null)
   }
 
@@ -164,9 +190,21 @@ export const RecipeCollectionEditPage = () => {
         fatPerServing: recipe.fatPerServing?.toString() || '',
         carbsPerServing: recipe.carbsPerServing?.toString() || '',
       })
-      setIngredients(recipe.ingredients && recipe.ingredients.length > 0 
-        ? recipe.ingredients 
-        : [{ name: '', amount: '' }])
+      const ing = recipe.ingredients
+      if (Array.isArray(ing) && ing.length > 0 && ing[0] && Array.isArray(ing[0].items)) {
+        // Новый формат: разделы
+        setIngredientGroups(
+          ing.map((g: any) => ({
+            title: g.title || '',
+            items: g.items && g.items.length > 0 ? g.items : [{ name: '', amount: '' }],
+          })),
+        )
+      } else if (Array.isArray(ing) && ing.length > 0) {
+        // Старый формат: плоский список -> одна группа без заголовка
+        setIngredientGroups([{ title: '', items: ing }])
+      } else {
+        setIngredientGroups([{ title: '', items: [{ name: '', amount: '' }] }])
+      }
     } else {
       resetRecipeForm()
     }
@@ -176,8 +214,18 @@ export const RecipeCollectionEditPage = () => {
   const handleSubmitRecipe = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Фильтруем пустые ингредиенты
-    const validIngredients = ingredients.filter(ing => ing.name.trim() !== '')
+    // Чистим разделы: убираем пустые ингредиенты и пустые группы
+    const cleanedGroups = ingredientGroups
+      .map((g) => ({
+        title: g.title.trim(),
+        items: g.items.filter((it) => it.name.trim() !== ''),
+      }))
+      .filter((g) => g.items.length > 0)
+    // Обратная совместимость: один раздел без заголовка -> плоский список
+    const ingredientsPayload =
+      cleanedGroups.length <= 1 && (!cleanedGroups[0] || !cleanedGroups[0].title)
+        ? cleanedGroups[0]?.items || []
+        : cleanedGroups
 
     const data = {
       title: recipeForm.title,
@@ -186,7 +234,7 @@ export const RecipeCollectionEditPage = () => {
       coverImageFit: recipeForm.coverImageFit,
       coverImagePosition: recipeForm.coverImagePosition,
       cookingTime: recipeForm.cookingTime ? parseInt(recipeForm.cookingTime) : null,
-      ingredients: validIngredients,
+      ingredients: ingredientsPayload,
       instructions: recipeForm.instructions,
       caloriesPer100g: recipeForm.caloriesPer100g ? parseFloat(recipeForm.caloriesPer100g) : null,
       proteinPer100g: recipeForm.proteinPer100g ? parseFloat(recipeForm.proteinPer100g) : null,
@@ -388,54 +436,73 @@ export const RecipeCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ингредиенты (каждый с новой строки: Название: Количество)
+                  Ингредиенты
                 </label>
-                <div className="space-y-2">
-                  {ingredients.map((ingredient, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input
-                        type="text"
-                        value={ingredient.name}
-                        onChange={(e) => {
-                          const newIngredients = [...ingredients]
-                          newIngredients[index].name = e.target.value
-                          setIngredients(newIngredients)
-                        }}
-                        placeholder="Название"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={ingredient.amount}
-                        onChange={(e) => {
-                          const newIngredients = [...ingredients]
-                          newIngredients[index].amount = e.target.value
-                          setIngredients(newIngredients)
-                        }}
-                        placeholder="Количество"
-                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                      {ingredients.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newIngredients = ingredients.filter((_, i) => i !== index)
-                            setIngredients(newIngredients)
-                          }}
-                          className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                <div className="space-y-4">
+                  {ingredientGroups.map((group, gi) => (
+                    <div key={gi} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={group.title}
+                          onChange={(e) => updateGroupTitle(gi, e.target.value)}
+                          placeholder="Заголовок раздела (пусто = «Ингредиенты»). Напр.: Для начинки"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                        {ingredientGroups.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeGroup(gi)}
+                            className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-xs whitespace-nowrap"
+                          >
+                            Удалить раздел
+                          </button>
+                        )}
+                      </div>
+                      {group.items.map((ing, ii) => (
+                        <div key={ii} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={ing.name}
+                            onChange={(e) => updateItem(gi, ii, 'name', e.target.value)}
+                            placeholder="Название"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={ing.amount}
+                            onChange={(e) => updateItem(gi, ii, 'amount', e.target.value)}
+                            placeholder="Количество"
+                            className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                          />
+                          {group.items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeItem(gi, ii)}
+                              className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addItem(gi)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Добавить ингредиент
+                      </button>
                     </div>
                   ))}
                   <button
                     type="button"
-                    onClick={() => setIngredients([...ingredients, { name: '', amount: '' }])}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    onClick={addGroup}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 font-medium"
                   >
                     <Plus className="w-4 h-4" />
-                    Добавить ингредиент
+                    Добавить раздел (напр. «Для начинки»)
                   </button>
                 </div>
               </div>

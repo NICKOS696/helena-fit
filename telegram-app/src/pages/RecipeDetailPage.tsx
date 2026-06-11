@@ -77,6 +77,20 @@ export const RecipeDetailPage = () => {
   const macroTotal = p + f + c
   const macroPct = (v: number) => (macroTotal > 0 ? (v / macroTotal) * 100 : 0)
 
+  // Ингредиенты: поддержка разделов. Старый формат — плоский [{name,amount}],
+  // новый — [{title, items:[{name,amount}]}]. Нормализуем в группы.
+  const rawIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : []
+  const ingredientGroups =
+    rawIngredients.length && rawIngredients[0] && Array.isArray(rawIngredients[0].items)
+      ? rawIngredients
+      : [{ title: '', items: rawIngredients }]
+
+  // Шаги приготовления: делим по переносам строк, срезаем ведущую нумерацию.
+  const steps = (recipe.instructions || '')
+    .split(/\r?\n/)
+    .map((s: string) => s.replace(/^\s*\d+[.)]\s*/, '').trim())
+    .filter((s: string) => s.length > 0)
+
   return (
     <div className="pb-4">
       {/* Header */}
@@ -188,24 +202,52 @@ export const RecipeDetailPage = () => {
           )}
         </div>
 
-        {/* Ingredients & Instructions - Combined */}
+        {/* Ингредиенты — аккуратными строками, с разделами */}
         <Card>
-          <h3 className="text-base font-bold text-gray-800 mb-3">Ингредиенты:</h3>
-          <ul className="space-y-2 mb-6">
-            {(Array.isArray(recipe.ingredients) ? recipe.ingredients : []).map((ingredient: any, index: number) => (
-              <li key={index} className="flex items-center gap-2 text-gray-700">
-                <span className="text-primary flex-shrink-0">•</span>
-                <span className="flex-1">
-                  {ingredient.name} - {ingredient.amount}
-                </span>
-              </li>
+          <h3 className="text-base font-bold text-gray-800 mb-3">Ингредиенты</h3>
+          <div className="space-y-4">
+            {ingredientGroups.map((group: any, gi: number) => (
+              <div key={gi}>
+                {group.title && (
+                  <h4 className="text-sm font-semibold text-primary mb-1">{group.title}</h4>
+                )}
+                <div>
+                  {(group.items || []).map((ing: any, i: number) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-baseline gap-3 py-2 border-b border-gray-100 last:border-0"
+                    >
+                      <span className="text-gray-700">{ing.name}</span>
+                      <span className="text-gray-500 text-right whitespace-nowrap text-sm">
+                        {ing.amount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
-          </ul>
-
-          <h3 className="text-base font-bold text-gray-800 mb-3">Способ приготовления:</h3>
-          <div className="whitespace-pre-line text-gray-700 leading-relaxed">
-            {recipe.instructions}
           </div>
+        </Card>
+
+        {/* Способ приготовления — нумерованные шаги */}
+        <Card>
+          <h3 className="text-base font-bold text-gray-800 mb-4">Способ приготовления</h3>
+          {steps.length > 0 ? (
+            <ol className="space-y-4">
+              {steps.map((step: string, i: number) => (
+                <li key={i} className="flex gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <span className="text-gray-700 leading-relaxed pt-0.5">{step}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+              {recipe.instructions}
+            </div>
+          )}
         </Card>
       </div>
     </div>
