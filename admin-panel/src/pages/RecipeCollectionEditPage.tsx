@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
 import { ArrowLeft, Plus, Edit, Trash2, X } from 'lucide-react'
 import { ImageUpload } from '@/components/ImageUpload'
+import { ImageFocusPicker } from '@/components/ImageFocusPicker'
 
 const categories = [
   { value: 'BREAKFAST', label: 'Завтраки' },
@@ -364,20 +365,13 @@ export const RecipeCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Положение фото (фокус кадра)
+                  Положение фото (как увидит пользователь)
                 </label>
-                <select
+                <ImageFocusPicker
+                  imageUrl={recipeForm.coverImage}
                   value={recipeForm.coverImagePosition}
-                  onChange={(e) => setRecipeForm({ ...recipeForm, coverImagePosition: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="center">Центр</option>
-                  <option value="top">Сверху</option>
-                  <option value="bottom">Снизу</option>
-                  <option value="left">Слева</option>
-                  <option value="right">Справа</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Фото всегда заполняет область; выберите, какую часть показывать, если блюдо обрезается.</p>
+                  onChange={(v) => setRecipeForm({ ...recipeForm, coverImagePosition: v })}
+                />
               </div>
 
               <div>
@@ -610,19 +604,13 @@ export const RecipeCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Положение обложки (фокус кадра)
+                  Положение обложки (как увидит пользователь)
                 </label>
-                <select
+                <ImageFocusPicker
+                  imageUrl={collectionForm.coverImage}
                   value={collectionForm.coverImagePosition}
-                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImagePosition: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="center">Центр</option>
-                  <option value="top">Сверху</option>
-                  <option value="bottom">Снизу</option>
-                  <option value="left">Слева</option>
-                  <option value="right">Справа</option>
-                </select>
+                  onChange={(v) => setCollectionForm({ ...collectionForm, coverImagePosition: v })}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
