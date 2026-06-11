@@ -5,6 +5,7 @@ export interface CreateRecipeCollectionDto {
   title: string;
   description?: string;
   coverImage?: string;
+  coverImageFit?: string;
   price: number;
   discount?: number;
   discountType?: 'PERCENTAGE' | 'FIXED';
@@ -17,6 +18,7 @@ export interface CreateRecipeDto {
   title: string;
   description?: string;
   coverImage?: string;
+  coverImageFit?: string;
   category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD';
   cookingTime?: number;
   ingredients: any;

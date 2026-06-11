@@ -93,7 +93,12 @@ export const RecipeDetailPage = () => {
           <img
             src={recipe.coverImage}
             alt={recipe.title}
-            className="w-full h-96 object-cover"
+            className={clsx(
+              'w-full h-96',
+              recipe.coverImageFit === 'contain'
+                ? 'object-contain bg-gray-50'
+                : 'object-cover'
+            )}
           />
           {/* Favorite Button */}
           <div className="absolute top-4 right-4">

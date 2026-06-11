@@ -22,6 +22,7 @@ export const WorkoutCollectionEditPage = () => {
     title: '',
     description: '',
     coverImage: '',
+    coverImageFit: 'cover',
     price: '',
     discount: '',
     discountType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
@@ -120,6 +121,7 @@ export const WorkoutCollectionEditPage = () => {
         title: collection.title,
         description: collection.description || '',
         coverImage: collection.coverImage || '',
+        coverImageFit: collection.coverImageFit || 'cover',
         price: collection.price.toString(),
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
@@ -134,6 +136,7 @@ export const WorkoutCollectionEditPage = () => {
       title: collectionForm.title,
       description: collectionForm.description,
       coverImage: collectionForm.coverImage || null,
+      coverImageFit: collectionForm.coverImageFit,
       price: parseInt(collectionForm.price),
       discount: collectionForm.discount ? parseInt(collectionForm.discount) : 0,
       discountType: collectionForm.discountType,
@@ -412,6 +415,20 @@ export const WorkoutCollectionEditPage = () => {
                 value={collectionForm.coverImage}
                 onChange={(url) => setCollectionForm({ ...collectionForm, coverImage: url })}
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Как показывать обложку у пользователя
+                </label>
+                <select
+                  value={collectionForm.coverImageFit}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImageFit: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
+                  <option value="contain">Показывать целиком (без обрезки)</option>
+                </select>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

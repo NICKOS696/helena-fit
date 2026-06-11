@@ -154,7 +154,11 @@ export const WorkoutCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 object-cover object-top rounded-lg"
+            className={`w-full h-64 rounded-lg ${
+              collection.coverImageFit === 'contain'
+                ? 'object-contain bg-gray-50'
+                : 'object-cover object-top'
+            }`}
           />
         )}
         

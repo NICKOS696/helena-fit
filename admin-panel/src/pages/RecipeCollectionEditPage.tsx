@@ -27,6 +27,7 @@ export const RecipeCollectionEditPage = () => {
     title: '',
     description: '',
     coverImage: '',
+    coverImageFit: 'cover',
     price: '',
     discount: '',
     discountType: 'PERCENTAGE',
@@ -35,6 +36,7 @@ export const RecipeCollectionEditPage = () => {
     title: '',
     category: 'BREAKFAST',
     coverImage: '',
+    coverImageFit: 'cover',
     cookingTime: '',
     instructions: '',
     caloriesPer100g: '',
@@ -93,6 +95,7 @@ export const RecipeCollectionEditPage = () => {
         title: collection.title,
         description: collection.description || '',
         coverImage: collection.coverImage || '',
+        coverImageFit: collection.coverImageFit || 'cover',
         price: collection.price?.toString() || '',
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
@@ -107,6 +110,7 @@ export const RecipeCollectionEditPage = () => {
       title: collectionForm.title,
       description: collectionForm.description || null,
       coverImage: collectionForm.coverImage || null,
+      coverImageFit: collectionForm.coverImageFit,
       price: collectionForm.price ? parseFloat(collectionForm.price) : null,
       discount: collectionForm.discount ? parseFloat(collectionForm.discount) : null,
       discountType: collectionForm.discountType,
@@ -118,6 +122,7 @@ export const RecipeCollectionEditPage = () => {
       title: '',
       category: 'BREAKFAST',
       coverImage: '',
+      coverImageFit: 'cover',
       cookingTime: '',
       instructions: '',
       caloriesPer100g: '',
@@ -140,6 +145,7 @@ export const RecipeCollectionEditPage = () => {
         title: recipe.title,
         category: recipe.category,
         coverImage: recipe.coverImage || '',
+        coverImageFit: recipe.coverImageFit || 'cover',
         cookingTime: recipe.cookingTime?.toString() || '',
         instructions: recipe.instructions || '',
         caloriesPer100g: recipe.caloriesPer100g?.toString() || '',
@@ -170,6 +176,7 @@ export const RecipeCollectionEditPage = () => {
       title: recipeForm.title,
       category: recipeForm.category,
       coverImage: recipeForm.coverImage || null,
+      coverImageFit: recipeForm.coverImageFit,
       cookingTime: recipeForm.cookingTime ? parseInt(recipeForm.cookingTime) : null,
       ingredients: validIngredients,
       instructions: recipeForm.instructions,
@@ -347,6 +354,20 @@ export const RecipeCollectionEditPage = () => {
                 value={recipeForm.coverImage}
                 onChange={(url) => setRecipeForm({ ...recipeForm, coverImage: url })}
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Как показывать фото у пользователя
+                </label>
+                <select
+                  value={recipeForm.coverImageFit}
+                  onChange={(e) => setRecipeForm({ ...recipeForm, coverImageFit: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
+                  <option value="contain">Показывать целиком (без обрезки)</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -575,6 +596,20 @@ export const RecipeCollectionEditPage = () => {
                 value={collectionForm.coverImage}
                 onChange={(url) => setCollectionForm({ ...collectionForm, coverImage: url })}
               />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Как показывать обложку у пользователя
+                </label>
+                <select
+                  value={collectionForm.coverImageFit}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImageFit: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
+                  <option value="contain">Показывать целиком (без обрезки)</option>
+                </select>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

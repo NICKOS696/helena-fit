@@ -156,7 +156,11 @@ export const RecipeCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 object-cover object-top rounded-lg"
+            className={`w-full h-64 rounded-lg ${
+              collection.coverImageFit === 'contain'
+                ? 'object-contain bg-gray-50'
+                : 'object-cover object-top'
+            }`}
           />
         )}
         
@@ -325,7 +329,12 @@ export const RecipeCollectionPage = () => {
                   <img
                     src={recipe.coverImage}
                     alt={recipe.title}
-                    className="w-full h-40 object-cover"
+                    className={clsx(
+                      'w-full h-40',
+                      recipe.coverImageFit === 'contain'
+                        ? 'object-contain bg-gray-50'
+                        : 'object-cover'
+                    )}
                   />
                 ) : (
                   <div className="w-full h-40 bg-gray-100" />
