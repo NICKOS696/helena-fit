@@ -29,14 +29,11 @@ export const RecipeCollectionPage = () => {
     () => !!pollKey && sessionStorage.getItem(pollKey) === '1',
   )
 
+  // Грузим все рецепты сборника один раз; переключение категорий —
+  // мгновенная клиентская фильтрация (без повторных запросов и скелетона).
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['recipe-collection', id, selectedCategory],
-    queryFn: () => {
-      const apiCategory = selectedCategory === 'all' || selectedCategory === 'favorites'
-        ? undefined
-        : selectedCategory
-      return recipesApi.getCollection(id!, apiCategory)
-    },
+    queryKey: ['recipe-collection', id],
+    queryFn: () => recipesApi.getCollection(id!),
   })
 
   // После клика "Купить" опрос API каждые 2 сек
@@ -302,7 +299,7 @@ export const RecipeCollectionPage = () => {
           }
 
           return (
-            <div className="grid grid-cols-2 gap-3">
+            <div key={selectedCategory} className="grid grid-cols-2 gap-3 animate-fadein">
               {filteredRecipes.map((recipe: any) => (
             <div
               key={recipe.id}
