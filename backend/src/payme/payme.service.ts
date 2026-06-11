@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
@@ -17,11 +17,33 @@ export class PaymeService {
     userId: string;
     collectionId: string;
     collectionType: 'WORKOUT' | 'RECIPE';
-    amount: number;
+    amount?: number; // ИГНОРИРУЕТСЯ: цену считаем на сервере, не доверяем клиенту
   }): Promise<string> {
-    const { userId, collectionId, collectionType, amount } = params;
+    const { userId, collectionId, collectionType } = params;
 
-    // Создаем транзакцию в БД
+    // Сумму НЕ берём из запроса — иначе можно оплатить 1 сум за платный сборник.
+    // Загружаем сборник из БД и считаем актуальную цену со скидкой на сервере.
+    const collection =
+      collectionType === 'WORKOUT'
+        ? await this.prisma.workoutCollection.findUnique({ where: { id: collectionId } })
+        : await this.prisma.recipeCollection.findUnique({ where: { id: collectionId } });
+
+    if (!collection || !collection.isActive) {
+      throw new BadRequestException('Сборник не найден или недоступен');
+    }
+
+    const amount = this.calculateFinalPrice(
+      collection.price,
+      collection.discount,
+      collection.discountType,
+      collection.discountEndDate,
+    );
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new BadRequestException('Некорректная цена сборника');
+    }
+
+    // Создаем транзакцию в БД с серверной суммой
     const transaction = await this.prisma.transaction.create({
       data: {
         userId,
@@ -38,7 +60,7 @@ export class PaymeService {
     const merchantId = this.config.get('PAYME_MERCHANT_ID');
     const amountInTiyin = amount * 100; // Payme работает в тийинах (1 сум = 100 тийин)
     const telegramAppUrl = this.config.get('TELEGRAM_APP_URL');
-    
+
     // Формируем параметры в формате key=value с разделителем ;
     // c - URL возврата после оплаты (пользователь вернётся в бот)
     // l - язык интерфейса (ru)
@@ -50,8 +72,26 @@ export class PaymeService {
     // Формируем URL (правильный формат для Payme)
     const paymentUrl = `${this.config.get('PAYME_ENDPOINT')}/${paramsEncoded}`;
 
-    console.log('Payment URL:', paymentUrl); // Для отладки
     return paymentUrl;
+  }
+
+  /**
+   * Серверный расчёт итоговой цены со скидкой (та же логика, что в
+   * workouts/recipes сервисах). Используется, чтобы НЕ доверять сумме клиента.
+   */
+  private calculateFinalPrice(
+    price: number,
+    discount: number | null,
+    discountType: string | null,
+    discountEndDate: Date | null,
+  ): number {
+    if (!discount || (discountEndDate && new Date() > discountEndDate)) {
+      return price;
+    }
+    if (discountType === 'PERCENTAGE') {
+      return Math.round(price * (1 - discount / 100));
+    }
+    return Math.max(0, price - discount);
   }
 
   /**
