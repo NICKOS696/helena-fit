@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Telegram safe-area insets (0 вне fullscreen — вид не меняется).
+     Заполняются из Telegram SDK в applySafeAreaInsets(). */
+  --app-safe-top: 0px;
+  --app-safe-bottom: 0px;
+}
+
 * {
   margin: 0;
   padding: 0;

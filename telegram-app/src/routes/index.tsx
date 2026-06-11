@@ -7,6 +7,7 @@ import { SectionItemPage } from '@/pages/SectionItemPage'
 import { RecipesPage } from '@/pages/RecipesPage'
 import { RecipeCollectionPage } from '@/pages/RecipeCollectionPage'
 import { RecipeDetailPage } from '@/pages/RecipeDetailPage'
+import { NewsDetailPage } from '@/pages/NewsDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 
 export const AppRoutes = () => {
@@ -14,6 +15,7 @@ export const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<HomePage />} />
+        <Route path="news/:id" element={<NewsDetailPage />} />
         <Route path="workouts" element={<WorkoutsPage />} />
         <Route path="workouts/:id" element={<WorkoutCollectionPage />} />
         <Route path="workouts/:id/section-item/:itemId" element={<SectionItemPage />} />

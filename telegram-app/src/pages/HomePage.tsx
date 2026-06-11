@@ -89,7 +89,7 @@ export const HomePage = () => {
                         } else if (item.recipeLinks?.[0]) {
                           navigate(`/recipes/${item.recipeLinks[0].collectionId}`)
                         } else if (item.content && item.content.trim()) {
-                          alert(item.content)
+                          navigate(`/news/${item.id}`)
                         }
                       }}
                       className="flex items-center gap-1"
