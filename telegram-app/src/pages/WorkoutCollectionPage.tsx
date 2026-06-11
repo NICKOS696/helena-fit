@@ -5,6 +5,8 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { ErrorState } from '@/components/ErrorState'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
+import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Flame, Clock, Lock, ChevronDown } from 'lucide-react'
 import { getRutubeEmbedUrl } from '@/utils/video'
 import { useState, useEffect } from 'react'
@@ -12,6 +14,7 @@ import { useState, useEffect } from 'react'
 export const WorkoutCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  useTelegramBackButton()
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
@@ -102,6 +105,7 @@ export const WorkoutCollectionPage = () => {
 
   const handlePurchase = async () => {
     try {
+      haptic.impact('medium')
       setIsPaymentLoading(true)
       const response = await paymeApi.createPayment({
         collectionId: id!,

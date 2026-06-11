@@ -7,6 +7,8 @@ import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
+import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Clock, Lock, Flame, Heart } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -21,7 +23,12 @@ const categories = [
 export const RecipeCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  useTelegramBackButton()
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const selectCategory = (cat: string) => {
+    haptic.selection()
+    setSelectedCategory(cat)
+  }
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
   const pollKey = id ? `payment_polling_${id}` : ''
@@ -74,6 +81,7 @@ export const RecipeCollectionPage = () => {
 
   const handlePurchase = async () => {
     try {
+      haptic.impact('medium')
       setIsPaymentLoading(true)
       const response = await paymeApi.createPayment({
         collectionId: id!,
@@ -202,7 +210,7 @@ export const RecipeCollectionPage = () => {
           {/* Первая строка: Все, Избранное, Перекусы */}
           <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => selectCategory('all')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'all'
@@ -213,7 +221,7 @@ export const RecipeCollectionPage = () => {
               Все
             </button>
             <button
-              onClick={() => setSelectedCategory('favorites')}
+              onClick={() => selectCategory('favorites')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'favorites'
@@ -224,7 +232,7 @@ export const RecipeCollectionPage = () => {
               Избранное
             </button>
             <button
-              onClick={() => setSelectedCategory('SNACK')}
+              onClick={() => selectCategory('SNACK')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'SNACK'
@@ -238,7 +246,7 @@ export const RecipeCollectionPage = () => {
           {/* Вторая строка: Завтраки, Вторые блюда, Салаты */}
           <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => setSelectedCategory('BREAKFAST')}
+              onClick={() => selectCategory('BREAKFAST')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'BREAKFAST'
@@ -249,7 +257,7 @@ export const RecipeCollectionPage = () => {
               Завтраки
             </button>
             <button
-              onClick={() => setSelectedCategory('MAIN_COURSE')}
+              onClick={() => selectCategory('MAIN_COURSE')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'MAIN_COURSE'
@@ -260,7 +268,7 @@ export const RecipeCollectionPage = () => {
               Вторые блюда
             </button>
             <button
-              onClick={() => setSelectedCategory('SALAD')}
+              onClick={() => selectCategory('SALAD')}
               className={clsx(
                 'px-3 py-2 rounded-xl text-sm font-medium transition-all',
                 selectedCategory === 'SALAD'

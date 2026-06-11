@@ -1,10 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/Card'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { ArrowLeft } from 'lucide-react'
 
 export const SectionItemPage = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  useTelegramBackButton()
   const { item, sectionTitle } = location.state || {}
 
   if (!item) {

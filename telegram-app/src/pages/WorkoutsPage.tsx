@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { workoutsApi, paymeApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
+import { haptic } from '@/lib/telegram'
 import { Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
@@ -38,6 +39,7 @@ export const WorkoutsPage = () => {
 
   const handlePurchase = async (collection: any) => {
     try {
+      haptic.impact('medium')
       setLoadingCollectionId(collection.id)
       const response = await paymeApi.createPayment({
         collectionId: collection.id,

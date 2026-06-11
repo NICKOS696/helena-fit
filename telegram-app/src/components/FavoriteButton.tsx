@@ -1,6 +1,7 @@
 import { Heart } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { recipesApi } from '@/lib/api'
+import { haptic } from '@/lib/telegram'
 import clsx from 'clsx'
 
 interface FavoriteButtonProps {
@@ -47,6 +48,7 @@ export const FavoriteButton = ({
     <button
       onClick={(e) => {
         e.stopPropagation()
+        haptic.impact('light')
         toggleFavorite.mutate()
       }}
       disabled={toggleFavorite.isPending}

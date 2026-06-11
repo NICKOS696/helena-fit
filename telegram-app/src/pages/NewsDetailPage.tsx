@@ -4,11 +4,13 @@ import { newsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { ArrowLeft, Calendar, Dumbbell, UtensilsCrossed } from 'lucide-react'
 
 export const NewsDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  useTelegramBackButton()
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['news', id],

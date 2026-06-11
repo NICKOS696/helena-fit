@@ -98,6 +98,34 @@ export const initTelegram = () => {
   }
 }
 
+/**
+ * Тактильная отдача Telegram. Безопасна: если API недоступно (веб/старый клиент),
+ * вызовы тихо игнорируются.
+ */
+export const haptic = {
+  impact: (style: 'light' | 'medium' | 'heavy' | 'soft' | 'rigid' = 'light') => {
+    try {
+      (tg as any)?.HapticFeedback?.impactOccurred(style)
+    } catch {
+      /* no-op */
+    }
+  },
+  notify: (type: 'error' | 'success' | 'warning') => {
+    try {
+      (tg as any)?.HapticFeedback?.notificationOccurred(type)
+    } catch {
+      /* no-op */
+    }
+  },
+  selection: () => {
+    try {
+      (tg as any)?.HapticFeedback?.selectionChanged()
+    } catch {
+      /* no-op */
+    }
+  },
+}
+
 export const getTelegramInitData = () => {
   return tg?.initData || ''
 }

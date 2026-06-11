@@ -5,12 +5,14 @@ import { recipesApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { ArrowLeft, Clock } from 'lucide-react'
 import clsx from 'clsx'
 
 export const RecipeDetailPage = () => {
   const { collectionId, recipeId } = useParams<{ collectionId: string; recipeId: string }>()
   const navigate = useNavigate()
+  useTelegramBackButton()
   const [nutritionMode, setNutritionMode] = useState<'serving' | '100g'>('serving')
 
   const { data, isLoading, isError, refetch } = useQuery({
