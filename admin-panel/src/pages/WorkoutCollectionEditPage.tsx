@@ -23,6 +23,7 @@ export const WorkoutCollectionEditPage = () => {
     description: '',
     coverImage: '',
     coverImageFit: 'cover',
+    coverImagePosition: 'center',
     price: '',
     discount: '',
     discountType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
@@ -122,6 +123,7 @@ export const WorkoutCollectionEditPage = () => {
         description: collection.description || '',
         coverImage: collection.coverImage || '',
         coverImageFit: collection.coverImageFit || 'cover',
+        coverImagePosition: collection.coverImagePosition || 'center',
         price: collection.price.toString(),
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
@@ -137,6 +139,7 @@ export const WorkoutCollectionEditPage = () => {
       description: collectionForm.description,
       coverImage: collectionForm.coverImage || null,
       coverImageFit: collectionForm.coverImageFit,
+      coverImagePosition: collectionForm.coverImagePosition,
       price: parseInt(collectionForm.price),
       discount: collectionForm.discount ? parseInt(collectionForm.discount) : 0,
       discountType: collectionForm.discountType,
@@ -418,15 +421,18 @@ export const WorkoutCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Как показывать обложку у пользователя
+                  Положение обложки (фокус кадра)
                 </label>
                 <select
-                  value={collectionForm.coverImageFit}
-                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImageFit: e.target.value })}
+                  value={collectionForm.coverImagePosition}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImagePosition: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
-                  <option value="contain">Показывать целиком (без обрезки)</option>
+                  <option value="center">Центр</option>
+                  <option value="top">Сверху</option>
+                  <option value="bottom">Снизу</option>
+                  <option value="left">Слева</option>
+                  <option value="right">Справа</option>
                 </select>
               </div>
 

@@ -15,6 +15,7 @@ export class WorkoutsService {
         description: true,
         coverImage: true,
         coverImageFit: true,
+        coverImagePosition: true,
         price: true,
         discount: true,
         discountType: true,

@@ -6,6 +6,7 @@ export interface CreateWorkoutCollectionDto {
   description?: string;
   coverImage?: string;
   coverImageFit?: string;
+  coverImagePosition?: string;
   price: number;
   discount?: number;
   discountType?: 'PERCENTAGE' | 'FIXED';

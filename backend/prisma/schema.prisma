@@ -40,6 +40,7 @@ model WorkoutCollection {
   description String?
   coverImage  String?
   coverImageFit String @default("cover")
+  coverImagePosition String @default("center")
   price       Int
   discount    Int?     @default(0)
   discountType DiscountType? @default(PERCENTAGE)
@@ -127,6 +128,7 @@ model RecipeCollection {
   description String?
   coverImage  String?
   coverImageFit String @default("cover")
+  coverImagePosition String @default("center")
   price       Int
   discount    Int?     @default(0)
   discountType DiscountType? @default(PERCENTAGE)
@@ -151,6 +153,7 @@ model Recipe {
   description   String?
   coverImage    String?
   coverImageFit String  @default("cover")
+  coverImagePosition String @default("center")
   category      RecipeCategory
   cookingTime   Int?
   ingredients   Json

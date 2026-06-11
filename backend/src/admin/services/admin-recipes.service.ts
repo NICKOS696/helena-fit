@@ -6,6 +6,7 @@ export interface CreateRecipeCollectionDto {
   description?: string;
   coverImage?: string;
   coverImageFit?: string;
+  coverImagePosition?: string;
   price: number;
   discount?: number;
   discountType?: 'PERCENTAGE' | 'FIXED';
@@ -19,6 +20,7 @@ export interface CreateRecipeDto {
   description?: string;
   coverImage?: string;
   coverImageFit?: string;
+  coverImagePosition?: string;
   category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD';
   cookingTime?: number;
   ingredients: any;

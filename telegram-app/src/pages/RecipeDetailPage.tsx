@@ -93,12 +93,8 @@ export const RecipeDetailPage = () => {
           <img
             src={recipe.coverImage}
             alt={recipe.title}
-            className={clsx(
-              'w-full h-96',
-              recipe.coverImageFit === 'contain'
-                ? 'object-contain bg-gray-50'
-                : 'object-cover'
-            )}
+            className="w-full h-96 object-cover"
+            style={{ objectPosition: recipe.coverImagePosition || 'center' }}
           />
           {/* Favorite Button */}
           <div className="absolute top-4 right-4">

@@ -28,6 +28,7 @@ export const RecipeCollectionEditPage = () => {
     description: '',
     coverImage: '',
     coverImageFit: 'cover',
+    coverImagePosition: 'center',
     price: '',
     discount: '',
     discountType: 'PERCENTAGE',
@@ -37,6 +38,7 @@ export const RecipeCollectionEditPage = () => {
     category: 'BREAKFAST',
     coverImage: '',
     coverImageFit: 'cover',
+    coverImagePosition: 'center',
     cookingTime: '',
     instructions: '',
     caloriesPer100g: '',
@@ -96,6 +98,7 @@ export const RecipeCollectionEditPage = () => {
         description: collection.description || '',
         coverImage: collection.coverImage || '',
         coverImageFit: collection.coverImageFit || 'cover',
+        coverImagePosition: collection.coverImagePosition || 'center',
         price: collection.price?.toString() || '',
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
@@ -111,6 +114,7 @@ export const RecipeCollectionEditPage = () => {
       description: collectionForm.description || null,
       coverImage: collectionForm.coverImage || null,
       coverImageFit: collectionForm.coverImageFit,
+      coverImagePosition: collectionForm.coverImagePosition,
       price: collectionForm.price ? parseFloat(collectionForm.price) : null,
       discount: collectionForm.discount ? parseFloat(collectionForm.discount) : null,
       discountType: collectionForm.discountType,
@@ -123,6 +127,7 @@ export const RecipeCollectionEditPage = () => {
       category: 'BREAKFAST',
       coverImage: '',
       coverImageFit: 'cover',
+      coverImagePosition: 'center',
       cookingTime: '',
       instructions: '',
       caloriesPer100g: '',
@@ -146,6 +151,7 @@ export const RecipeCollectionEditPage = () => {
         category: recipe.category,
         coverImage: recipe.coverImage || '',
         coverImageFit: recipe.coverImageFit || 'cover',
+        coverImagePosition: recipe.coverImagePosition || 'center',
         cookingTime: recipe.cookingTime?.toString() || '',
         instructions: recipe.instructions || '',
         caloriesPer100g: recipe.caloriesPer100g?.toString() || '',
@@ -177,6 +183,7 @@ export const RecipeCollectionEditPage = () => {
       category: recipeForm.category,
       coverImage: recipeForm.coverImage || null,
       coverImageFit: recipeForm.coverImageFit,
+      coverImagePosition: recipeForm.coverImagePosition,
       cookingTime: recipeForm.cookingTime ? parseInt(recipeForm.cookingTime) : null,
       ingredients: validIngredients,
       instructions: recipeForm.instructions,
@@ -300,9 +307,9 @@ export const RecipeCollectionEditPage = () => {
       </div>
 
       {showRecipeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
+          <div className="bg-white min-h-screen w-full p-6">
+            <div className="flex justify-between items-center mb-4 max-w-4xl mx-auto">
               <h2 className="text-2xl font-bold">
                 {editingRecipe ? 'Редактировать рецепт' : 'Новый рецепт'}
               </h2>
@@ -317,7 +324,7 @@ export const RecipeCollectionEditPage = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitRecipe} className="space-y-4">
+            <form onSubmit={handleSubmitRecipe} className="space-y-4 max-w-4xl mx-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -357,16 +364,20 @@ export const RecipeCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Как показывать фото у пользователя
+                  Положение фото (фокус кадра)
                 </label>
                 <select
-                  value={recipeForm.coverImageFit}
-                  onChange={(e) => setRecipeForm({ ...recipeForm, coverImageFit: e.target.value })}
+                  value={recipeForm.coverImagePosition}
+                  onChange={(e) => setRecipeForm({ ...recipeForm, coverImagePosition: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
-                  <option value="contain">Показывать целиком (без обрезки)</option>
+                  <option value="center">Центр</option>
+                  <option value="top">Сверху</option>
+                  <option value="bottom">Снизу</option>
+                  <option value="left">Слева</option>
+                  <option value="right">Справа</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Фото всегда заполняет область; выберите, какую часть показывать, если блюдо обрезается.</p>
               </div>
 
               <div>
@@ -599,15 +610,18 @@ export const RecipeCollectionEditPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Как показывать обложку у пользователя
+                  Положение обложки (фокус кадра)
                 </label>
                 <select
-                  value={collectionForm.coverImageFit}
-                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImageFit: e.target.value })}
+                  value={collectionForm.coverImagePosition}
+                  onChange={(e) => setCollectionForm({ ...collectionForm, coverImagePosition: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="cover">Заполнять область (может обрезаться по краям)</option>
-                  <option value="contain">Показывать целиком (без обрезки)</option>
+                  <option value="center">Центр</option>
+                  <option value="top">Сверху</option>
+                  <option value="bottom">Снизу</option>
+                  <option value="left">Слева</option>
+                  <option value="right">Справа</option>
                 </select>
               </div>
 
