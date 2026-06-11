@@ -68,6 +68,13 @@ export const RecipeDetailPage = () => {
         carbs: recipe.carbsPer100g,
       }
 
+  // Пропорции Б/Ж/У (по граммам) для визуальной полосы
+  const p = Number(nutrition.protein) || 0
+  const f = Number(nutrition.fat) || 0
+  const c = Number(nutrition.carbs) || 0
+  const macroTotal = p + f + c
+  const macroPct = (v: number) => (macroTotal > 0 ? (v / macroTotal) * 100 : 0)
+
   return (
     <div className="pb-4">
       {/* Header */}
@@ -124,23 +131,46 @@ export const RecipeDetailPage = () => {
           </button>
         </div>
 
-        {/* КБЖУ Cards - smaller */}
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-white rounded-xl p-2.5 text-center shadow-card">
-            <div className="text-xs text-text-secondary mb-0.5">Белки</div>
-            <div className="text-lg font-bold text-primary">{nutrition.protein || 0} г</div>
+        {/* КБЖУ: калорийность крупно + пропорция Б/Ж/У */}
+        <div className="bg-white rounded-xl p-4 shadow-card">
+          <div className="flex items-baseline justify-between mb-3">
+            <span className="text-sm text-text-secondary">Калорийность</span>
+            <span className="text-2xl font-bold text-text-primary">
+              {nutrition.calories || 0}{' '}
+              <span className="text-base font-medium text-text-secondary">ккал</span>
+            </span>
           </div>
-          <div className="bg-white rounded-xl p-2.5 text-center shadow-card">
-            <div className="text-xs text-text-secondary mb-0.5">Жиры</div>
-            <div className="text-lg font-bold text-primary">{nutrition.fat || 0} г</div>
-          </div>
-          <div className="bg-white rounded-xl p-2.5 text-center shadow-card">
-            <div className="text-xs text-text-secondary mb-0.5">Углеводы</div>
-            <div className="text-lg font-bold text-primary">{nutrition.carbs || 0} г</div>
-          </div>
-          <div className="bg-white rounded-xl p-2.5 text-center shadow-card">
-            <div className="text-xs text-text-secondary mb-0.5">Ккал</div>
-            <div className="text-lg font-bold text-primary">{nutrition.calories || 0}</div>
+
+          {macroTotal > 0 && (
+            <div className="flex h-2.5 rounded-full overflow-hidden mb-3">
+              <div className="bg-primary" style={{ width: `${macroPct(p)}%` }} />
+              <div className="bg-amber-400" style={{ width: `${macroPct(f)}%` }} />
+              <div className="bg-violet-400" style={{ width: `${macroPct(c)}%` }} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-primary" />
+                Белки
+              </div>
+              <div className="text-base font-bold text-text-primary">{p} г</div>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                Жиры
+              </div>
+              <div className="text-base font-bold text-text-primary">{f} г</div>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-violet-400" />
+                Углеводы
+              </div>
+              <div className="text-base font-bold text-text-primary">{c} г</div>
+            </div>
           </div>
         </div>
 
