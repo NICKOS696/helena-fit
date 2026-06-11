@@ -58,3 +58,7 @@ postgres_data/
 
 # Server check script output
 server-check-output.txt
+
+# Доступы и секреты (НЕ коммитить!)
+CREDENTIALS.local.md
+*.local.md

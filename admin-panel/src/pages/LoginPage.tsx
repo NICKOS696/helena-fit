@@ -76,11 +76,6 @@ export const LoginPage = () => {
             {isLoading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Логин по умолчанию: <strong>admin</strong></p>
-          <p>Пароль по умолчанию: <strong>admin123</strong></p>
-        </div>
       </div>
     </div>
   )

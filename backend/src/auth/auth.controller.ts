@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -7,13 +7,11 @@ export class AuthController {
 
   @Post('telegram')
   async loginTelegram(@Body() body: { initData: string }) {
-    try {
-      const telegramData = this.parseTelegramInitData(body.initData);
-      const user = await this.authService.validateTelegramUser(telegramData);
-      return this.authService.loginTelegram(user);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid Telegram data');
-    }
+    // Проверка подписи initData выполняется внутри verifyAndParseInitData и
+    // бросает UnauthorizedException при невалидной подписи/просроченных данных.
+    const telegramData = this.authService.verifyAndParseInitData(body?.initData);
+    const user = await this.authService.validateTelegramUser(telegramData);
+    return this.authService.loginTelegram(user);
   }
 
   @Post('dev-login')
@@ -29,16 +27,5 @@ export class AuthController {
   async loginAdmin(@Body() body: { username: string; password: string }) {
     const admin = await this.authService.validateAdmin(body.username, body.password);
     return this.authService.loginAdmin(admin);
-  }
-
-  private parseTelegramInitData(initData: string): any {
-    const params = new URLSearchParams(initData);
-    const userParam = params.get('user');
-    
-    if (!userParam) {
-      throw new Error('User data not found');
-    }
-
-    return JSON.parse(userParam);
   }
 }

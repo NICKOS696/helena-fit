@@ -1,0 +1,53 @@
+# Пример конфигурации Nginx для Helena Fit (HTTPS + reverse-proxy).
+# Замените helena-fit.ru на ваш домен. Сертификат выпускается через:
+#   certbot --nginx -d helena-fit.ru
+# certbot сам допишет блоки ssl_certificate — этот файл задаёт маршрутизацию.
+
+# HTTP -> HTTPS редирект
+server {
+    listen 80;
+    server_name helena-fit.ru;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name helena-fit.ru;
+
+    # Пути к сертификату подставит certbot:
+    # ssl_certificate     /etc/letsencrypt/live/helena-fit.ru/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/helena-fit.ru/privkey.pem;
+
+    # Лимит размера загружаемых файлов (совпадает с лимитом backend 50MB)
+    client_max_body_size 50M;
+
+    # API -> backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Загруженные файлы -> backend (раздаются через useStaticAssets)
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        # Не доверять mime по содержимому (защита от stored-XSS на загрузках)
+        add_header X-Content-Type-Options nosniff;
+    }
+
+    # Админ-панель (SPA) на /admin
+    # ВАЖНО: admin-panel должна быть собрана с base: '/admin/' в vite.config.ts
+    location /admin/ {
+        alias /var/www/helena-fit/admin/;
+        try_files $uri $uri/ /admin/index.html;
+    }
+
+    # Telegram Mini App (SPA) на корне
+    location / {
+        root /var/www/helena-fit/telegram;
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -15,11 +15,12 @@ RUN npm install
 # Копируем остальные файлы
 COPY . .
 
-# Генерируем Prisma Client
+# Генерируем Prisma Client и собираем production-бандл в dist/
 RUN npx prisma generate
+RUN npm run build
 
 # Открываем порт
 EXPOSE 3000
 
-# Команда запуска будет в docker-compose.yml
-CMD ["npm", "run", "start:dev"]
+# По умолчанию prod-запуск; docker-compose переопределяет command при необходимости
+CMD ["npm", "run", "start:prod"]

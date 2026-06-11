@@ -4,7 +4,7 @@
 
 - **IP:** 85.239.63.189
 - **SSH:** `ssh root@85.239.63.189`
-- **Пароль:** zMxN-DD1LzrcrJ
+- **Пароль:** <see CREDENTIALS.local.md>
 - **Установлено:** Docker, Apache
 
 ---
@@ -79,10 +79,10 @@ nano .env
 ### 3.2 Обязательно измените:
 ```env
 # Придумайте сложный пароль для БД
-DB_PASSWORD=your_very_secure_password_123
+DB_PASSWORD=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 
 # Придумайте длинный случайный JWT секрет
-JWT_SECRET=your-super-long-random-jwt-secret-key-here-make-it-very-long
+JWT_SECRET=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 
 # Укажите ваш домен (или IP если домена нет)
 TELEGRAM_APP_URL=https://85.239.63.189

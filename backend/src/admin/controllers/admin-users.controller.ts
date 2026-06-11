@@ -40,13 +40,6 @@ export class AdminUsersController {
     @Body() body: { workoutIds: string[]; recipeIds: string[] },
     @Request() req,
   ) {
-    console.log('Updating user access:', {
-      userId: id,
-      workoutIds: body.workoutIds,
-      recipeIds: body.recipeIds,
-      adminId: req.user?.id,
-    });
-    
     return this.adminUsersService.updateUserAccess(
       id,
       body.workoutIds || [],

@@ -109,6 +109,29 @@ export class WorkoutsService {
             duration: w.duration,
             locked: true,
           })),
+      // Без доступа отдаём структуру секций, но вырезаем платный контент
+      // (rutubeUrl видео и текстовый content), оставляя только превью.
+      sections: hasAccess
+        ? collection.sections
+        : collection.sections.map((s) => ({
+            id: s.id,
+            collectionId: s.collectionId,
+            title: s.title,
+            description: s.description,
+            type: s.type,
+            order: s.order,
+            items: s.items.map((i) => ({
+              id: i.id,
+              sectionId: i.sectionId,
+              title: i.title,
+              description: i.description,
+              coverImage: i.coverImage,
+              calories: i.calories,
+              duration: i.duration,
+              order: i.order,
+              locked: true,
+            })),
+          })),
     };
   }
 

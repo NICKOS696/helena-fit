@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../../auth/guards/admin.guard';
 import { AdminWorkoutSectionsService } from '../services/admin-workout-sections.service';
 
 @Controller('admin/workout-collections/:collectionId/sections')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminWorkoutSectionsController {
   constructor(private sectionsService: AdminWorkoutSectionsService) {}
 

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useTelegram } from '@/providers/TelegramProvider'
 import { usersApi } from '@/lib/api'
 import { Card } from '@/components/Card'
-import { User, Dumbbell, UtensilsCrossed, Receipt } from 'lucide-react'
+import { CalorieCalculator } from '@/components/CalorieCalculator'
+import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle } from 'lucide-react'
 
 export const ProfilePage = () => {
   const { user } = useTelegram()
@@ -54,6 +55,8 @@ export const ProfilePage = () => {
           </div>
         </div>
       </Card>
+
+      <CalorieCalculator />
 
       <Card>
         <h3 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
@@ -145,6 +148,26 @@ export const ProfilePage = () => {
           <p className="text-text-secondary">История покупок пуста</p>
         )}
       </Card>
+
+      <div className="pt-4 pb-2 flex justify-center">
+        <button
+          onClick={() => {
+            const url = 'https://t.me/Ioca_uz'
+            const tg = (window as any).Telegram?.WebApp
+            if (tg?.openTelegramLink) {
+              tg.openTelegramLink(url)
+            } else if (tg?.openLink) {
+              tg.openLink(url)
+            } else {
+              window.open(url, '_blank')
+            }
+          }}
+          className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors"
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span>Обратиться в тех.поддержку</span>
+        </button>
+      </div>
     </div>
   )
 }

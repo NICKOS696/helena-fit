@@ -7,14 +7,25 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: helena_fit
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      # Доступ к БД только с localhost (через SSH-туннель), не наружу.
+      - "127.0.0.1:5434:5432"
     networks:
       - helena-fit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d helena_fit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     build:
@@ -23,14 +34,15 @@ services:
     container_name: helena-fit-backend
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres123}@postgres:5432/helena_fit?schema=public
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: 7d
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/helena_fit?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       PORT: 3000
-      NODE_ENV: development
+      NODE_ENV: production
       UPLOAD_DIR: ./uploads
       MAX_FILE_SIZE: 10485760
       TELEGRAM_APP_URL: ${TELEGRAM_APP_URL}
@@ -40,13 +52,21 @@ services:
       PAYME_PROD_KEY: ${PAYME_PROD_KEY}
       PAYME_ENDPOINT: ${PAYME_ENDPOINT}
       PAYME_CALLBACK_URL: ${PAYME_CALLBACK_URL}
+      # Аварийный рубильник проверки подписи Telegram (по умолчанию выключен = проверка включена)
+      DISABLE_TELEGRAM_SIGNATURE_CHECK: ${DISABLE_TELEGRAM_SIGNATURE_CHECK:-false}
     volumes:
       - ./backend/uploads:/app/uploads
     ports:
       - "3000:3000"
     networks:
       - helena-fit-network
-    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+    # db push идемпотентен и без --accept-data-loss не удаляет данные (при дрейфе упадёт с ошибкой).
+    command: sh -c "npx prisma db push --skip-generate && npm run start:prod"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:

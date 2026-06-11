@@ -18,8 +18,8 @@
 5. Настройте переменные окружения:
    ```
    DATABASE_URL=<автоматически из PostgreSQL>
-   JWT_SECRET=<ваш секретный ключ>
-   TELEGRAM_BOT_TOKEN=<токен бота>
+   JWT_SECRET=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+   TELEGRAM_BOT_TOKEN=<TAKE_FROM_ENV__DO_NOT_COMMIT>
    PORT=3000
    NODE_ENV=production
    TELEGRAM_APP_URL=<URL вашего Telegram App>
@@ -167,9 +167,9 @@ sudo certbot --nginx -d api.helenafit.uz
 
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/helena_fit
-JWT_SECRET=<сгенерируйте длинный случайный ключ>
+JWT_SECRET=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 JWT_EXPIRES_IN=7d
-TELEGRAM_BOT_TOKEN=<ваш токен>
+TELEGRAM_BOT_TOKEN=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 PORT=3000
 NODE_ENV=production
 UPLOAD_DIR=./uploads

@@ -4,6 +4,7 @@ import { workoutsApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
+import { ErrorState } from '@/components/ErrorState'
 import { ArrowLeft, Flame, Clock, Lock, ChevronDown } from 'lucide-react'
 import { getRutubeEmbedUrl } from '@/utils/video'
 import { useState, useEffect } from 'react'
@@ -26,32 +27,42 @@ export const WorkoutCollectionPage = () => {
     })
   }
 
-  const [isPollingPayment, setIsPollingPayment] = useState(false)
+  // Опрос статуса оплаты переживает перезагрузку Mini App (после возврата
+  // из браузера Payme): флаг хранится в sessionStorage по id сборника.
+  const pollKey = id ? `payment_polling_${id}` : ''
+  const [isPollingPayment, setIsPollingPayment] = useState(
+    () => !!pollKey && sessionStorage.getItem(pollKey) === '1',
+  )
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['workout-collection', id],
     queryFn: () => workoutsApi.getCollection(id!),
   })
 
-  // После клика "Купить" запускаем прямой опрос API каждые 2 сек
-  // Когда hasAccess становится true - перезагружаем страницу
+  // После клика "Купить" запускаем прямой опрос API каждые 2 сек.
+  // Когда hasAccess становится true — чистим флаг и перезагружаем страницу.
   useEffect(() => {
     if (!isPollingPayment || !id) return
+    const stopPolling = () => {
+      sessionStorage.removeItem(pollKey)
+      setIsPollingPayment(false)
+    }
     const interval = setInterval(async () => {
       try {
         const res = await workoutsApi.getCollection(id)
         if (res.data?.hasAccess) {
+          sessionStorage.removeItem(pollKey)
           window.location.reload()
         }
       } catch {}
     }, 2000)
     // Автостоп через 10 минут
-    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    const stopTimeout = setTimeout(stopPolling, 10 * 60 * 1000)
     return () => {
       clearInterval(interval)
       clearTimeout(stopTimeout)
     }
-  }, [isPollingPayment, id])
+  }, [isPollingPayment, id, pollKey])
 
   // Отправляем просмотр при загрузке страницы
   useEffect(() => {
@@ -78,6 +89,17 @@ export const WorkoutCollectionPage = () => {
 
   const collection = data?.data
 
+  // Защита от белого экрана: если запрос упал или данных нет — показываем ошибку.
+  if (isError || !collection) {
+    return (
+      <ErrorState
+        message="Не удалось загрузить сборник."
+        onBack={() => navigate(-1)}
+        onRetry={() => refetch()}
+      />
+    )
+  }
+
   const handlePurchase = async () => {
     try {
       setIsPaymentLoading(true)
@@ -86,7 +108,7 @@ export const WorkoutCollectionPage = () => {
         collectionType: 'WORKOUT',
         amount: collection.finalPrice,
       })
-      
+
       // Открываем страницу оплаты Payme
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.openLink(response.data.paymentUrl)
@@ -94,7 +116,8 @@ export const WorkoutCollectionPage = () => {
         window.open(response.data.paymentUrl, '_blank')
       }
 
-      // Запускаем опрос статуса оплаты
+      // Запускаем опрос статуса оплаты (переживёт перезагрузку приложения)
+      if (pollKey) sessionStorage.setItem(pollKey, '1')
       setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
@@ -114,6 +137,14 @@ export const WorkoutCollectionPage = () => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Индикатор ожидания подтверждения оплаты */}
+        {isPollingPayment && !collection.hasAccess && (
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-sm text-text-primary flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-full bg-primary animate-pulse" />
+            Ожидаем подтверждение оплаты. Доступ откроется автоматически.
+          </div>
+        )}
+
         {/* Обложка и описание сборника */}
         {collection.coverImage && (
           <img

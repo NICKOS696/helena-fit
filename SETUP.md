@@ -50,8 +50,8 @@ cp .env.example .env
 
 ```env
 DATABASE_URL="postgresql://postgres:password@localhost:5432/helena_fit?schema=public"
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+JWT_SECRET=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+TELEGRAM_BOT_TOKEN=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 ```
 
 ### Выполните миграции и seed

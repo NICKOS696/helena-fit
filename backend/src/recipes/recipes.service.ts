@@ -137,7 +137,6 @@ export class RecipesService {
       isFavorite = !!favorite;
     }
 
-    // Для тестирования разрешаем просмотр, но помечаем как locked
     const recipe = await this.prisma.recipe.findUnique({
       where: { id: recipeId },
     });
@@ -146,9 +145,24 @@ export class RecipesService {
       throw new ForbiddenException('Recipe not found');
     }
 
+    // Без доступа отдаём только превью — без ингредиентов, инструкций и КБЖУ.
+    if (!hasAccess) {
+      return {
+        id: recipe.id,
+        collectionId: recipe.collectionId,
+        title: recipe.title,
+        description: recipe.description,
+        coverImage: recipe.coverImage,
+        category: recipe.category,
+        cookingTime: recipe.cookingTime,
+        locked: true,
+        isFavorite,
+      };
+    }
+
     return {
       ...recipe,
-      locked: !hasAccess,
+      locked: false,
       isFavorite,
     };
   }

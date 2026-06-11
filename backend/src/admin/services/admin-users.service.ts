@@ -85,16 +85,9 @@ export class AdminUsersService {
     adminId?: string,
   ) {
     try {
-      console.log('Service: Updating access for user:', userId);
-      console.log('Workout IDs:', workoutIds);
-      console.log('Recipe IDs:', recipeIds);
-
       // Фильтруем null/undefined значения
       const validWorkoutIds = (workoutIds || []).filter(id => id != null && id !== '');
       const validRecipeIds = (recipeIds || []).filter(id => id != null && id !== '');
-
-      console.log('Valid Workout IDs:', validWorkoutIds);
-      console.log('Valid Recipe IDs:', validRecipeIds);
 
       await this.prisma.$transaction(async (tx) => {
         // Удаляем старые доступы
@@ -126,10 +119,8 @@ export class AdminUsersService {
         }
       });
 
-      console.log('Access updated successfully');
       return { success: true };
     } catch (error) {
-      console.error('Error updating user access:', error);
       throw error;
     }
   }

@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { recipesApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { ErrorState } from '@/components/ErrorState'
 import { ArrowLeft, Clock } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -12,7 +13,7 @@ export const RecipeDetailPage = () => {
   const navigate = useNavigate()
   const [nutritionMode, setNutritionMode] = useState<'serving' | '100g'>('serving')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['recipe', collectionId, recipeId],
     queryFn: () => recipesApi.getRecipe(collectionId!, recipeId!),
   })
@@ -41,6 +42,17 @@ export const RecipeDetailPage = () => {
   }
 
   const recipe = data?.data
+
+  // Защита от белого экрана при сбое API/отсутствии рецепта.
+  if (isError || !recipe) {
+    return (
+      <ErrorState
+        message="Не удалось загрузить рецепт."
+        onBack={() => navigate(-1)}
+        onRetry={() => refetch()}
+      />
+    )
+  }
 
   const nutrition = nutritionMode === 'serving'
     ? {
@@ -147,7 +159,7 @@ export const RecipeDetailPage = () => {
         <Card>
           <h3 className="text-base font-bold text-gray-800 mb-3">Ингредиенты:</h3>
           <ul className="space-y-2 mb-6">
-            {recipe.ingredients.map((ingredient: any, index: number) => (
+            {(Array.isArray(recipe.ingredients) ? recipe.ingredients : []).map((ingredient: any, index: number) => (
               <li key={index} className="flex items-center gap-2 text-gray-700">
                 <span className="text-primary flex-shrink-0">•</span>
                 <span className="flex-1">

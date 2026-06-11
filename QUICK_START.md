@@ -43,7 +43,7 @@ git push -u origin main
 ```bash
 ssh root@85.239.63.189
 ```
-Пароль: `zMxN-DD1LzrcrJ`
+Пароль: `<see CREDENTIALS.local.md>`
 
 ### 2.2 Запустите проверку:
 Скопируйте команды из файла `SERVER_CHECK.md` и выполните на сервере.
@@ -70,14 +70,14 @@ nano .env
 
 Вставьте:
 ```env
-DB_PASSWORD=HelenaFit2026SecurePass
-JWT_SECRET=super-long-random-jwt-secret-key-change-this-123456789
-TELEGRAM_BOT_TOKEN=8676161809:AAEUArS36PzRCE3-7v45lUCPG-sgzCuB5b0
+DB_PASSWORD=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+JWT_SECRET=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+TELEGRAM_BOT_TOKEN=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 TELEGRAM_APP_URL=https://85.239.63.189
 ADMIN_PANEL_URL=https://85.239.63.189/admin
-PAYME_MERCHANT_ID=68c7b7859ac2828cbcccc4ed
-PAYME_TEST_KEY=q%#9mdaAId9tsNVR9Nfe27PdP@Rqys62DK76
-PAYME_PROD_KEY=m1k%&o0dXhJabWM@5?kz7aS3TIs7y#%nXJ#q
+PAYME_MERCHANT_ID=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+PAYME_TEST_KEY=<TAKE_FROM_ENV__DO_NOT_COMMIT>
+PAYME_PROD_KEY=<TAKE_FROM_ENV__DO_NOT_COMMIT>
 PAYME_ENDPOINT=https://checkout.paycom.uz
 PAYME_CALLBACK_URL=https://85.239.63.189/api/payme/callback
 ```

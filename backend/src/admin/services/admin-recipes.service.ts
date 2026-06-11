@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CreateRecipeCollectionDto {
@@ -72,6 +72,17 @@ export class AdminRecipesService {
   }
 
   async deleteCollection(id: string) {
+    // Защита от тихой потери доступов: если сборник кому-то выдан/куплен,
+    // удаление каскадно снесёт все access-записи. Запрещаем — предлагаем
+    // деактивацию (isActive=false) вместо удаления.
+    const accessCount = await this.prisma.recipeCollectionAccess.count({
+      where: { collectionId: id },
+    });
+    if (accessCount > 0) {
+      throw new ConflictException(
+        `Нельзя удалить сборник: у ${accessCount} пользователей есть доступ. Деактивируйте его (isActive=false) вместо удаления.`,
+      );
+    }
     await this.prisma.recipeCollection.delete({ where: { id } });
     return { success: true };
   }

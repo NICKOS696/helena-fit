@@ -8,7 +8,7 @@
 ssh root@85.239.63.189
 ```
 
-Пароль: `zMxN-DD1LzrcrJ`
+Пароль: `<see CREDENTIALS.local.md>`
 
 ---
 

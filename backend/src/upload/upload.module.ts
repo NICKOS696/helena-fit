@@ -1,8 +1,15 @@
-import { Module } from '@nestjs/common';
+import { BadRequestException, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { UploadController } from './upload.controller';
+
+// Разрешённые типы изображений и соответствующие расширения.
+const ALLOWED_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
 
 @Module({
   imports: [
@@ -14,9 +21,23 @@ import { UploadController } from './upload.controller';
             .fill(null)
             .map(() => Math.round(Math.random() * 16).toString(16))
             .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
+          // Расширение берём из доверенного mime-типа, а не из имени клиента.
+          const ext = ALLOWED_MIME[file.mimetype] || '';
+          cb(null, `${randomName}${ext}`);
         },
       }),
+      fileFilter: (req, file, cb) => {
+        if (ALLOWED_MIME[file.mimetype]) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              'Допустимы только изображения (jpeg, png, webp, gif)',
+            ),
+            false,
+          );
+        }
+      },
       limits: {
         fileSize: 10 * 1024 * 1024,
       },

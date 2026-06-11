@@ -6,6 +6,7 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { ErrorState } from '@/components/ErrorState'
 import { ArrowLeft, Clock, Lock, Flame, Heart } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -22,13 +23,17 @@ export const RecipeCollectionPage = () => {
   const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
-  const [isPollingPayment, setIsPollingPayment] = useState(false)
+  // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
+  const pollKey = id ? `payment_polling_${id}` : ''
+  const [isPollingPayment, setIsPollingPayment] = useState(
+    () => !!pollKey && sessionStorage.getItem(pollKey) === '1',
+  )
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['recipe-collection', id, selectedCategory],
     queryFn: () => {
-      const apiCategory = selectedCategory === 'all' || selectedCategory === 'favorites' 
-        ? undefined 
+      const apiCategory = selectedCategory === 'all' || selectedCategory === 'favorites'
+        ? undefined
         : selectedCategory
       return recipesApi.getCollection(id!, apiCategory)
     },
@@ -41,16 +46,20 @@ export const RecipeCollectionPage = () => {
       try {
         const res = await recipesApi.getCollection(id)
         if (res.data?.hasAccess) {
+          sessionStorage.removeItem(pollKey)
           window.location.reload()
         }
       } catch {}
     }, 2000)
-    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    const stopTimeout = setTimeout(() => {
+      sessionStorage.removeItem(pollKey)
+      setIsPollingPayment(false)
+    }, 10 * 60 * 1000)
     return () => {
       clearInterval(interval)
       clearTimeout(stopTimeout)
     }
-  }, [isPollingPayment, id])
+  }, [isPollingPayment, id, pollKey])
 
   // Отправляем просмотр при загрузке страницы
   useEffect(() => {
@@ -82,7 +91,8 @@ export const RecipeCollectionPage = () => {
         window.open(response.data.paymentUrl, '_blank')
       }
 
-      // Запускаем опрос статуса оплаты
+      // Запускаем опрос статуса оплаты (переживёт перезагрузку приложения)
+      if (pollKey) sessionStorage.setItem(pollKey, '1')
       setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
@@ -103,6 +113,17 @@ export const RecipeCollectionPage = () => {
     )
   }
 
+  // Защита от белого экрана: если запрос упал или данных нет — показываем ошибку.
+  if (isError || !collection) {
+    return (
+      <ErrorState
+        message="Не удалось загрузить сборник."
+        onBack={() => navigate(-1)}
+        onRetry={() => refetch()}
+      />
+    )
+  }
+
   return (
     <div className="pb-4">
       {/* Header */}
@@ -117,6 +138,14 @@ export const RecipeCollectionPage = () => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Индикатор ожидания подтверждения оплаты */}
+        {isPollingPayment && !collection.hasAccess && (
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-sm text-text-primary flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-full bg-primary animate-pulse" />
+            Ожидаем подтверждение оплаты. Доступ откроется автоматически.
+          </div>
+        )}
+
         {/* Обложка и описание сборника */}
         {collection.coverImage && (
           <img
