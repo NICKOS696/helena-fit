@@ -4,6 +4,13 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+// BigInt не сериализуется в JSON по умолчанию (ошибка "Do not know how to
+// serialize a BigInt"). Payme-таймстампы хранятся как BigInt и попадают в
+// ответы (например, история покупок) — отдаём их строкой.
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
