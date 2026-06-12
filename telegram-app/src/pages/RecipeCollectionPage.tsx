@@ -9,7 +9,7 @@ import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Clock, Lock, Flame, Heart } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const categories = [
@@ -25,6 +25,7 @@ export const RecipeCollectionPage = () => {
   const navigate = useNavigate()
   useTelegramBackButton()
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [search, setSearch] = useState('')
   const selectCategory = (cat: string) => {
     haptic.selection()
     setSelectedCategory(cat)
@@ -205,6 +206,30 @@ export const RecipeCollectionPage = () => {
         </Card>
         )}
 
+        {/* Поиск по рецептам сборника */}
+        {collection.hasAccess && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+            <input
+              type="search"
+              enterKeyHint="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск рецепта..."
+              className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-secondary"
+                aria-label="Очистить поиск"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Categories - показываем если есть доступ */}
         {collection.hasAccess && (
         <div className="flex flex-col gap-2">
@@ -285,7 +310,12 @@ export const RecipeCollectionPage = () => {
 
         {/* Recipe Cards - показываем если есть доступ */}
         {collection.hasAccess && collection.recipes && (() => {
+          const query = search.trim().toLowerCase()
           const filteredRecipes = collection.recipes.filter((recipe: any) => {
+            // Поиск по названию (работает вместе с категорией)
+            if (query && !(recipe.title || '').toLowerCase().includes(query)) {
+              return false
+            }
             // Фильтр по избранному
             if (selectedCategory === 'favorites') {
               return recipe.isFavorite
@@ -296,6 +326,18 @@ export const RecipeCollectionPage = () => {
             }
             return true
           })
+
+          if (filteredRecipes.length === 0 && query) {
+            return (
+              <Card className="text-center py-12">
+                <Search className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-bold text-gray-600 mb-2">Ничего не найдено</h3>
+                <p className="text-sm text-gray-500">
+                  Попробуйте изменить запрос или выбрать категорию «Все»
+                </p>
+              </Card>
+            )
+          }
 
           if (filteredRecipes.length === 0 && selectedCategory === 'favorites') {
             return (
