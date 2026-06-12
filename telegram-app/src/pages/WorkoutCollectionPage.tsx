@@ -8,7 +8,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Flame, Clock, Lock, ChevronDown } from 'lucide-react'
-import { getRutubeEmbedUrl } from '@/utils/video'
+import { RutubeVideo } from '@/components/RutubeVideo'
 import { useState, useEffect } from 'react'
 
 export const WorkoutCollectionPage = () => {
@@ -252,19 +252,28 @@ export const WorkoutCollectionPage = () => {
                   <div className="space-y-3">
                     {section.items.map((item: any) => (
                       <Card key={item.id}>
-                        {item.coverImage && (
+                        {/* Обложка = плеер: видео загружается по тапу */}
+                        {item.rutubeUrl ? (
+                          <div className="mb-3">
+                            <RutubeVideo
+                              rutubeUrl={item.rutubeUrl}
+                              poster={item.coverImage}
+                              title={item.title}
+                            />
+                          </div>
+                        ) : item.coverImage ? (
                           <img
                             src={item.coverImage}
                             alt={item.title}
                             className="w-full h-40 object-cover object-top rounded-lg mb-3"
                           />
-                        )}
+                        ) : null}
                         <h3 className="text-lg font-bold text-text-primary mb-2">{item.title}</h3>
                         {item.description && (
                           <p className="text-text-secondary mb-3 text-sm">{item.description}</p>
                         )}
 
-                        <div className="flex gap-4 mb-3">
+                        <div className="flex gap-4">
                           {item.calories && (
                             <div className="flex items-center gap-1 text-sm">
                               <Flame className="w-4 h-4 text-red-500" />
@@ -278,25 +287,6 @@ export const WorkoutCollectionPage = () => {
                             </div>
                           )}
                         </div>
-
-                        {!collection.hasAccess ? (
-                          <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center gap-2 text-text-secondary">
-                            <Lock className="w-5 h-5" />
-                            <span>Купите сборник для доступа</span>
-                          </div>
-                        ) : item.rutubeUrl ? (
-                          <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                            <iframe
-                              src={getRutubeEmbedUrl(item.rutubeUrl)}
-                              width="100%"
-                              height="100%"
-                              frameBorder="0"
-                              allow="clipboard-write; autoplay"
-                              allowFullScreen
-                              className="w-full h-full"
-                            />
-                          </div>
-                        ) : null}
                       </Card>
                     ))}
                   </div>
@@ -334,19 +324,28 @@ export const WorkoutCollectionPage = () => {
           <div className="space-y-3">
             {collection.workouts.map((workout: any) => (
             <Card key={workout.id}>
-              {workout.coverImage && (
+              {/* Обложка = плеер: видео загружается по тапу */}
+              {!workout.locked && workout.rutubeUrl ? (
+                <div className="mb-3">
+                  <RutubeVideo
+                    rutubeUrl={workout.rutubeUrl}
+                    poster={workout.coverImage}
+                    title={workout.title}
+                  />
+                </div>
+              ) : workout.coverImage ? (
                 <img
                   src={workout.coverImage}
                   alt={workout.title}
                   className="w-full h-40 object-cover object-top rounded-lg mb-3"
                 />
-              )}
+              ) : null}
               <h3 className="text-lg font-bold text-text-primary mb-2">{workout.title}</h3>
               {workout.description && (
                 <p className="text-text-secondary mb-3 text-sm">{workout.description}</p>
               )}
 
-              <div className="flex gap-4 mb-3">
+              <div className="flex gap-4">
                 {workout.calories && (
                   <div className="flex items-center gap-1 text-sm">
                     <Flame className="w-4 h-4 text-red-500" />
@@ -361,24 +360,12 @@ export const WorkoutCollectionPage = () => {
                 )}
               </div>
 
-              {workout.locked ? (
-                <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center gap-2 text-text-secondary">
+              {workout.locked && (
+                <div className="mt-3 bg-gray-100 rounded-lg p-4 flex items-center justify-center gap-2 text-text-secondary">
                   <Lock className="w-5 h-5" />
                   <span>Купите сборник для доступа</span>
                 </div>
-              ) : workout.rutubeUrl ? (
-                <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                  <iframe
-                    src={getRutubeEmbedUrl(workout.rutubeUrl)}
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    allow="clipboard-write; autoplay"
-                    allowFullScreen
-                    className="w-full h-full"
-                  />
-                </div>
-              ) : null}
+              )}
             </Card>
           ))}
           </div>
