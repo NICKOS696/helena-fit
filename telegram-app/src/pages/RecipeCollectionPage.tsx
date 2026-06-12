@@ -152,8 +152,9 @@ export const RecipeCollectionPage = () => {
           </div>
         )}
 
-        {/* Обложка и описание сборника */}
-        {collection.coverImage && (
+        {/* Обложка и описание — только на продающей странице (до покупки).
+            После покупки пользователь сразу видит поиск, категории и рецепты. */}
+        {!collection.hasAccess && collection.coverImage && (
           <img
             src={collection.coverImage}
             alt={collection.title}
@@ -161,8 +162,8 @@ export const RecipeCollectionPage = () => {
             style={{ objectPosition: collection.coverImagePosition || 'center' }}
           />
         )}
-        
-        {collection.description && (
+
+        {!collection.hasAccess && collection.description && (
           <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line">
             {collection.description}
           </p>
