@@ -24,6 +24,7 @@ model User {
   transactions  Transaction[]
   contentViews  ContentView[]
   favoriteRecipes FavoriteRecipe[]
+  workoutProgress WorkoutProgress[]
 
   @@map("users")
 }
@@ -350,11 +351,25 @@ model FavoriteRecipe {
   userId    String
   recipeId  String
   createdAt DateTime @default(now())
-  
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, recipeId])
   @@index([userId])
   @@map("favorite_recipes")
+}
+
+model WorkoutProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  // id WorkoutSectionItem или legacy Workout — без FK, чтобы покрыть оба типа
+  itemId      String
+  completedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@map("workout_progress")
 }

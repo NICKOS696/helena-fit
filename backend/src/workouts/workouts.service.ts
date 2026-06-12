@@ -91,6 +91,22 @@ export class WorkoutsService {
       hasAccess = !!access;
     }
 
+    // Отметки «выполнено» текущего пользователя (только при доступе)
+    let completedIds = new Set<string>();
+    if (userId && hasAccess) {
+      const itemIds = [
+        ...collection.workouts.map((w) => w.id),
+        ...collection.sections.flatMap((s) => s.items.map((i) => i.id)),
+      ];
+      if (itemIds.length > 0) {
+        const progress = await this.prisma.workoutProgress.findMany({
+          where: { userId, itemId: { in: itemIds } },
+          select: { itemId: true },
+        });
+        completedIds = new Set(progress.map((p) => p.itemId));
+      }
+    }
+
     return {
       ...collection,
       hasAccess,
@@ -101,7 +117,10 @@ export class WorkoutsService {
         collection.discountEndDate,
       ),
       workouts: hasAccess
-        ? collection.workouts
+        ? collection.workouts.map((w) => ({
+            ...w,
+            completed: completedIds.has(w.id),
+          }))
         : collection.workouts.map((w) => ({
             id: w.id,
             title: w.title,
@@ -114,7 +133,13 @@ export class WorkoutsService {
       // Без доступа отдаём структуру секций, но вырезаем платный контент
       // (rutubeUrl видео и текстовый content), оставляя только превью.
       sections: hasAccess
-        ? collection.sections
+        ? collection.sections.map((s) => ({
+            ...s,
+            items: s.items.map((i) => ({
+              ...i,
+              completed: completedIds.has(i.id),
+            })),
+          }))
         : collection.sections.map((s) => ({
             id: s.id,
             collectionId: s.collectionId,
@@ -135,6 +160,21 @@ export class WorkoutsService {
             })),
           })),
     };
+  }
+
+  // Переключает отметку «выполнено» у тренировки для пользователя.
+  async toggleProgress(userId: string, itemId: string) {
+    const existing = await this.prisma.workoutProgress.findUnique({
+      where: { userId_itemId: { userId, itemId } },
+    });
+
+    if (existing) {
+      await this.prisma.workoutProgress.delete({ where: { id: existing.id } });
+      return { completed: false };
+    }
+
+    await this.prisma.workoutProgress.create({ data: { userId, itemId } });
+    return { completed: true };
   }
 
   private calculateFinalPrice(

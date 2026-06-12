@@ -7,9 +7,10 @@ import { PriceDisplay } from '@/components/PriceDisplay'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Flame, Clock, Lock, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Flame, Clock, Lock, ChevronDown, Check } from 'lucide-react'
 import { RutubeVideo } from '@/components/RutubeVideo'
 import { useState, useEffect } from 'react'
+import clsx from 'clsx'
 
 export const WorkoutCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -41,6 +42,49 @@ export const WorkoutCollectionPage = () => {
     queryKey: ['workout-collection', id],
     queryFn: () => workoutsApi.getCollection(id!),
   })
+
+  // Отметки «выполнено»: сидируются с сервера, переключаются оптимистично.
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    const c = data?.data
+    if (!c) return
+    const ids = new Set<string>()
+    c.sections?.forEach((s: any) =>
+      s.items?.forEach((i: any) => i.completed && ids.add(i.id)),
+    )
+    c.workouts?.forEach((w: any) => w.completed && ids.add(w.id))
+    setCompletedIds(ids)
+  }, [data])
+
+  const toggleCompleted = (itemId: string) => {
+    const wasCompleted = completedIds.has(itemId)
+    if (wasCompleted) {
+      haptic.selection()
+    } else {
+      haptic.notify('success')
+    }
+    setCompletedIds((prev) => {
+      const next = new Set(prev)
+      if (wasCompleted) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+    workoutsApi.toggleProgress(itemId).catch(() => {
+      // Откат при ошибке сети
+      setCompletedIds((prev) => {
+        const next = new Set(prev)
+        if (wasCompleted) {
+          next.add(itemId)
+        } else {
+          next.delete(itemId)
+        }
+        return next
+      })
+    })
+  }
 
   // После клика "Купить" запускаем прямой опрос API каждые 2 сек.
   // Когда hasAccess становится true — чистим флаг и перезагружаем страницу.
@@ -229,16 +273,46 @@ export const WorkoutCollectionPage = () => {
         {/* Разделы - показываем если есть доступ */}
         {collection.hasAccess && collection.sections && collection.sections.length > 0 && (
           <div className="space-y-3">
-            {collection.sections.map((section: any) => (
+            {collection.sections.map((section: any) => {
+              // Прогресс по видеоразделу: сколько тренировок отмечено выполненными
+              const isVideoSection = section.type === 'VIDEO'
+              const totalItems = section.items?.length || 0
+              const doneItems = isVideoSection
+                ? (section.items || []).filter((i: any) => completedIds.has(i.id)).length
+                : 0
+              const allDone = isVideoSection && totalItems > 0 && doneItems === totalItems
+
+              return (
               <div key={section.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 {/* Заголовок раздела - кликабельный */}
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full bg-white p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full bg-white p-4 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors"
                 >
-                  <h2 className="text-lg font-bold text-gray-800">{section.title}</h2>
-                  <ChevronDown 
-                    className={`w-5 h-5 text-gray-600 transition-transform ${
+                  <div className="text-left min-w-0">
+                    <h2 className="text-lg font-bold text-gray-800">{section.title}</h2>
+                    {isVideoSection && totalItems > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${(doneItems / totalItems) * 100}%` }}
+                          />
+                        </div>
+                        <span
+                          className={clsx(
+                            'text-xs',
+                            allDone ? 'text-primary font-semibold' : 'text-text-secondary',
+                          )}
+                        >
+                          {doneItems} из {totalItems}
+                        </span>
+                        {allDone && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </div>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
                       expandedSections.has(section.id) ? 'rotate-180' : ''
                     }`}
                   />
@@ -287,6 +361,20 @@ export const WorkoutCollectionPage = () => {
                             </div>
                           )}
                         </div>
+
+                        {/* Отметка «выполнено» */}
+                        <button
+                          onClick={() => toggleCompleted(item.id)}
+                          className={clsx(
+                            'mt-3 w-full py-2.5 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors',
+                            completedIds.has(item.id)
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-text-secondary border-gray-200',
+                          )}
+                        >
+                          <Check className="w-4 h-4" />
+                          {completedIds.has(item.id) ? 'Выполнено' : 'Отметить выполненной'}
+                        </button>
                       </Card>
                     ))}
                   </div>
@@ -315,7 +403,8 @@ export const WorkoutCollectionPage = () => {
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -360,11 +449,24 @@ export const WorkoutCollectionPage = () => {
                 )}
               </div>
 
-              {workout.locked && (
+              {workout.locked ? (
                 <div className="mt-3 bg-gray-100 rounded-lg p-4 flex items-center justify-center gap-2 text-text-secondary">
                   <Lock className="w-5 h-5" />
                   <span>Купите сборник для доступа</span>
                 </div>
+              ) : (
+                <button
+                  onClick={() => toggleCompleted(workout.id)}
+                  className={clsx(
+                    'mt-3 w-full py-2.5 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors',
+                    completedIds.has(workout.id)
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-text-secondary border-gray-200',
+                  )}
+                >
+                  <Check className="w-4 h-4" />
+                  {completedIds.has(workout.id) ? 'Выполнено' : 'Отметить выполненной'}
+                </button>
               )}
             </Card>
           ))}

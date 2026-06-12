@@ -33,6 +33,7 @@ export const usersApi = {
 export const workoutsApi = {
   getCollections: () => api.get('/workouts'),
   getCollection: (id: string) => api.get(`/workouts/${id}`),
+  toggleProgress: (itemId: string) => api.post(`/workouts/progress/${itemId}/toggle`),
 }
 
 export const recipesApi = {
