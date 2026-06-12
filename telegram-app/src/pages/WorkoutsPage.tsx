@@ -4,6 +4,7 @@ import { workoutsApi, paymeApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { haptic } from '@/lib/telegram'
+import { pluralize } from '@/utils/plural'
 import { Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
@@ -115,7 +116,10 @@ export const WorkoutsPage = () => {
             {/* Информация */}
             {!collection.isInDevelopment && (
               <div className="flex items-center gap-4 text-sm text-text-secondary">
-                <span>📋 {collection.workoutCount} тренировок</span>
+                <span>
+                  📋 {collection.workoutCount}{' '}
+                  {pluralize(collection.workoutCount, 'тренировка', 'тренировки', 'тренировок')}
+                </span>
                 {!collection.hasAccess && collection.discount > 0 && (
                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
                     -{collection.discount}{collection.discountType === 'PERCENTAGE' ? '%' : ' сум'}

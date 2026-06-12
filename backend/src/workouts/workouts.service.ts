@@ -23,19 +23,32 @@ export class WorkoutsService {
         isInDevelopment: true,
         sections: {
           select: {
+            type: true,
             items: {
               select: { id: true },
             },
           },
         },
+        workouts: {
+          select: { id: true },
+        },
       },
     });
+
+    // Считаем только видеотренировки: текстовые разделы (план питания,
+    // рекомендации) — не «тренировки». Legacy-сборники без секций — по workouts.
+    const countWorkouts = (c: (typeof collections)[number]) =>
+      c.sections.reduce(
+        (total, section) => (section.type === 'VIDEO' ? total + section.items.length : total),
+        0,
+      ) + c.workouts.length;
 
     if (!userId) {
       return collections.map((c) => ({
         ...c,
-        workoutCount: c.sections.reduce((total, section) => total + section.items.length, 0),
+        workoutCount: countWorkouts(c),
         sections: undefined, // Убираем sections из ответа
+        workouts: undefined,
         hasAccess: false,
       }));
     }
@@ -49,8 +62,9 @@ export class WorkoutsService {
 
     return collections.map((c) => ({
       ...c,
-      workoutCount: c.sections.reduce((total, section) => total + section.items.length, 0),
+      workoutCount: countWorkouts(c),
       sections: undefined, // Убираем sections из ответа
+      workouts: undefined,
       hasAccess: accessIds.has(c.id),
       finalPrice: this.calculateFinalPrice(c.price, c.discount, c.discountType, c.discountEndDate),
     }));
