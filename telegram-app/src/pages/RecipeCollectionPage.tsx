@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { recipesApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
@@ -24,11 +24,24 @@ export const RecipeCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   useTelegramBackButton()
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  // Категорию храним в URL (?cat=...), чтобы она сохранялась при возврате
+  // с экрана рецепта — иначе фильтр каждый раз сбрасывался бы на «Все».
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedCategory = searchParams.get('cat') || 'all'
   const [search, setSearch] = useState('')
   const selectCategory = (cat: string) => {
     haptic.selection()
-    setSelectedCategory(cat)
+    setSearchParams(
+      (prev) => {
+        if (cat === 'all') {
+          prev.delete('cat')
+        } else {
+          prev.set('cat', cat)
+        }
+        return prev
+      },
+      { replace: true },
+    )
   }
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
