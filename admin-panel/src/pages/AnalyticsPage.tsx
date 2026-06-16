@@ -1,7 +1,44 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/lib/api'
 import { BarChart3, Eye, Users, TrendingUp, ChevronDown } from 'lucide-react'
+
+// Сворачиваемый блок: по умолчанию закрыт, раскрывается по клику на заголовок.
+const CollapsibleSection = ({
+  title,
+  icon,
+  count,
+  children,
+}: {
+  title: string
+  icon: ReactNode
+  count?: number
+  children: ReactNode
+}) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="bg-white rounded-lg shadow mb-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+          open ? 'border-b' : ''
+        }`}
+      >
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          {icon}
+          {title}
+          {typeof count === 'number' && (
+            <span className="text-sm font-normal text-gray-400">({count})</span>
+          )}
+        </h2>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="p-6">{children}</div>}
+    </div>
+  )
+}
 
 const typeLabel: Record<string, string> = {
   WORKOUT_COLLECTION: '🏋️ Сборник тренировок',
@@ -189,14 +226,11 @@ export const AnalyticsPage = () => {
       </div>
 
       {/* Популярный контент (коллекции) */}
-      <div className="bg-white rounded-lg shadow mb-8">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            Популярный контент
-          </h2>
-        </div>
-        <div className="p-6">
+      <CollapsibleSection
+        title="Популярный контент"
+        icon={<BarChart3 className="w-6 h-6 text-primary" />}
+        count={collections.length}
+      >
           {collections.length === 0 ? (
             <p className="text-center text-gray-500 py-8">Пока нет данных</p>
           ) : (
@@ -231,18 +265,14 @@ export const AnalyticsPage = () => {
               ))}
             </div>
           )}
-        </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Популярные рецепты */}
-      <div className="bg-white rounded-lg shadow mb-8">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            Популярные рецепты
-          </h2>
-        </div>
-        <div className="p-6">
+      <CollapsibleSection
+        title="Популярные рецепты"
+        icon={<BarChart3 className="w-6 h-6 text-primary" />}
+        count={recipes.length}
+      >
           {recipes.length === 0 ? (
             <p className="text-center text-gray-500 py-8">Пока нет данных</p>
           ) : (
@@ -274,18 +304,14 @@ export const AnalyticsPage = () => {
               ))}
             </div>
           )}
-        </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Активность пользователей */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            Активные пользователи
-          </h2>
-        </div>
-        <div className="p-6">
+      <CollapsibleSection
+        title="Активные пользователи"
+        icon={<Users className="w-6 h-6 text-primary" />}
+        count={activity.length}
+      >
           {activity.length === 0 ? (
             <p className="text-center text-gray-500 py-8">Пока нет данных</p>
           ) : (
@@ -295,8 +321,7 @@ export const AnalyticsPage = () => {
               ))}
             </div>
           )}
-        </div>
-      </div>
+      </CollapsibleSection>
     </div>
   )
 }
