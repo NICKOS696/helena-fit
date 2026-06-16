@@ -274,4 +274,54 @@ export class AnalyticsService {
 
     return enrichedActivity;
   }
+
+  // День запуска: покупки считаем начиная с 16.06.2026 (00:00 по Ташкенту, UTC+5).
+  // Раньше этой даты — тестовые транзакции, их не показываем.
+  private static readonly LAUNCH_DATE = new Date('2026-06-16T00:00:00+05:00');
+
+  /**
+   * Покупки: кто, что и когда купил (завершённые транзакции с дня запуска).
+   */
+  async getPurchases() {
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        status: 'COMPLETED',
+        type: 'PURCHASE',
+        createdAt: { gte: AnalyticsService.LAUNCH_DATE },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            username: true,
+            telegramId: true,
+            photoUrl: true,
+          },
+        },
+      },
+    });
+
+    const purchases = await Promise.all(
+      transactions.map(async (t) => {
+        const meta = await this.resolveContentMeta(t.itemType, t.itemId);
+        return {
+          id: t.id,
+          user: t.user,
+          itemType: t.itemType,
+          title: meta?.title ?? 'Удалённый контент',
+          coverImage: meta?.coverImage ?? null,
+          amount: t.amount,
+          paymentMethod: t.paymentMethod,
+          createdAt: t.createdAt,
+        };
+      }),
+    );
+
+    const totalRevenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    return { purchases, totalRevenue, count: purchases.length };
+  }
 }

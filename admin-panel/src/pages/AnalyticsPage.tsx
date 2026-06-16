@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/lib/api'
-import { BarChart3, Eye, Users, TrendingUp, ChevronDown } from 'lucide-react'
+import { BarChart3, Eye, Users, TrendingUp, ChevronDown, ShoppingBag } from 'lucide-react'
+
+const formatMoney = (n: number) => (n || 0).toLocaleString('ru-RU') + ' сум'
 
 // Сворачиваемый блок: по умолчанию закрыт, раскрывается по клику на заголовок.
 const CollapsibleSection = ({
@@ -57,6 +59,99 @@ const formatDate = (d?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+// Секция «Покупки»: кто, что и когда купил. Сворачиваемая, грузится лениво.
+const PurchasesSection = () => {
+  const [open, setOpen] = useState(false)
+  const { data, isLoading } = useQuery({
+    queryKey: ['analytics-purchases'],
+    queryFn: () => analyticsApi.getPurchases(),
+    enabled: open,
+  })
+  const result = data?.data
+  const purchases = result?.purchases || []
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+          open ? 'border-b' : ''
+        }`}
+      >
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <ShoppingBag className="w-6 h-6 text-primary" />
+          Покупки
+          {result && (
+            <span className="text-sm font-normal text-gray-400">({result.count})</span>
+          )}
+        </h2>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="p-6">
+          {isLoading ? (
+            <p className="text-center text-gray-500 py-4">Загрузка…</p>
+          ) : purchases.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Пока нет покупок</p>
+          ) : (
+            <>
+              <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                <span className="text-gray-600">
+                  Выручка:{' '}
+                  <span className="font-bold text-primary">
+                    {formatMoney(result.totalRevenue)}
+                  </span>
+                </span>
+                <span className="text-gray-600">
+                  Покупок: <span className="font-bold">{result.count}</span>
+                </span>
+              </div>
+              <div className="space-y-2">
+                {purchases.map((p: any) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
+                  >
+                    {p.coverImage ? (
+                      <img
+                        src={p.coverImage}
+                        alt={p.title}
+                        className="w-10 h-10 object-cover rounded flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{p.title}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {p.user?.firstName || 'Пользователь'} {p.user?.lastName || ''}
+                        {p.user?.username
+                          ? ` · @${p.user.username}`
+                          : p.user?.telegramId
+                          ? ` · ${p.user.telegramId}`
+                          : ''}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-primary whitespace-nowrap">
+                        {formatMoney(p.amount)}
+                      </p>
+                      <p className="text-xs text-gray-500">{formatDate(p.createdAt)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Строка активного пользователя с кнопкой «Подробно».
@@ -179,8 +274,8 @@ export const AnalyticsPage = () => {
   const activity = activityData?.data || []
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-8">📊 Статистика</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-8">📊 Статистика</h1>
 
       {/* Общая статистика */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -224,6 +319,9 @@ export const AnalyticsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Покупки: кто, что и когда купил */}
+      <PurchasesSection />
 
       {/* Популярный контент (коллекции) */}
       <CollapsibleSection

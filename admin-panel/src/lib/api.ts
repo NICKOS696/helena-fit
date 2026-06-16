@@ -126,4 +126,6 @@ export const analyticsApi = {
     api.get('/analytics/user-activity'),
   getUserViews: (userId: string) =>
     api.get('/analytics/user-views', { params: { userId } }),
+  getPurchases: () =>
+    api.get('/analytics/purchases'),
 }

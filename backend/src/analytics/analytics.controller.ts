@@ -71,4 +71,13 @@ export class AnalyticsController {
   async getUserViews(@Query('userId') userId: string) {
     return this.analyticsService.getUserViews(userId);
   }
+
+  /**
+   * Покупки: кто, что и когда купил (для админов)
+   */
+  @Get('purchases')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getPurchases() {
+    return this.analyticsService.getPurchases();
+  }
 }
