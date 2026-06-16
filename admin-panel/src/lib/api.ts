@@ -122,6 +122,8 @@ export const analyticsApi = {
     api.get('/analytics/content-stats', { params: { type } }),
   getOverallStats: () => 
     api.get('/analytics/overall'),
-  getUserActivity: () => 
+  getUserActivity: () =>
     api.get('/analytics/user-activity'),
+  getUserViews: (userId: string) =>
+    api.get('/analytics/user-views', { params: { userId } }),
 }

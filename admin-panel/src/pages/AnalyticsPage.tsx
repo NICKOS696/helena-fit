@@ -1,6 +1,119 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/lib/api'
-import { BarChart3, Eye, Users, TrendingUp } from 'lucide-react'
+import { BarChart3, Eye, Users, TrendingUp, ChevronDown } from 'lucide-react'
+
+const typeLabel: Record<string, string> = {
+  WORKOUT_COLLECTION: '🏋️ Сборник тренировок',
+  RECIPE_COLLECTION: '🍽️ Сборник рецептов',
+  RECIPE: '🍽️ Рецепт',
+  WORKOUT: '🏋️ Тренировка',
+  NEWS: '📰 Новость',
+}
+
+const formatDate = (d?: string) => {
+  if (!d) return ''
+  return new Date(d).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Строка активного пользователя с кнопкой «Подробно».
+// Список открытого контента грузится лениво — только при раскрытии.
+const ActiveUserRow = ({ item, index }: { item: any; index: number }) => {
+  const [open, setOpen] = useState(false)
+  const { data, isLoading } = useQuery({
+    queryKey: ['user-views', item.userId],
+    queryFn: () => analyticsApi.getUserViews(item.userId),
+    enabled: open, // запрос уходит только после нажатия «Подробно»
+  })
+  const views = data?.data || []
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center gap-4 p-4 hover:bg-gray-50">
+        <div className="text-2xl font-bold text-gray-400 w-8">#{index + 1}</div>
+        {item.user?.photoUrl ? (
+          <img
+            src={item.user.photoUrl}
+            alt={item.user.firstName}
+            className="w-12 h-12 rounded-full"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-light to-primary flex items-center justify-center">
+            <Users className="w-6 h-6 text-white" />
+          </div>
+        )}
+        <div className="flex-1">
+          <h3 className="font-bold">
+            {item.user?.firstName || 'Пользователь'} {item.user?.lastName || ''}
+          </h3>
+          {item.user?.username && (
+            <p className="text-sm text-gray-600">@{item.user.username}</p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-primary">{item.views}</p>
+          <p className="text-sm text-gray-600">просмотров</p>
+        </div>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="ml-2 flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+        >
+          Подробно
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
+
+      {open && (
+        <div className="border-t border-gray-100 bg-gray-50 p-4">
+          {isLoading ? (
+            <p className="text-center text-gray-500 py-4">Загрузка…</p>
+          ) : views.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Нет открытого контента</p>
+          ) : (
+            <div className="space-y-2">
+              {views.map((v: any) => (
+                <div
+                  key={`${v.itemType}-${v.itemId}`}
+                  className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
+                >
+                  {v.coverImage ? (
+                    <img
+                      src={v.coverImage}
+                      alt={v.title}
+                      className="w-10 h-10 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-gray-100" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{v.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {typeLabel[v.itemType] || v.itemType}
+                      {' · '}
+                      открыто {formatDate(v.lastViewedAt)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-primary">{v.views}</p>
+                    <p className="text-xs text-gray-500">раз</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const AnalyticsPage = () => {
   const { data: overallData } = useQuery({
@@ -178,37 +291,7 @@ export const AnalyticsPage = () => {
           ) : (
             <div className="space-y-4">
               {activity.map((item: any, index: number) => (
-                <div
-                  key={item.userId}
-                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="text-2xl font-bold text-gray-400 w-8">
-                    #{index + 1}
-                  </div>
-                  {item.user?.photoUrl ? (
-                    <img
-                      src={item.user.photoUrl}
-                      alt={item.user.firstName}
-                      className="w-12 h-12 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-light to-primary flex items-center justify-center">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-bold">
-                      {item.user?.firstName || 'Пользователь'} {item.user?.lastName || ''}
-                    </h3>
-                    {item.user?.username && (
-                      <p className="text-sm text-gray-600">@{item.user.username}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">{item.views}</p>
-                    <p className="text-sm text-gray-600">просмотров</p>
-                  </div>
-                </div>
+                <ActiveUserRow key={item.userId} item={item} index={index} />
               ))}
             </div>
           )}

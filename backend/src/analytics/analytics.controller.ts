@@ -62,4 +62,13 @@ export class AnalyticsController {
   async getUserActivity() {
     return this.analyticsService.getUserActivity();
   }
+
+  /**
+   * Что именно открывал конкретный пользователь (для админов)
+   */
+  @Get('user-views')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getUserViews(@Query('userId') userId: string) {
+    return this.analyticsService.getUserViews(userId);
+  }
 }

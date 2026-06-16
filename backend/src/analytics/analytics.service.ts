@@ -91,77 +91,105 @@ export class AnalyticsService {
   }
 
   /**
+   * Определить название и обложку контента по его типу и id.
+   * Возвращает null, если контент не найден (удалён).
+   */
+  private async resolveContentMeta(
+    itemType: string,
+    itemId: string,
+  ): Promise<{ title: string; coverImage: string | null } | null> {
+    try {
+      if (itemType === 'WORKOUT_COLLECTION') {
+        const c = await this.prisma.workoutCollection.findUnique({
+          where: { id: itemId },
+          select: { title: true, coverImage: true },
+        });
+        return c ? { title: c.title, coverImage: c.coverImage } : null;
+      } else if (itemType === 'RECIPE_COLLECTION') {
+        const c = await this.prisma.recipeCollection.findUnique({
+          where: { id: itemId },
+          select: { title: true, coverImage: true },
+        });
+        return c ? { title: c.title, coverImage: c.coverImage } : null;
+      } else if (itemType === 'RECIPE') {
+        const r = await this.prisma.recipe.findUnique({
+          where: { id: itemId },
+          select: { title: true, coverImage: true },
+        });
+        return r ? { title: r.title, coverImage: r.coverImage } : null;
+      } else if (itemType === 'WORKOUT') {
+        const w = await this.prisma.workout.findUnique({
+          where: { id: itemId },
+          select: { title: true, coverImage: true },
+        });
+        return w ? { title: w.title, coverImage: w.coverImage } : null;
+      } else if (itemType === 'NEWS') {
+        const n = await this.prisma.news.findUnique({
+          where: { id: itemId },
+          select: { title: true, bannerImage: true },
+        });
+        return n ? { title: n.title, coverImage: n.bannerImage } : null;
+      }
+    } catch (error) {
+      console.error('Error fetching content details:', error);
+    }
+    return null;
+  }
+
+  /**
    * Обогащение статистики деталями контента
    */
   private async enrichStats(stats: any[]) {
     const enrichedStats = await Promise.all(
       stats.map(async (stat) => {
-        let title = 'Unknown';
-        let coverImage = null;
-
-        try {
-          if (stat.itemType === 'WORKOUT_COLLECTION') {
-            const collection = await this.prisma.workoutCollection.findUnique({
-              where: { id: stat.itemId },
-              select: { title: true, coverImage: true },
-            });
-            if (collection) {
-              title = collection.title;
-              coverImage = collection.coverImage;
-            }
-          } else if (stat.itemType === 'RECIPE_COLLECTION') {
-            const collection = await this.prisma.recipeCollection.findUnique({
-              where: { id: stat.itemId },
-              select: { title: true, coverImage: true },
-            });
-            if (collection) {
-              title = collection.title;
-              coverImage = collection.coverImage;
-            }
-          } else if (stat.itemType === 'RECIPE') {
-            const recipe = await this.prisma.recipe.findUnique({
-              where: { id: stat.itemId },
-              select: { title: true, coverImage: true },
-            });
-            if (recipe) {
-              title = recipe.title;
-              coverImage = recipe.coverImage;
-            }
-          } else if (stat.itemType === 'WORKOUT') {
-            const workout = await this.prisma.workout.findUnique({
-              where: { id: stat.itemId },
-              select: { title: true, coverImage: true },
-            });
-            if (workout) {
-              title = workout.title;
-              coverImage = workout.coverImage;
-            }
-          } else if (stat.itemType === 'NEWS') {
-            const news = await this.prisma.news.findUnique({
-              where: { id: stat.itemId },
-              select: { title: true, bannerImage: true },
-            });
-            if (news) {
-              title = news.title;
-              coverImage = news.bannerImage;
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching content details:', error);
-        }
-
+        const meta = await this.resolveContentMeta(stat.itemType, stat.itemId);
         return {
           itemId: stat.itemId,
           itemType: stat.itemType,
-          title,
-          coverImage,
+          title: meta?.title ?? 'Unknown',
+          coverImage: meta?.coverImage ?? null,
           views: stat._count.id,
         };
-      })
+      }),
     );
 
     // Фильтруем записи с Unknown (удалённый контент)
-    return enrichedStats.filter(stat => stat.title !== 'Unknown');
+    return enrichedStats.filter((stat) => stat.title !== 'Unknown');
+  }
+
+  /**
+   * Что именно открывал конкретный пользователь:
+   * список контента с количеством просмотров и датой последнего открытия.
+   */
+  async getUserViews(userId: string) {
+    const grouped = await this.prisma.contentView.groupBy({
+      by: ['itemId', 'itemType'],
+      where: { userId },
+      _count: { id: true },
+      _max: { createdAt: true },
+      orderBy: { _max: { createdAt: 'desc' } },
+      take: 200,
+    });
+
+    const enriched = await Promise.all(
+      grouped.map(async (g) => {
+        const meta = await this.resolveContentMeta(g.itemType, g.itemId);
+        return {
+          itemId: g.itemId,
+          itemType: g.itemType,
+          title: meta?.title ?? 'Удалённый контент',
+          coverImage: meta?.coverImage ?? null,
+          views: g._count.id,
+          lastViewedAt: g._max.createdAt,
+        };
+      }),
+    );
+
+    // Сортируем по дате последнего просмотра — сверху самое свежее
+    return enriched.sort(
+      (a, b) =>
+        new Date(b.lastViewedAt as any).getTime() - new Date(a.lastViewedAt as any).getTime(),
+    );
   }
 
   /**
