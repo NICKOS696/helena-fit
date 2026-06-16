@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
-import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut } from 'lucide-react'
+import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const navItems = [
@@ -13,26 +14,51 @@ const navItems = [
 
 export const DashboardLayout = () => {
   const { logout } = useAuth()
+  // Состояние выезжающего меню на мобильных. На десктопе (lg+) меню всегда видно.
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <aside className="w-64 bg-white shadow-lg">
-        <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold text-primary">Helena Fit</h1>
-          <p className="text-sm text-gray-600">Админ-панель</p>
+      {/* Затемнение под меню на мобильных */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      {/* Боковое меню: статичное на lg+, выезжающее на мобильных */}
+      <aside
+        className={clsx(
+          'fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0',
+          menuOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="p-6 border-b flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-primary">Helena Fit</h1>
+            <p className="text-sm text-gray-600">Админ-панель</p>
+          </div>
+          {/* Закрыть меню (только на мобильных) */}
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="lg:hidden text-gray-500 hover:text-gray-800"
+            aria-label="Закрыть меню"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {navItems.map(({ path, icon: Icon, label }) => (
             <NavLink
               key={path}
               to={path}
+              onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
                 clsx(
                   'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                  isActive
-                    ? 'bg-primary text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                  isActive ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100',
                 )
               }
             >
@@ -42,7 +68,7 @@ export const DashboardLayout = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 w-64 p-4 border-t">
+        <div className="p-4 border-t">
           <button
             onClick={logout}
             className="flex items-center gap-3 px-4 py-3 w-full text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -53,9 +79,23 @@ export const DashboardLayout = () => {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Верхняя полоса с «гамбургером» — только на мобильных */}
+        <header className="lg:hidden bg-white shadow-sm flex items-center gap-3 p-4 sticky top-0 z-20">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="text-gray-700"
+            aria-label="Открыть меню"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <h1 className="text-lg font-bold text-primary">Helena Fit</h1>
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

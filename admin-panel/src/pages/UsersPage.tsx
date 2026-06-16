@@ -97,12 +97,12 @@ export const UsersPage = () => {
   const users = data?.data || []
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Пользователи</h1>
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Пользователи</h1>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
+          className="flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
         >
           <Plus className="w-5 h-5" />
           Добавить пользователя
@@ -110,7 +110,7 @@ export const UsersPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -137,7 +137,9 @@ export const UsersPage = () => {
       {isLoading ? (
         <div className="text-center py-12">Загрузка...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <>
+        {/* Десктоп: таблица */}
+        <div className="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -213,6 +215,61 @@ export const UsersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Мобильные: карточки пользователей */}
+        <div className="md:hidden space-y-3">
+          {users.map((user: any) => (
+            <div key={user.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 truncate">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-sm text-gray-500">ID: {user.telegramId}</p>
+                  {user.username && (
+                    <p className="text-sm text-gray-500">@{user.username}</p>
+                  )}
+                </div>
+                <span
+                  className={`flex-shrink-0 px-2 py-1 text-xs rounded-full ${
+                    user.status === 'ACTIVE'
+                      ? 'bg-green-100 text-green-700'
+                      : user.status === 'PENDING'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {user.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <span className="text-sm text-gray-500">
+                  {user._count.workoutAccess + user._count.recipeAccess} доступов
+                </span>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => handleOpenAccessModal(user)}
+                    className="flex items-center gap-1 text-primary font-medium text-sm"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Доступ
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить пользователя?')) {
+                        deleteMutation.mutate(user.id)
+                      }
+                    }}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {showAddModal && (
@@ -247,8 +304,8 @@ export const UsersPage = () => {
       {showAccessModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">
+            <div className="flex justify-between items-start gap-3 mb-4">
+              <h2 className="text-lg md:text-2xl font-bold">
                 Управление доступом: {selectedUser.firstName} {selectedUser.lastName}
               </h2>
               <button
