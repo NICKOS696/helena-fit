@@ -100,9 +100,30 @@ const PurchasesSection = () => {
             <p className="text-center text-gray-500 py-4">Пока нет покупок</p>
           ) : (
             <>
+              {/* Разбивка выручки за сегодня / неделю / месяц */}
+              {result.breakdown && (
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {[
+                    { label: 'Сегодня', data: result.breakdown.today },
+                    { label: 'За неделю', data: result.breakdown.week },
+                    { label: 'За месяц', data: result.breakdown.month },
+                  ].map((b) => (
+                    <div key={b.label} className="bg-gray-50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-500 mb-1">{b.label}</p>
+                      <p className="text-base md:text-lg font-bold text-primary leading-tight">
+                        {formatMoney(b.data?.revenue || 0)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {b.data?.count || 0} покупок
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                 <span className="text-gray-600">
-                  Выручка:{' '}
+                  Всего с запуска:{' '}
                   <span className="font-bold text-primary">
                     {formatMoney(result.totalRevenue)}
                   </span>

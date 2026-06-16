@@ -322,6 +322,45 @@ export class AnalyticsService {
 
     const totalRevenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-    return { purchases, totalRevenue, count: purchases.length };
+    // Разбивка выручки за сегодня / неделю / месяц.
+    const now = new Date();
+    // Начало сегодняшнего дня по Ташкенту (UTC+5), выраженное в UTC
+    const tashkent = new Date(now.getTime() + 5 * 3600 * 1000);
+    const startOfToday = new Date(
+      Date.UTC(tashkent.getUTCFullYear(), tashkent.getUTCMonth(), tashkent.getUTCDate()) -
+        5 * 3600 * 1000,
+    );
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+    const launch = AnalyticsService.LAUNCH_DATE;
+    // Не считаем раньше дня запуска (тестовые транзакции)
+    const clamp = (d: Date) => (d < launch ? launch : d);
+
+    const [today, week, month] = await Promise.all([
+      this.revenueSince(clamp(startOfToday)),
+      this.revenueSince(clamp(weekAgo)),
+      this.revenueSince(clamp(monthAgo)),
+    ]);
+
+    return {
+      purchases,
+      totalRevenue,
+      count: purchases.length,
+      breakdown: { today, week, month },
+    };
+  }
+
+  /** Сумма выручки и число покупок начиная с даты (только завершённые покупки). */
+  private async revenueSince(date: Date) {
+    const r = await this.prisma.transaction.aggregate({
+      where: {
+        status: 'COMPLETED',
+        type: 'PURCHASE',
+        createdAt: { gte: date },
+      },
+      _sum: { amount: true },
+      _count: { _all: true },
+    });
+    return { revenue: r._sum.amount || 0, count: r._count._all };
   }
 }
