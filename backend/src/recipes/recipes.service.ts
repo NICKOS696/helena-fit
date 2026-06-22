@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 // Telegram ID, которым можно открывать сборники «в разработке» для предпросмотра.
 // Остальные пользователи видят такие сборники как «Скоро будет доступно».
-const PREVIEW_TELEGRAM_IDS = ['89761488'];
+const PREVIEW_TELEGRAM_IDS = ['89761488', '449178486'];
 
 @Injectable()
 export class RecipesService {
