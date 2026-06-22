@@ -1,11 +1,19 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Telegram ID, которым можно открывать сборники «в разработке» для предпросмотра.
+// Остальные пользователи видят такие сборники как «Скоро будет доступно».
+const PREVIEW_TELEGRAM_IDS = ['89761488'];
+
 @Injectable()
 export class RecipesService {
   constructor(private prisma: PrismaService) {}
 
-  async getCollections(userId?: string) {
+  private isPreviewer(telegramId?: string): boolean {
+    return !!telegramId && PREVIEW_TELEGRAM_IDS.includes(telegramId);
+  }
+
+  async getCollections(userId?: string, telegramId?: string) {
     const collections = await this.prisma.recipeCollection.findMany({
       where: { isActive: true },
       orderBy: { order: 'asc' },
@@ -42,16 +50,19 @@ export class RecipesService {
     });
 
     const accessIds = new Set(userAccess.map((a) => a.collectionId));
+    const preview = this.isPreviewer(telegramId);
 
     return collections.map((c) => ({
       ...c,
       recipeCount: c._count.recipes,
-      hasAccess: accessIds.has(c.id),
+      // Для предпросмотра скрываем статус «в разработке» и открываем сборник
+      isInDevelopment: preview && c.isInDevelopment ? false : c.isInDevelopment,
+      hasAccess: accessIds.has(c.id) || (preview && c.isInDevelopment),
       finalPrice: this.calculateFinalPrice(c.price, c.discount, c.discountType, c.discountEndDate),
     }));
   }
 
-  async getCollection(id: string, userId?: string, category?: string) {
+  async getCollection(id: string, userId?: string, category?: string, telegramId?: string) {
     const collection = await this.prisma.recipeCollection.findUnique({
       where: { id },
       include: {
@@ -88,8 +99,15 @@ export class RecipesService {
       favoriteIds = new Set(favorites.map((f) => f.recipeId));
     }
 
+    // Предпросмотр сборника «в разработке» для доверенных Telegram ID
+    const preview = this.isPreviewer(telegramId) && collection.isInDevelopment;
+    if (preview) {
+      hasAccess = true;
+    }
+
     return {
       ...collection,
+      isInDevelopment: preview ? false : collection.isInDevelopment,
       hasAccess,
       finalPrice: this.calculateFinalPrice(
         collection.price,
@@ -116,10 +134,15 @@ export class RecipesService {
     };
   }
 
-  async getRecipe(collectionId: string, recipeId: string, userId?: string) {
+  async getRecipe(collectionId: string, recipeId: string, userId?: string, telegramId?: string) {
     let hasAccess = false;
     let isFavorite = false;
-    
+
+    // Доверенным Telegram ID открываем контент для предпросмотра
+    if (this.isPreviewer(telegramId)) {
+      hasAccess = true;
+    }
+
     if (userId) {
       const access = await this.prisma.recipeCollectionAccess.findUnique({
         where: {
@@ -129,7 +152,7 @@ export class RecipesService {
           },
         },
       });
-      hasAccess = !!access;
+      hasAccess = hasAccess || !!access;
 
       // Проверяем избранное
       const favorite = await this.prisma.favoriteRecipe.findFirst({

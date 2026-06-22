@@ -14,7 +14,7 @@ export class RecipesController {
 
   @Get()
   async getCollections(@Request() req) {
-    return this.recipesService.getCollections(req.user?.id);
+    return this.recipesService.getCollections(req.user?.id, req.user?.telegramId);
   }
 
   @Get(':id')
@@ -23,7 +23,7 @@ export class RecipesController {
     @Query('category') category: string,
     @Request() req,
   ) {
-    return this.recipesService.getCollection(id, req.user?.id, category);
+    return this.recipesService.getCollection(id, req.user?.id, category, req.user?.telegramId);
   }
 
   @Get(':collectionId/recipe/:recipeId')
@@ -32,7 +32,12 @@ export class RecipesController {
     @Param('recipeId') recipeId: string,
     @Request() req,
   ) {
-    return this.recipesService.getRecipe(collectionId, recipeId, req.user?.id);
+    return this.recipesService.getRecipe(
+      collectionId,
+      recipeId,
+      req.user?.id,
+      req.user?.telegramId,
+    );
   }
 
   @Get('favorites/all')
