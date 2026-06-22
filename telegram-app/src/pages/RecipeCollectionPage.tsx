@@ -16,8 +16,9 @@ const categories = [
   { value: 'all', label: 'Все' },
   { value: 'BREAKFAST', label: 'Завтраки' },
   { value: 'MAIN_COURSE', label: 'Вторые блюда' },
-  { value: 'SNACK', label: 'Перекусы' },
   { value: 'SALAD', label: 'Салаты' },
+  { value: 'SNACK', label: 'Перекусы' },
+  { value: 'DESSERT', label: 'Десерты' },
 ]
 
 export const RecipeCollectionPage = () => {
@@ -244,83 +245,39 @@ export const RecipeCollectionPage = () => {
           </div>
         )}
 
-        {/* Categories - показываем если есть доступ */}
-        {collection.hasAccess && (
-        <div className="flex flex-col gap-2">
-          {/* Первая строка: Все, Избранное, Перекусы */}
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => selectCategory('all')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'all'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Все
-            </button>
-            <button
-              onClick={() => selectCategory('favorites')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'favorites'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Избранное
-            </button>
-            <button
-              onClick={() => selectCategory('SNACK')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'SNACK'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Перекусы
-            </button>
-          </div>
-          {/* Вторая строка: Завтраки, Вторые блюда, Салаты */}
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => selectCategory('BREAKFAST')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'BREAKFAST'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Завтраки
-            </button>
-            <button
-              onClick={() => selectCategory('MAIN_COURSE')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'MAIN_COURSE'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Вторые блюда
-            </button>
-            <button
-              onClick={() => selectCategory('SALAD')}
-              className={clsx(
-                'px-3 py-2 rounded-xl text-sm font-medium transition-all',
-                selectedCategory === 'SALAD'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-text-primary border border-gray-200'
-              )}
-            >
-              Салаты
-            </button>
-          </div>
-        </div>
-        )}
+        {/* Categories - показываем если есть доступ.
+            Кнопки категорий показываем только для непустых (где есть рецепты);
+            появляются автоматически, как только в категорию добавлен рецепт. */}
+        {collection.hasAccess && (() => {
+          const presentCategories = categories.filter(
+            (c) =>
+              c.value !== 'all' &&
+              collection.recipes?.some((r: any) => r.category === c.value),
+          )
+          const filterButtons = [
+            { value: 'all', label: 'Все' },
+            { value: 'favorites', label: 'Избранное' },
+            ...presentCategories,
+          ]
+          return (
+            <div className="grid grid-cols-3 gap-2">
+              {filterButtons.map((cat) => (
+                <button
+                  key={cat.value}
+                  onClick={() => selectCategory(cat.value)}
+                  className={clsx(
+                    'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                    selectedCategory === cat.value
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-white text-text-primary border border-gray-200',
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Recipe Cards - показываем если есть доступ */}
         {collection.hasAccess && collection.recipes && (() => {

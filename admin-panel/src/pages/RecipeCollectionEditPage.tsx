@@ -9,8 +9,9 @@ import { ImageFocusPicker } from '@/components/ImageFocusPicker'
 const categories = [
   { value: 'BREAKFAST', label: 'Завтраки' },
   { value: 'MAIN_COURSE', label: 'Вторые блюда' },
-  { value: 'SNACK', label: 'Перекусы' },
   { value: 'SALAD', label: 'Салаты' },
+  { value: 'SNACK', label: 'Перекусы' },
+  { value: 'DESSERT', label: 'Десерты' },
 ]
 
 export const RecipeCollectionEditPage = () => {

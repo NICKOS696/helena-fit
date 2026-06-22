@@ -21,7 +21,7 @@ export interface CreateRecipeDto {
   coverImage?: string;
   coverImageFit?: string;
   coverImagePosition?: string;
-  category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD';
+  category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD' | 'DESSERT';
   cookingTime?: number;
   ingredients: any;
   instructions: string;

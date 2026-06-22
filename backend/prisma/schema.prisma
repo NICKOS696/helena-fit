@@ -182,6 +182,7 @@ enum RecipeCategory {
   MAIN_COURSE
   SNACK
   SALAD
+  DESSERT
 }
 
 enum DiscountType {
