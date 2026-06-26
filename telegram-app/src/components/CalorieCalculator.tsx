@@ -21,6 +21,16 @@ interface Result {
   fat: number
   carbs: number
   bmr: number
+  water: number
+}
+
+// Доп. вода в зависимости от уровня активности (литры), к базе 30 мл/кг
+const waterActivityBonus: Record<Activity, number> = {
+  1.2: 0,
+  1.375: 0.3,
+  1.55: 0.5,
+  1.725: 0.7,
+  1.9: 1.0,
 }
 
 const STORAGE_KEY = 'kbju_calculator_v1'
@@ -86,7 +96,10 @@ export const CalorieCalculator = () => {
     const fat = Math.round((calories * 0.27) / 9)
     const carbs = Math.round((calories * 0.46) / 4)
 
-    const newResult = { calories, protein, fat, carbs, bmr: Math.round(bmr) }
+    // Норма воды: 30 мл на кг веса + поправка на активность
+    const water = Math.round((weight * 0.03 + waterActivityBonus[form.activity]) * 10) / 10
+
+    const newResult = { calories, protein, fat, carbs, bmr: Math.round(bmr), water }
     setResult(newResult)
 
     try {
@@ -304,6 +317,26 @@ export const CalorieCalculator = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Норма воды */}
+              {result.water > 0 && (
+                <div className="mt-3 bg-sky-50 rounded-xl p-3 flex items-center gap-3">
+                  <span className="text-xl" aria-hidden>💧</span>
+                  <div className="flex-1">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-text-secondary">Норма воды</span>
+                      <span className="text-lg font-bold text-sky-600">
+                        {result.water.toLocaleString('ru-RU')} л
+                        <span className="text-xs font-medium text-text-secondary">/день</span>
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-text-secondary/80 mt-0.5">
+                      с учётом активности, без учёта чая и кофе
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 text-center space-y-1">
                 <p className="text-xs text-text-secondary">
                   BMR: <span className="font-semibold text-text-primary">{result.bmr} ккал</span>
