@@ -19,6 +19,7 @@ const categories = [
   { value: 'SALAD', label: 'Салаты' },
   { value: 'SNACK', label: 'Перекусы' },
   { value: 'DESSERT', label: 'Десерты' },
+  { value: 'SMOOTHIE', label: 'Смузи' },
 ]
 
 export const RecipeCollectionPage = () => {

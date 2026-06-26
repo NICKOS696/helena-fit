@@ -12,6 +12,7 @@ const categories = [
   { value: 'SALAD', label: 'Салаты' },
   { value: 'SNACK', label: 'Перекусы' },
   { value: 'DESSERT', label: 'Десерты' },
+  { value: 'SMOOTHIE', label: 'Смузи' },
 ]
 
 export const RecipeCollectionEditPage = () => {
@@ -69,6 +70,7 @@ export const RecipeCollectionEditPage = () => {
     coverImagePosition: 'center',
     cookingTime: '',
     instructions: '',
+    benefits: '',
     caloriesPer100g: '',
     proteinPer100g: '',
     fatPer100g: '',
@@ -158,6 +160,7 @@ export const RecipeCollectionEditPage = () => {
       coverImagePosition: 'center',
       cookingTime: '',
       instructions: '',
+      benefits: '',
       caloriesPer100g: '',
       proteinPer100g: '',
       fatPer100g: '',
@@ -182,6 +185,7 @@ export const RecipeCollectionEditPage = () => {
         coverImagePosition: recipe.coverImagePosition || 'center',
         cookingTime: recipe.cookingTime?.toString() || '',
         instructions: recipe.instructions || '',
+        benefits: recipe.benefits || '',
         caloriesPer100g: recipe.caloriesPer100g?.toString() || '',
         proteinPer100g: recipe.proteinPer100g?.toString() || '',
         fatPer100g: recipe.fatPer100g?.toString() || '',
@@ -237,6 +241,7 @@ export const RecipeCollectionEditPage = () => {
       cookingTime: recipeForm.cookingTime ? parseInt(recipeForm.cookingTime) : null,
       ingredients: ingredientsPayload,
       instructions: recipeForm.instructions,
+      benefits: recipeForm.benefits || null,
       caloriesPer100g: recipeForm.caloriesPer100g ? parseFloat(recipeForm.caloriesPer100g) : null,
       proteinPer100g: recipeForm.proteinPer100g ? parseFloat(recipeForm.proteinPer100g) : null,
       fatPer100g: recipeForm.fatPer100g ? parseFloat(recipeForm.fatPer100g) : null,
@@ -517,6 +522,22 @@ export const RecipeCollectionEditPage = () => {
                   onChange={(e) => setRecipeForm({ ...recipeForm, instructions: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   rows={5}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Для напитков (смузи) можно оставить пустым — тогда блок не покажется.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Польза <span className="text-gray-400">(необязательно)</span>
+                </label>
+                <textarea
+                  value={recipeForm.benefits}
+                  onChange={(e) => setRecipeForm({ ...recipeForm, benefits: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows={5}
+                  placeholder="Например, чем полезен этот смузи. Если заполнено — в рецепте появится блок «Польза»."
                 />
               </div>
 

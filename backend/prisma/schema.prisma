@@ -159,6 +159,7 @@ model Recipe {
   cookingTime   Int?
   ingredients   Json
   instructions  String
+  benefits      String?  @db.Text
   caloriesPer100g Int?
   proteinPer100g  Float?
   fatPer100g      Float?
@@ -183,6 +184,7 @@ enum RecipeCategory {
   SNACK
   SALAD
   DESSERT
+  SMOOTHIE
 }
 
 enum DiscountType {

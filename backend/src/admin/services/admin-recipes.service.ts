@@ -21,10 +21,11 @@ export interface CreateRecipeDto {
   coverImage?: string;
   coverImageFit?: string;
   coverImagePosition?: string;
-  category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD' | 'DESSERT';
+  category: 'BREAKFAST' | 'MAIN_COURSE' | 'SNACK' | 'SALAD' | 'DESSERT' | 'SMOOTHIE';
   cookingTime?: number;
   ingredients: any;
-  instructions: string;
+  instructions?: string;
+  benefits?: string;
   caloriesPer100g?: number;
   proteinPer100g?: number;
   fatPer100g?: number;
@@ -95,6 +96,8 @@ export class AdminRecipesService {
     return this.prisma.recipe.create({
       data: {
         ...data,
+        // instructions необязателен для напитков (смузи) — подставляем пустую строку
+        instructions: data.instructions ?? '',
         collectionId,
       },
     });

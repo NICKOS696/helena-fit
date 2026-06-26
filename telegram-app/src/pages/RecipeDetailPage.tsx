@@ -231,10 +231,11 @@ export const RecipeDetailPage = () => {
           </div>
         </Card>
 
-        {/* Способ приготовления — нумерованные шаги */}
-        <Card>
-          <h3 className="text-base font-bold text-gray-800 mb-4">Способ приготовления</h3>
-          {steps.length > 0 ? (
+        {/* Способ приготовления — нумерованные шаги. Скрываем, если пусто
+            (например, у напитков/смузи способа приготовления нет). */}
+        {steps.length > 0 && (
+          <Card>
+            <h3 className="text-base font-bold text-gray-800 mb-4">Способ приготовления</h3>
             <ol className="space-y-3">
               {steps.map((step: string, i: number) => (
                 <li key={i} className="flex gap-3">
@@ -245,12 +246,18 @@ export const RecipeDetailPage = () => {
                 </li>
               ))}
             </ol>
-          ) : (
+          </Card>
+        )}
+
+        {/* Польза — для смузи и напитков вместо способа приготовления */}
+        {recipe.benefits && recipe.benefits.trim() && (
+          <Card>
+            <h3 className="text-base font-bold text-gray-800 mb-3">Польза</h3>
             <div className="whitespace-pre-line text-gray-700 leading-relaxed">
-              {recipe.instructions}
+              {recipe.benefits}
             </div>
-          )}
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   )
