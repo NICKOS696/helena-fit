@@ -252,7 +252,10 @@ export const RecipeDetailPage = () => {
         {/* Польза — для смузи и напитков вместо способа приготовления */}
         {recipe.benefits && recipe.benefits.trim() && (
           <Card>
-            <h3 className="text-base font-bold text-gray-800 mb-3">Польза</h3>
+            <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <span aria-hidden>🌱</span>
+              Польза
+            </h3>
             <div className="whitespace-pre-line text-gray-700 leading-relaxed">
               {recipe.benefits}
             </div>
