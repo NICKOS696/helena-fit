@@ -206,6 +206,17 @@ export const RecipeCollectionPage = () => {
     }
   }
 
+  // Пока открыт экран списка — блокируем прокрутку фоновой страницы,
+  // иначе прокрутка «прокидывается» и контент подвисает в Telegram-вебвью.
+  useEffect(() => {
+    if (!showList) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [showList])
+
   // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
   const pollKey = id ? `payment_polling_${id}` : ''
   const [isPollingPayment, setIsPollingPayment] = useState(
@@ -666,7 +677,10 @@ export const RecipeCollectionPage = () => {
             </div>
 
             {/* Чек-лист */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {items.length === 0 ? (
                 <p className="text-center text-text-secondary py-12">Список пуст</p>
               ) : (
