@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Heart } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { recipesApi } from '@/lib/api'
@@ -18,12 +19,21 @@ export const FavoriteButton = ({
   className 
 }: FavoriteButtonProps) => {
   const queryClient = useQueryClient()
+  // Оптимистичное состояние: меняем иконку сразу, не дожидаясь сервера
+  const [optimistic, setOptimistic] = useState(isFavorite)
+  useEffect(() => setOptimistic(isFavorite), [isFavorite])
 
   const toggleFavorite = useMutation({
-    mutationFn: () => 
-      isFavorite 
+    mutationFn: () =>
+      optimistic
         ? recipesApi.removeFromFavorites(recipeId)
         : recipesApi.addToFavorites(recipeId),
+    onMutate: () => {
+      setOptimistic((v) => !v) // мгновенно переключаем визуально
+    },
+    onError: () => {
+      setOptimistic((v) => !v) // откат при ошибке сети
+    },
     onSuccess: () => {
       // Обновляем все запросы с рецептами
       queryClient.invalidateQueries({ queryKey: ['recipe-collection'] })
@@ -51,23 +61,21 @@ export const FavoriteButton = ({
         haptic.impact('light')
         toggleFavorite.mutate()
       }}
-      disabled={toggleFavorite.isPending}
       className={clsx(
-        'rounded-full flex items-center justify-center transition-all duration-300',
+        'rounded-full flex items-center justify-center transition-colors',
         'active:scale-90 backdrop-blur-sm shadow-md',
         // Тот же стиль, что у кнопки списка покупок: белый кружок / мягкий зелёный при активации
-        isFavorite ? 'bg-primary-light' : 'bg-white/90',
+        optimistic ? 'bg-primary-light' : 'bg-white/90',
         sizeClasses[size],
         className
       )}
     >
       <Heart
         className={clsx(
-          'transition-all duration-300',
           iconSizes[size],
-          isFavorite
+          optimistic
             ? 'fill-white text-white'
-            : 'text-primary-light'
+            : 'text-primary-light/70'
         )}
       />
     </button>

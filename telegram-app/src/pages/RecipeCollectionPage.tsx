@@ -553,7 +553,7 @@ export const RecipeCollectionPage = () => {
                       'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-colors',
                       listIds.has(recipe.id)
                         ? 'bg-primary-light text-white'
-                        : 'bg-white/90 text-primary-light',
+                        : 'bg-white/90 text-primary-light/70',
                     )}
                   >
                     {listIds.has(recipe.id) ? (
