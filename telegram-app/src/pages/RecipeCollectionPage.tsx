@@ -30,43 +30,21 @@ function extractIngredients(recipe: any): { name: string; amount: string }[] {
   return out
 }
 
-// Приводим название ингредиента к единому виду (объединяем синонимы).
-// Сначала смотрим справочник из админки (aliasMap), потом эвристику.
+// Приводим название ингредиента к единому виду.
+// Объединяем ТОЛЬКО по справочнику из админки (группы). Без группы —
+// название остаётся отдельным продуктом «как написано» (без авто-угадывания).
 function canonicalizeIngredient(
   raw: string,
   aliasMap?: Record<string, string>,
 ): { key: string; display: string } {
-  // 1) Справочник: точное совпадение «сырого» названия (lowercase)
-  const exact = aliasMap?.[raw.trim().toLowerCase()]
-  if (exact) return { key: exact.toLowerCase(), display: exact }
+  const lower = raw.trim().toLowerCase()
+  // Справочник: точное совпадение «сырого» названия
+  const grouped = aliasMap?.[lower]
+  if (grouped) return { key: grouped.toLowerCase(), display: grouped }
 
-  const s = raw
-    .trim()
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, ' ') // убираем скобки (бренды/пояснения)
-    .replace(/\d+\s*%/g, ' ') // убираем жирность %
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  // Правила: от частного к общему (порядок важен).
-  const rules: [RegExp, string][] = [
-    [/(зел[её]н\w*\s+лук|лук\s+зел[её]н)/, 'Зелёный лук'],
-    [/(^|\s)лук(\s|$)/, 'Лук'],
-    [/(яйц|яич|белок|желток)/, 'Яйцо'],
-    [/творожн\w*\s+сыр/, 'Творожный сыр'],
-    [/творог|творожн/, 'Творог'],
-    [/моцарелл/, 'Моцарелла'],
-    [/сметан/, 'Сметана'],
-    [/сливк/, 'Сливки'],
-    [/греческ\w*\s+йогурт/, 'Греческий йогурт'],
-    [/йогурт/, 'Йогурт'],
-    [/молоко/, 'Молоко'],
-  ]
-  for (const [re, name] of rules) {
-    if (re.test(s)) return { key: name.toLowerCase(), display: name }
-  }
-  const display = s ? s.charAt(0).toUpperCase() + s.slice(1) : raw.trim()
-  return { key: s || raw.trim().toLowerCase(), display }
+  // Нет группы — продукт сам по себе, с аккуратным отображением
+  const display = raw.trim() ? raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1) : raw.trim()
+  return { key: lower, display }
 }
 
 // Суммируем количества по единицам (г/кг/мл/л/шт). «По вкусу», «щепотка»,
