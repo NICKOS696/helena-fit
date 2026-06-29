@@ -632,7 +632,7 @@ export const RecipeCollectionEditPage = () => {
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="font-bold mb-3">КБЖУ на всё блюдо</h3>
+                <h3 className="font-bold mb-3">КБЖУ на все блюдо</h3>
                 <div className="grid grid-cols-4 gap-4">
                   <input
                     type="number"
