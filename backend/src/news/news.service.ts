@@ -1,17 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Telegram ID, которым видны черновики новостей (для предпросмотра).
+const PREVIEW_TELEGRAM_IDS = ['89761488', '449178486'];
+
 @Injectable()
 export class NewsService {
   constructor(private prisma: PrismaService) {}
 
-  async getNews(page = 1, limit = 10) {
+  private isPreviewer(telegramId?: string): boolean {
+    return !!telegramId && PREVIEW_TELEGRAM_IDS.includes(telegramId);
+  }
+
+  async getNews(page = 1, limit = 10, telegramId?: string) {
     const skip = (page - 1) * limit;
+    const preview = this.isPreviewer(telegramId);
+    // Превьюверам показываем и черновики; остальным — только опубликованное
+    const where = preview
+      ? { status: { in: ['PUBLISHED', 'DRAFT'] as any } }
+      : { status: 'PUBLISHED' as any };
+    const orderBy = preview
+      ? ({ createdAt: 'desc' } as any) // у черновиков publishedAt пустой
+      : ({ publishedAt: 'desc' } as any);
 
     const [items, total] = await Promise.all([
       this.prisma.news.findMany({
-        where: { status: 'PUBLISHED' },
-        orderBy: { publishedAt: 'desc' },
+        where,
+        orderBy,
         skip,
         take: limit,
         include: {
@@ -37,9 +52,7 @@ export class NewsService {
           },
         },
       }),
-      this.prisma.news.count({
-        where: { status: 'PUBLISHED' },
-      }),
+      this.prisma.news.count({ where }),
     ]);
 
     return {
@@ -51,8 +64,8 @@ export class NewsService {
     };
   }
 
-  async getNewsById(id: string) {
-    return this.prisma.news.findUnique({
+  async getNewsById(id: string, telegramId?: string) {
+    const news = await this.prisma.news.findUnique({
       where: { id },
       include: {
         workoutLinks: {
@@ -67,5 +80,10 @@ export class NewsService {
         },
       },
     });
+    // Черновик/архив доступен только превьюверам
+    if (news && news.status !== 'PUBLISHED' && !this.isPreviewer(telegramId)) {
+      return null;
+    }
+    return news;
   }
 }
