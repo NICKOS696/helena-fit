@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { recipesApi, paymeApi, analyticsApi } from '@/lib/api'
+import {
+  getShoppingList,
+  toggleShoppingList,
+  clearShoppingList,
+  type ShoppingRecipe,
+} from '@/lib/shoppingList'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
@@ -12,10 +18,6 @@ import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
 import { pluralize } from '@/utils/plural'
-
-// Список покупок: пока тестируем на Сборнике №2 (закрыт у всех).
-// Пустая строка = выключено везде. Чтобы включить во всех сборниках — см. shoppingEnabled ниже.
-const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
 
 // Достаём плоский список ингредиентов рецепта (поддержка разделов и старого формата)
 function extractIngredients(recipe: any): { name: string; amount: string }[] {
@@ -109,45 +111,33 @@ export const RecipeCollectionPage = () => {
   }
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
 
-  // --- Список покупок (тест на Сборнике №2) ---
-  const shoppingEnabled = id === SHOPPING_LIST_TEST_COLLECTION
-  const listKey = id ? `shopping_list_${id}` : ''
-  const [listIds, setListIds] = useState<Set<string>>(() => {
-    try {
-      const raw = listKey ? localStorage.getItem(listKey) : null
-      return new Set(raw ? JSON.parse(raw) : [])
-    } catch {
-      return new Set()
-    }
-  })
+  // --- Список покупок (общий, сквозной для всех сборников; тест на Сборнике №2) ---
+  const shoppingEnabled = true // список покупок включён во всех сборниках
+  const [listRecipes, setListRecipes] = useState<ShoppingRecipe[]>(() => getShoppingList())
+  const listIds = useMemo(() => new Set(listRecipes.map((r) => r.id)), [listRecipes])
   const [showList, setShowList] = useState(false)
   const [showListRecipes, setShowListRecipes] = useState(false)
   const [copied, setCopied] = useState(false)
   const [checkedLines, setCheckedLines] = useState<Set<string>>(new Set())
 
-  const toggleInList = (recipeId: string) => {
+  // Добавляем/убираем рецепт в общий список (сохраняем «снимок»)
+  const toggleInList = (recipe: any) => {
     haptic.selection()
-    setListIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(recipeId)) {
-        next.delete(recipeId)
-      } else {
-        next.add(recipeId)
-      }
-      try {
-        if (listKey) localStorage.setItem(listKey, JSON.stringify([...next]))
-      } catch {}
-      return next
-    })
+    setListRecipes(
+      toggleShoppingList({
+        id: recipe.id,
+        collectionId: id || recipe.collectionId,
+        title: recipe.title,
+        coverImage: recipe.coverImage,
+        ingredients: recipe.ingredients,
+      }),
+    )
   }
 
   const clearList = () => {
     haptic.impact('light')
-    setListIds(new Set())
+    setListRecipes(clearShoppingList())
     setShowList(false)
-    try {
-      if (listKey) localStorage.removeItem(listKey)
-    } catch {}
   }
 
   // Пока открыт экран списка — «замораживаем» фоновую страницу (iOS-надёжный способ
@@ -543,12 +533,12 @@ export const RecipeCollectionPage = () => {
                     />
                   </div>
                 )}
-                {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
+                {/* Кнопка «в список покупок» */}
                 {shoppingEnabled && !recipe.locked && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      toggleInList(recipe.id)
+                      toggleInList(recipe)
                     }}
                     aria-label="В список покупок"
                     className={clsx(
@@ -651,9 +641,9 @@ export const RecipeCollectionPage = () => {
         </div>
       )}
 
-      {/* Экран списка покупок */}
+      {/* Экран списка покупок — берём общий список (со всех сборников) */}
       {shoppingEnabled && showList && (() => {
-        const selected = (collection.recipes || []).filter((r: any) => listIds.has(r.id))
+        const selected = listRecipes
         const items = buildListItems(selected)
         const text = buildListText(selected)
         return (
@@ -709,7 +699,7 @@ export const RecipeCollectionPage = () => {
                         key={r.id}
                         onClick={() => {
                           setShowList(false)
-                          navigate(`/recipes/${id}/recipe/${r.id}`)
+                          navigate(`/recipes/${r.collectionId}/recipe/${r.id}`)
                         }}
                         className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left"
                       >
@@ -729,7 +719,7 @@ export const RecipeCollectionPage = () => {
                           className="w-4 h-4 text-text-secondary flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            toggleInList(r.id)
+                            toggleInList(r)
                           }}
                         />
                       </button>

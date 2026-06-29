@@ -7,11 +7,9 @@ import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
+import { isInShoppingList, toggleShoppingList } from '@/lib/shoppingList'
 import { ArrowLeft, Clock, ShoppingBag, Check } from 'lucide-react'
 import clsx from 'clsx'
-
-// Должно совпадать с флагом в RecipeCollectionPage (тест списка на Сборнике №2)
-const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
 
 export const RecipeDetailPage = () => {
   const { collectionId, recipeId } = useParams<{ collectionId: string; recipeId: string }>()
@@ -19,40 +17,31 @@ export const RecipeDetailPage = () => {
   useTelegramBackButton()
   const [nutritionMode, setNutritionMode] = useState<'serving' | '100g'>('serving')
 
-  // Список покупок (тот же localStorage-ключ, что на странице сборника)
-  const shoppingEnabled = collectionId === SHOPPING_LIST_TEST_COLLECTION
-  const listKey = collectionId ? `shopping_list_${collectionId}` : ''
+  // Общий список покупок (сквозной для всех сборников)
+  const shoppingEnabled = true
   const [inList, setInList] = useState(false)
   useEffect(() => {
-    try {
-      const raw = listKey ? localStorage.getItem(listKey) : null
-      const ids: string[] = raw ? JSON.parse(raw) : []
-      setInList(!!recipeId && ids.includes(recipeId))
-    } catch {
-      setInList(false)
-    }
-  }, [listKey, recipeId])
-
-  const toggleInList = () => {
-    if (!recipeId || !listKey) return
-    haptic.selection()
-    try {
-      const raw = localStorage.getItem(listKey)
-      const ids: string[] = raw ? JSON.parse(raw) : []
-      const next = ids.includes(recipeId)
-        ? ids.filter((x) => x !== recipeId)
-        : [...ids, recipeId]
-      localStorage.setItem(listKey, JSON.stringify(next))
-      setInList(next.includes(recipeId))
-    } catch {
-      /* no-op */
-    }
-  }
+    setInList(!!recipeId && isInShoppingList(recipeId))
+  }, [recipeId])
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['recipe', collectionId, recipeId],
     queryFn: () => recipesApi.getRecipe(collectionId!, recipeId!),
   })
+
+  const toggleInList = () => {
+    const recipe = data?.data
+    if (!recipe || !recipeId) return
+    haptic.selection()
+    toggleShoppingList({
+      id: recipe.id,
+      collectionId: collectionId || recipe.collectionId,
+      title: recipe.title,
+      coverImage: recipe.coverImage,
+      ingredients: recipe.ingredients,
+    })
+    setInList(isInShoppingList(recipeId))
+  }
 
   // Отправляем просмотр при загрузке страницы
   useEffect(() => {
