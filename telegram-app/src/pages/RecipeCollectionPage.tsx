@@ -652,12 +652,12 @@ export const RecipeCollectionPage = () => {
         const items = buildListItems(selected)
         const text = buildListText(selected)
         return (
-          // Весь экран — единый скроллящийся контейнер (надёжно в Telegram-вебвью),
-          // шапка с кнопками «прилипает» сверху.
-          <div className="fixed inset-0 z-50 bg-white overflow-y-auto overscroll-contain">
-            {/* Шапка + кнопки (sticky) */}
+          // Экран не скроллится сам (overflow-hidden), шапка фиксирована (flex-none),
+          // прокручивается ТОЛЬКО список ниже. Короткий список не «пружинит».
+          <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
+            {/* Шапка + кнопки */}
             <div
-              className="sticky top-0 z-10 bg-white border-b border-gray-200"
+              className="flex-none bg-white border-b border-gray-200"
               style={{ paddingTop: 'var(--app-safe-top)' }}
             >
               <div className="flex items-center gap-3 px-4 pt-4">
@@ -685,8 +685,11 @@ export const RecipeCollectionPage = () => {
               </div>
             </div>
 
-            {/* Чек-лист */}
-            <div className="px-4 pb-10">
+            {/* Чек-лист — единственная прокручиваемая область */}
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-10"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {items.length === 0 ? (
                 <p className="text-center text-text-secondary py-12">Список пуст</p>
               ) : (

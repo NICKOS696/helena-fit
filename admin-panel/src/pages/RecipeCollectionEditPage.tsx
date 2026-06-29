@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
 import { ArrowLeft, Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react'
@@ -19,6 +19,8 @@ export const RecipeCollectionEditPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const autoOpenedRef = useRef(false)
   
   const [showCollectionModal, setShowCollectionModal] = useState(false)
   const [showRecipeModal, setShowRecipeModal] = useState(false)
@@ -227,6 +229,20 @@ export const RecipeCollectionEditPage = () => {
     }
     setShowRecipeModal(true)
   }
+
+  // Переход из раздела «Ингредиенты»: ?recipe=<id> — открываем рецепт на правку
+  useEffect(() => {
+    if (autoOpenedRef.current) return
+    const recipeId = searchParams.get('recipe')
+    const recipes = data?.data?.recipes
+    if (!recipeId || !recipes) return
+    const recipe = recipes.find((r: any) => r.id === recipeId)
+    if (recipe) {
+      autoOpenedRef.current = true
+      handleOpenRecipeModal(recipe)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, data])
 
   const handleSubmitRecipe = (e: React.FormEvent) => {
     e.preventDefault()

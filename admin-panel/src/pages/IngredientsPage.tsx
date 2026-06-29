@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminIngredientsApi } from '@/lib/api'
-import { Plus, X, Trash2, Search } from 'lucide-react'
+import { Plus, X, Trash2, Search, ExternalLink } from 'lucide-react'
 
 interface Group {
   id: string
@@ -9,8 +10,15 @@ interface Group {
   aliases: string[]
 }
 
+interface Usage {
+  recipeId: string
+  recipeTitle: string
+  collectionId: string
+}
+
 export const IngredientsPage = () => {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [newGroup, setNewGroup] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -21,9 +29,13 @@ export const IngredientsPage = () => {
     queryFn: () => adminIngredientsApi.getOverview(),
   })
 
-  const overview = data?.data || { groups: [], unassigned: [] }
+  const overview = data?.data || { groups: [], unassigned: [], usage: {} }
   const groups: Group[] = overview.groups || []
   const unassigned: string[] = overview.unassigned || []
+  const usage: Record<string, Usage[]> = overview.usage || {}
+
+  // Переход в рецепт для правки названия (откроется на редактирование)
+  const goToRecipe = (u: Usage) => navigate(`/recipes/${u.collectionId}?recipe=${u.recipeId}`)
 
   // Все мутации возвращают свежую сводку — кладём её в кэш
   const onData = (res: any) => queryClient.setQueryData(['admin-ingredients'], res)
@@ -125,20 +137,35 @@ export const IngredientsPage = () => {
               {unassigned.length === 0 ? 'Все ингредиенты распределены 🎉' : 'Ничего не найдено'}
             </p>
           ) : (
-            <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
+            <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
               {filteredUnassigned.map((name) => (
-                <label
-                  key={name}
-                  className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(name)}
-                    onChange={() => toggleSelect(name)}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-gray-800">{name}</span>
-                </label>
+                <div key={name} className="px-3 py-2 hover:bg-gray-50">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(name)}
+                      onChange={() => toggleSelect(name)}
+                      className="w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="text-sm text-gray-800">{name}</span>
+                  </label>
+                  {/* В каких рецептах встречается — клик ведёт в рецепт на правку */}
+                  {usage[name]?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1 pl-7">
+                      {usage[name].map((u) => (
+                        <button
+                          key={u.recipeId}
+                          onClick={() => goToRecipe(u)}
+                          title="Открыть рецепт для правки"
+                          className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-full"
+                        >
+                          {u.recipeTitle}
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

@@ -23,10 +23,12 @@ function extractNames(ingredients: any): string[] {
 export class AdminIngredientsService {
   constructor(private prisma: PrismaService) {}
 
-  // Сводка: группы с их псевдонимами + нераспределённые названия из рецептов
+  // Сводка: группы с их псевдонимами + нераспределённые названия + где встречаются
   async getOverview() {
     const [recipes, groups] = await Promise.all([
-      this.prisma.recipe.findMany({ select: { ingredients: true } }),
+      this.prisma.recipe.findMany({
+        select: { id: true, title: true, collectionId: true, ingredients: true },
+      }),
       this.prisma.ingredientGroup.findMany({
         include: { aliases: true },
         orderBy: { name: 'asc' },
@@ -34,7 +36,19 @@ export class AdminIngredientsService {
     ]);
 
     const allNames = new Set<string>();
-    recipes.forEach((r) => extractNames(r.ingredients).forEach((n) => allNames.add(n)));
+    // usage: название (lowercase) -> список рецептов, где оно встречается
+    const usage: Record<string, { recipeId: string; recipeTitle: string; collectionId: string }[]> =
+      {};
+    recipes.forEach((r) => {
+      const seen = new Set<string>();
+      extractNames(r.ingredients).forEach((n) => {
+        allNames.add(n);
+        if (seen.has(n)) return; // один рецепт — одна запись на название
+        seen.add(n);
+        if (!usage[n]) usage[n] = [];
+        usage[n].push({ recipeId: r.id, recipeTitle: r.title, collectionId: r.collectionId });
+      });
+    });
 
     const assigned = new Set(groups.flatMap((g) => g.aliases.map((a) => a.alias)));
     const unassigned = [...allNames]
@@ -48,6 +62,7 @@ export class AdminIngredientsService {
         aliases: g.aliases.map((a) => a.alias).sort((a, b) => a.localeCompare(b, 'ru')),
       })),
       unassigned,
+      usage,
     };
   }
 
