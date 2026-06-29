@@ -9,7 +9,7 @@ import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingCart, Copy, Share2, Check } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check } from 'lucide-react'
 import clsx from 'clsx'
 
 // Список покупок: пока тестируем на Сборнике №2 (закрыт у всех).
@@ -559,7 +559,7 @@ export const RecipeCollectionPage = () => {
                     {listIds.has(recipe.id) ? (
                       <Check className="w-4 h-4" />
                     ) : (
-                      <ShoppingCart className="w-4 h-4" />
+                      <ShoppingBag className="w-4 h-4" />
                     )}
                   </button>
                 )}
@@ -643,7 +643,7 @@ export const RecipeCollectionPage = () => {
             }}
             className="flex items-center gap-1.5 bg-primary text-white text-sm px-3.5 py-1.5 rounded-full shadow active:scale-95 transition-transform"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingBag className="w-4 h-4" />
             <span className="font-medium">{listIds.size}</span>
           </button>
         </div>
