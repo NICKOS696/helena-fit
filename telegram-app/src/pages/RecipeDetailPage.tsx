@@ -146,12 +146,25 @@ export const RecipeDetailPage = () => {
           />
           {/* Favorite Button */}
           <div className="absolute top-4 right-4">
-            <FavoriteButton 
-              recipeId={recipe.id} 
+            <FavoriteButton
+              recipeId={recipe.id}
               isFavorite={recipe.isFavorite || false}
               size="md"
             />
           </div>
+          {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
+          {shoppingEnabled && !recipe.locked && (
+            <button
+              onClick={toggleInList}
+              aria-label="В список покупок"
+              className={clsx(
+                'absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-colors',
+                inList ? 'bg-primary text-white' : 'bg-white/90 text-text-secondary',
+              )}
+            >
+              {inList ? <Check className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       )}
 
@@ -236,21 +249,6 @@ export const RecipeDetailPage = () => {
           )}
         </div>
 
-        {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
-        {shoppingEnabled && !recipe.locked && (
-          <button
-            onClick={toggleInList}
-            className={clsx(
-              'w-full py-3 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors',
-              inList
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-text-primary border-gray-200',
-            )}
-          >
-            {inList ? <Check className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
-            {inList ? 'В списке покупок' : 'Добавить в список покупок'}
-          </button>
-        )}
 
         {/* Ингредиенты — аккуратными строками, с разделами */}
         <Card>
