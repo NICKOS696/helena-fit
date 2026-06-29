@@ -386,37 +386,23 @@ export const RecipeCollectionPage = () => {
             </div>
           )
 
-          // В режиме «Все» — группируем рецепты по категориям, каждая со своим
-          // заголовком и в фиксированном порядке (как в списке categories).
+          // В режиме «Все» — упорядочиваем рецепты по категориям (завтраки →
+          // вторые → салаты → ...), без заголовков. Внутри категории — исходный
+          // порядок. Незнакомые категории уходят в конец.
+          let orderedRecipes = filteredRecipes
           if (selectedCategory === 'all') {
-            const known = new Set(categories.map((c) => c.value))
-            const groups = categories
-              .filter((c) => c.value !== 'all')
-              .map((c) => ({
-                label: c.label,
-                items: filteredRecipes.filter((r: any) => r.category === c.value),
-              }))
-              .filter((g) => g.items.length > 0)
-
-            // Рецепты с неизвестной категорией (на всякий случай) — в конец
-            const others = filteredRecipes.filter((r: any) => !known.has(r.category))
-            if (others.length) groups.push({ label: 'Другое', items: others })
-
-            return (
-              <div key="all" className="space-y-6 animate-fadein">
-                {groups.map((g) => (
-                  <div key={g.label}>
-                    <h3 className="text-base font-bold text-text-primary mb-3">{g.label}</h3>
-                    <div className="grid grid-cols-2 gap-3">{g.items.map(renderCard)}</div>
-                  </div>
-                ))}
-              </div>
+            const orderOf = (cat: string) => {
+              const i = categories.findIndex((c) => c.value !== 'all' && c.value === cat)
+              return i === -1 ? 999 : i
+            }
+            orderedRecipes = [...filteredRecipes].sort(
+              (a: any, b: any) => orderOf(a.category) - orderOf(b.category),
             )
           }
 
           return (
             <div key={selectedCategory} className="grid grid-cols-2 gap-3 animate-fadein">
-              {filteredRecipes.map(renderCard)}
+              {orderedRecipes.map(renderCard)}
             </div>
           )
         })()}
