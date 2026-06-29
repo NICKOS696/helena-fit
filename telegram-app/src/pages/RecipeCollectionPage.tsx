@@ -161,6 +161,15 @@ export const RecipeCollectionPage = () => {
     })
   }
 
+  const clearList = () => {
+    haptic.impact('light')
+    setListIds(new Set())
+    setShowList(false)
+    try {
+      if (listKey) localStorage.removeItem(listKey)
+    } catch {}
+  }
+
   // Собираем позиции списка покупок: объединяем синонимы и суммируем количества.
   const buildListItems = (selectedRecipes: any[]) => {
     const map = new Map<string, { name: string; amounts: string[] }>()
@@ -206,16 +215,6 @@ export const RecipeCollectionPage = () => {
     }
   }
 
-  // Пока открыт экран списка — блокируем прокрутку фоновой страницы,
-  // иначе прокрутка «прокидывается» и контент подвисает в Telegram-вебвью.
-  useEffect(() => {
-    if (!showList) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [showList])
 
   // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
   const pollKey = id ? `payment_polling_${id}` : ''
@@ -625,18 +624,26 @@ export const RecipeCollectionPage = () => {
         })()}
       </div>
 
-      {/* Плавающая кнопка «Список покупок» (тест на Сборнике №2) */}
+      {/* Компактные плавающие кнопки списка покупок (тест на Сборнике №2) */}
       {shoppingEnabled && collection.hasAccess && listIds.size > 0 && !showList && (
-        <button
-          onClick={() => {
-            haptic.impact('light')
-            setShowList(true)
-          }}
-          className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30 flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full shadow-lg active:scale-95 transition-transform"
-        >
-          <ShoppingCart className="w-5 h-5" />
-          <span className="font-medium">Список • {listIds.size}</span>
-        </button>
+        <div className="fixed right-3 bottom-24 z-30 flex items-center gap-2">
+          <button
+            onClick={clearList}
+            className="bg-white/95 border border-gray-200 text-text-secondary text-xs px-3 py-1.5 rounded-full shadow active:scale-95 transition-transform"
+          >
+            Очистить
+          </button>
+          <button
+            onClick={() => {
+              haptic.impact('light')
+              setShowList(true)
+            }}
+            className="flex items-center gap-1.5 bg-primary text-white text-sm px-3.5 py-1.5 rounded-full shadow active:scale-95 transition-transform"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            <span className="font-medium">{listIds.size}</span>
+          </button>
+        </div>
       )}
 
       {/* Экран списка покупок */}
@@ -645,42 +652,41 @@ export const RecipeCollectionPage = () => {
         const items = buildListItems(selected)
         const text = buildListText(selected)
         return (
-          <div className="fixed inset-0 z-50 bg-white flex flex-col">
-            {/* Шапка */}
+          // Весь экран — единый скроллящийся контейнер (надёжно в Telegram-вебвью),
+          // шапка с кнопками «прилипает» сверху.
+          <div className="fixed inset-0 z-50 bg-white overflow-y-auto overscroll-contain">
+            {/* Шапка + кнопки (sticky) */}
             <div
-              className="flex items-center gap-3 p-4 border-b border-gray-200"
-              style={{ paddingTop: 'calc(1rem + var(--app-safe-top))' }}
+              className="sticky top-0 z-10 bg-white border-b border-gray-200"
+              style={{ paddingTop: 'var(--app-safe-top)' }}
             >
-              <button onClick={() => setShowList(false)}>
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-              <h1 className="text-lg font-bold text-text-primary flex-1">Список покупок</h1>
-              <span className="text-sm text-text-secondary">{selected.length} рец.</span>
-            </div>
-
-            {/* Кнопки действий */}
-            <div className="flex gap-2 p-4">
-              <button
-                onClick={() => handleCopyList(text)}
-                className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Скопировано' : 'Скопировать'}
-              </button>
-              <button
-                onClick={() => handleShareList(text)}
-                className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 text-text-primary py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
-              >
-                <Share2 className="w-4 h-4" />
-                Поделиться
-              </button>
+              <div className="flex items-center gap-3 px-4 pt-4">
+                <button onClick={() => setShowList(false)}>
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+                <h1 className="text-lg font-bold text-text-primary flex-1">Список покупок</h1>
+                <span className="text-sm text-text-secondary">{selected.length} рец.</span>
+              </div>
+              <div className="flex gap-2 p-4">
+                <button
+                  onClick={() => handleCopyList(text)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Скопировано' : 'Скопировать'}
+                </button>
+                <button
+                  onClick={() => handleShareList(text)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 text-text-primary py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Поделиться
+                </button>
+              </div>
             </div>
 
             {/* Чек-лист */}
-            <div
-              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
+            <div className="px-4 pb-10">
               {items.length === 0 ? (
                 <p className="text-center text-text-secondary py-12">Список пуст</p>
               ) : (
