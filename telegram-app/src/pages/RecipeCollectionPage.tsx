@@ -12,10 +12,9 @@ import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingCart, Copy, Share2, Check } from 'lucide-react'
 import clsx from 'clsx'
 
-// Список покупок временно отключён (нужно додумать объединение ингредиентов).
-// Чтобы снова включить для теста — вернуть сюда ID сборника, напр.:
-// 'f2c682f5-030f-4c3c-908a-6b27055e81a5' (Сборник №2). Пустая строка = выключено.
-const SHOPPING_LIST_TEST_COLLECTION = ''
+// Список покупок: пока тестируем на Сборнике №2 (закрыт у всех).
+// Пустая строка = выключено везде. Чтобы включить во всех сборниках — см. shoppingEnabled ниже.
+const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
 
 // Достаём плоский список ингредиентов рецепта (поддержка разделов и старого формата)
 function extractIngredients(recipe: any): { name: string; amount: string }[] {
@@ -29,6 +28,57 @@ function extractIngredients(recipe: any): { name: string; amount: string }[] {
     }),
   )
   return out
+}
+
+// Приводим название ингредиента к единому виду (объединяем синонимы).
+// Возвращаем ключ (для группировки) и красивое отображаемое имя.
+function canonicalizeIngredient(raw: string): { key: string; display: string } {
+  const s = raw
+    .trim()
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ') // убираем скобки (бренды/пояснения)
+    .replace(/\d+\s*%/g, ' ') // убираем жирность %
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Правила: от частного к общему (порядок важен).
+  const rules: [RegExp, string][] = [
+    [/(зел[её]н\w*\s+лук|лук\s+зел[её]н)/, 'Зелёный лук'],
+    [/(^|\s)лук(\s|$)/, 'Лук'],
+    [/(яйц|яич|белок|желток)/, 'Яйцо'],
+    [/творожн\w*\s+сыр/, 'Творожный сыр'],
+    [/творог|творожн/, 'Творог'],
+    [/моцарелл/, 'Моцарелла'],
+    [/сметан/, 'Сметана'],
+    [/сливк/, 'Сливки'],
+    [/греческ\w*\s+йогурт/, 'Греческий йогурт'],
+    [/йогурт/, 'Йогурт'],
+    [/молоко/, 'Молоко'],
+  ]
+  for (const [re, name] of rules) {
+    if (re.test(s)) return { key: name.toLowerCase(), display: name }
+  }
+  const display = s ? s.charAt(0).toUpperCase() + s.slice(1) : raw.trim()
+  return { key: s || raw.trim().toLowerCase(), display }
+}
+
+// Суммируем количества: если все в одной единице (шт/г/мл) — складываем,
+// иначе перечисляем уникальные значения.
+function summarizeAmounts(amounts: string[]): string {
+  const list = amounts.map((a) => a.trim()).filter(Boolean)
+  if (list.length === 0) return ''
+  const units: [string, RegExp][] = [
+    ['шт', /^(\d+(?:[.,]\d+)?)\s*шт/],
+    ['г', /^(\d+(?:[.,]\d+)?)\s*г(?![а-я])/],
+    ['мл', /^(\d+(?:[.,]\d+)?)\s*мл/],
+  ]
+  for (const [unit, re] of units) {
+    if (list.every((a) => re.test(a))) {
+      const sum = list.reduce((acc, a) => acc + parseFloat(a.match(re)![1].replace(',', '.')), 0)
+      return `${Math.round(sum * 10) / 10} ${unit}`
+    }
+  }
+  return [...new Set(list)].join(', ')
 }
 
 const categories = [
@@ -97,24 +147,20 @@ export const RecipeCollectionPage = () => {
     })
   }
 
-  // Собираем позиции списка покупок из выбранных рецептов.
-  // Объединяем по названию без учёта регистра, складываем количества одной строкой.
+  // Собираем позиции списка покупок: объединяем синонимы и суммируем количества.
   const buildListItems = (selectedRecipes: any[]) => {
     const map = new Map<string, { name: string; amounts: string[] }>()
     selectedRecipes.forEach((r) => {
       extractIngredients(r).forEach(({ name, amount }) => {
-        const clean = name.trim()
-        if (!clean) return
-        const key = clean.toLowerCase()
-        if (!map.has(key)) {
-          const display = clean.charAt(0).toUpperCase() + clean.slice(1)
-          map.set(key, { name: display, amounts: [] })
-        }
-        const a = amount.trim()
-        if (a && !map.get(key)!.amounts.includes(a)) map.get(key)!.amounts.push(a)
+        if (!name.trim()) return
+        const { key, display } = canonicalizeIngredient(name)
+        if (!map.has(key)) map.set(key, { name: display, amounts: [] })
+        if (amount.trim()) map.get(key)!.amounts.push(amount.trim())
       })
     })
-    return [...map.values()].map((e) => ({ name: e.name, detail: e.amounts.join(', ') }))
+    return [...map.values()]
+      .map((e) => ({ name: e.name, detail: summarizeAmounts(e.amounts) }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
   }
 
   const buildListText = (selectedRecipes: any[]) =>
