@@ -655,9 +655,10 @@ export const RecipeCollectionPage = () => {
         const items = buildListItems(selected)
         const text = buildListText(selected)
         return (
+          // z-[60] — выше нижней навигации (z-50), иначе она перекрывает низ списка.
           // Экран не скроллится сам (overflow-hidden), шапка фиксирована (flex-none),
           // прокручивается ТОЛЬКО список ниже. Короткий список не «пружинит».
-          <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
+          <div className="fixed inset-0 z-[60] bg-white flex flex-col overflow-hidden">
             {/* Шапка + кнопки */}
             <div
               className="flex-none bg-white border-b border-gray-200"
@@ -688,10 +689,14 @@ export const RecipeCollectionPage = () => {
               </div>
             </div>
 
-            {/* Чек-лист — единственная прокручиваемая область */}
+            {/* Чек-лист — единственная прокручиваемая область.
+                Нижний отступ с учётом safe-area, чтобы последний пункт не прятался. */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-10"
-              style={{ WebkitOverflowScrolling: 'touch' }}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: 'calc(2.5rem + var(--app-safe-bottom))',
+              }}
             >
               {items.length === 0 ? (
                 <p className="text-center text-text-secondary py-12">Список пуст</p>

@@ -6,14 +6,48 @@ import { Card } from '@/components/Card'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { haptic } from '@/lib/telegram'
+import { ArrowLeft, Clock, ShoppingBag, Check } from 'lucide-react'
 import clsx from 'clsx'
+
+// Должно совпадать с флагом в RecipeCollectionPage (тест списка на Сборнике №2)
+const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
 
 export const RecipeDetailPage = () => {
   const { collectionId, recipeId } = useParams<{ collectionId: string; recipeId: string }>()
   const navigate = useNavigate()
   useTelegramBackButton()
   const [nutritionMode, setNutritionMode] = useState<'serving' | '100g'>('serving')
+
+  // Список покупок (тот же localStorage-ключ, что на странице сборника)
+  const shoppingEnabled = collectionId === SHOPPING_LIST_TEST_COLLECTION
+  const listKey = collectionId ? `shopping_list_${collectionId}` : ''
+  const [inList, setInList] = useState(false)
+  useEffect(() => {
+    try {
+      const raw = listKey ? localStorage.getItem(listKey) : null
+      const ids: string[] = raw ? JSON.parse(raw) : []
+      setInList(!!recipeId && ids.includes(recipeId))
+    } catch {
+      setInList(false)
+    }
+  }, [listKey, recipeId])
+
+  const toggleInList = () => {
+    if (!recipeId || !listKey) return
+    haptic.selection()
+    try {
+      const raw = localStorage.getItem(listKey)
+      const ids: string[] = raw ? JSON.parse(raw) : []
+      const next = ids.includes(recipeId)
+        ? ids.filter((x) => x !== recipeId)
+        : [...ids, recipeId]
+      localStorage.setItem(listKey, JSON.stringify(next))
+      setInList(next.includes(recipeId))
+    } catch {
+      /* no-op */
+    }
+  }
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['recipe', collectionId, recipeId],
@@ -201,6 +235,22 @@ export const RecipeDetailPage = () => {
             </div>
           )}
         </div>
+
+        {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
+        {shoppingEnabled && !recipe.locked && (
+          <button
+            onClick={toggleInList}
+            className={clsx(
+              'w-full py-3 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors',
+              inList
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-text-primary border-gray-200',
+            )}
+          >
+            {inList ? <Check className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
+            {inList ? 'В списке покупок' : 'Добавить в список покупок'}
+          </button>
+        )}
 
         {/* Ингредиенты — аккуратными строками, с разделами */}
         <Card>
