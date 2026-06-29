@@ -321,9 +321,7 @@ export const RecipeCollectionPage = () => {
             )
           }
 
-          return (
-            <div key={selectedCategory} className="grid grid-cols-2 gap-3 animate-fadein">
-              {filteredRecipes.map((recipe: any) => (
+          const renderCard = (recipe: any) => (
             <div
               key={recipe.id}
               onClick={() =>
@@ -354,8 +352,8 @@ export const RecipeCollectionPage = () => {
                 {/* Favorite Button */}
                 {!recipe.locked && (
                   <div className="absolute top-2 right-2">
-                    <FavoriteButton 
-                      recipeId={recipe.id} 
+                    <FavoriteButton
+                      recipeId={recipe.id}
                       isFavorite={recipe.isFavorite || false}
                       size="sm"
                     />
@@ -368,7 +366,7 @@ export const RecipeCollectionPage = () => {
                 <h3 className="text-sm font-bold text-text-primary mb-2 line-clamp-2 min-h-[2.5rem]">
                   {recipe.title}
                 </h3>
-                
+
                 {/* Stats */}
                 <div className="flex items-center justify-between text-xs text-text-secondary">
                   {recipe.caloriesPerServing && (
@@ -386,8 +384,40 @@ export const RecipeCollectionPage = () => {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          )
+
+          // В режиме «Все» — группируем рецепты по категориям, каждая со своим
+          // заголовком и в фиксированном порядке (как в списке categories).
+          if (selectedCategory === 'all') {
+            const known = new Set(categories.map((c) => c.value))
+            const groups = categories
+              .filter((c) => c.value !== 'all')
+              .map((c) => ({
+                label: c.label,
+                items: filteredRecipes.filter((r: any) => r.category === c.value),
+              }))
+              .filter((g) => g.items.length > 0)
+
+            // Рецепты с неизвестной категорией (на всякий случай) — в конец
+            const others = filteredRecipes.filter((r: any) => !known.has(r.category))
+            if (others.length) groups.push({ label: 'Другое', items: others })
+
+            return (
+              <div key="all" className="space-y-6 animate-fadein">
+                {groups.map((g) => (
+                  <div key={g.label}>
+                    <h3 className="text-base font-bold text-text-primary mb-3">{g.label}</h3>
+                    <div className="grid grid-cols-2 gap-3">{g.items.map(renderCard)}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          }
+
+          return (
+            <div key={selectedCategory} className="grid grid-cols-2 gap-3 animate-fadein">
+              {filteredRecipes.map(renderCard)}
+            </div>
           )
         })()}
       </div>
