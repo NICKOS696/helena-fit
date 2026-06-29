@@ -196,6 +196,15 @@ export class RecipesService {
     };
   }
 
+  // Словарь объединения ингредиентов для списка покупок:
+  // { "сырое название из рецепта" (lowercase): "Общее название" }
+  async getIngredientAliasMap() {
+    const groups = await this.prisma.ingredientGroup.findMany({ include: { aliases: true } });
+    const map: Record<string, string> = {};
+    groups.forEach((g) => g.aliases.forEach((a) => (map[a.alias] = g.name)));
+    return map;
+  }
+
   private calculateFinalPrice(
     price: number,
     discount: number,

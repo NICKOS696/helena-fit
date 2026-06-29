@@ -101,6 +101,16 @@ export const adminBroadcastApi = {
     api.post('/admin/broadcast', data),
 }
 
+export const adminIngredientsApi = {
+  getOverview: () => api.get('/admin/ingredients'),
+  createGroup: (name: string) => api.post('/admin/ingredients/groups', { name }),
+  renameGroup: (id: string, name: string) => api.put(`/admin/ingredients/groups/${id}`, { name }),
+  deleteGroup: (id: string) => api.delete(`/admin/ingredients/groups/${id}`),
+  assign: (groupId: string, aliases: string[]) =>
+    api.post('/admin/ingredients/assign', { groupId, aliases }),
+  unassign: (aliases: string[]) => api.post('/admin/ingredients/unassign', { aliases }),
+}
+
 export const uploadApi = {
   uploadImage: (file: File) => {
     const formData = new FormData()

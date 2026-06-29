@@ -5,12 +5,14 @@ import { AdminRecipesController } from './controllers/admin-recipes.controller';
 import { AdminNewsController } from './controllers/admin-news.controller';
 import { AdminWorkoutSectionsController } from './controllers/admin-workout-sections.controller';
 import { AdminBroadcastController } from './controllers/admin-broadcast.controller';
+import { AdminIngredientsController } from './controllers/admin-ingredients.controller';
 import { AdminUsersService } from './services/admin-users.service';
 import { AdminWorkoutsService } from './services/admin-workouts.service';
 import { AdminRecipesService } from './services/admin-recipes.service';
 import { AdminNewsService } from './services/admin-news.service';
 import { AdminWorkoutSectionsService } from './services/admin-workout-sections.service';
 import { AdminBroadcastService } from './services/admin-broadcast.service';
+import { AdminIngredientsService } from './services/admin-ingredients.service';
 
 @Module({
   controllers: [
@@ -20,6 +22,7 @@ import { AdminBroadcastService } from './services/admin-broadcast.service';
     AdminNewsController,
     AdminWorkoutSectionsController,
     AdminBroadcastController,
+    AdminIngredientsController,
   ],
   providers: [
     AdminUsersService,
@@ -28,6 +31,7 @@ import { AdminBroadcastService } from './services/admin-broadcast.service';
     AdminNewsService,
     AdminWorkoutSectionsService,
     AdminBroadcastService,
+    AdminIngredientsService,
   ],
 })
 export class AdminModule {}

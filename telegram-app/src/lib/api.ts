@@ -42,6 +42,7 @@ export const recipesApi = {
     api.get(`/recipes/${id}`, { params: { category } }),
   getRecipe: (collectionId: string, recipeId: string) =>
     api.get(`/recipes/${collectionId}/recipe/${recipeId}`),
+  getIngredientAliases: () => api.get('/recipes/ingredient-aliases'),
   getFavorites: () => api.get('/recipes/favorites/all'),
   addToFavorites: (recipeId: string) => api.post(`/recipes/favorites/${recipeId}`),
   removeFromFavorites: (recipeId: string) => api.delete(`/recipes/favorites/${recipeId}`),

@@ -31,8 +31,15 @@ function extractIngredients(recipe: any): { name: string; amount: string }[] {
 }
 
 // Приводим название ингредиента к единому виду (объединяем синонимы).
-// Возвращаем ключ (для группировки) и красивое отображаемое имя.
-function canonicalizeIngredient(raw: string): { key: string; display: string } {
+// Сначала смотрим справочник из админки (aliasMap), потом эвристику.
+function canonicalizeIngredient(
+  raw: string,
+  aliasMap?: Record<string, string>,
+): { key: string; display: string } {
+  // 1) Справочник: точное совпадение «сырого» названия (lowercase)
+  const exact = aliasMap?.[raw.trim().toLowerCase()]
+  if (exact) return { key: exact.toLowerCase(), display: exact }
+
   const s = raw
     .trim()
     .toLowerCase()
@@ -153,7 +160,7 @@ export const RecipeCollectionPage = () => {
     selectedRecipes.forEach((r) => {
       extractIngredients(r).forEach(({ name, amount }) => {
         if (!name.trim()) return
-        const { key, display } = canonicalizeIngredient(name)
+        const { key, display } = canonicalizeIngredient(name, aliasMap)
         if (!map.has(key)) map.set(key, { name: display, amounts: [] })
         if (amount.trim()) map.get(key)!.amounts.push(amount.trim())
       })
@@ -204,6 +211,15 @@ export const RecipeCollectionPage = () => {
     queryKey: ['recipe-collection', id],
     queryFn: () => recipesApi.getCollection(id!),
   })
+
+  // Словарь объединения ингредиентов (для списка покупок) — грузим только когда включено
+  const { data: aliasData } = useQuery({
+    queryKey: ['ingredient-aliases'],
+    queryFn: () => recipesApi.getIngredientAliases(),
+    enabled: shoppingEnabled,
+    staleTime: 5 * 60 * 1000,
+  })
+  const aliasMap: Record<string, string> = aliasData?.data || {}
 
   // После клика "Купить" опрос API каждые 2 сек
   useEffect(() => {

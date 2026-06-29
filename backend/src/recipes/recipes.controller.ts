@@ -17,6 +17,12 @@ export class RecipesController {
     return this.recipesService.getCollections(req.user?.id, req.user?.telegramId);
   }
 
+  // Словарь объединения ингредиентов для списка покупок (доступен всем)
+  @Get('ingredient-aliases')
+  async getIngredientAliases() {
+    return this.recipesService.getIngredientAliasMap();
+  }
+
   @Get(':id')
   async getCollection(
     @Param('id') id: string,

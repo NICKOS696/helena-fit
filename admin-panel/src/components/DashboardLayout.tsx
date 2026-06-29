@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
-import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X } from 'lucide-react'
+import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X, Carrot } from 'lucide-react'
 import clsx from 'clsx'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
   { path: '/recipes', icon: UtensilsCrossed, label: 'Рецепты' },
   { path: '/news', icon: Newspaper, label: 'Новости' },
+  { path: '/ingredients', icon: Carrot, label: 'Ингредиенты' },
   { path: '/analytics', icon: BarChart3, label: 'Статистика' },
 ]
 

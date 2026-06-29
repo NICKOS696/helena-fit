@@ -187,6 +187,29 @@ enum RecipeCategory {
   SMOOTHIE
 }
 
+// Справочник ингредиентов для списка покупок: группа = «общее название»,
+// псевдонимы = варианты написания из рецептов, которые в неё объединяются.
+model IngredientGroup {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  aliases   IngredientAlias[]
+
+  @@map("ingredient_groups")
+}
+
+model IngredientAlias {
+  id      String @id @default(uuid())
+  alias   String @unique // нормализованное (lowercase) «сырое» название из рецепта
+  groupId String
+
+  group   IngredientGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@map("ingredient_aliases")
+}
+
 enum DiscountType {
   PERCENTAGE
   FIXED

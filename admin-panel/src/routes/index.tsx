@@ -9,6 +9,7 @@ import { RecipesPage } from '@/pages/RecipesPage'
 import { RecipeCollectionEditPage } from '@/pages/RecipeCollectionEditPage'
 import { NewsPage } from '@/pages/NewsPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
+import { IngredientsPage } from '@/pages/IngredientsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -43,6 +44,7 @@ export const AppRoutes = () => {
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="recipes/:id" element={<RecipeCollectionEditPage />} />
         <Route path="news" element={<NewsPage />} />
+        <Route path="ingredients" element={<IngredientsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
       </Route>
     </Routes>
