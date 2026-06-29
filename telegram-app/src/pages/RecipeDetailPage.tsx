@@ -159,7 +159,7 @@ export const RecipeDetailPage = () => {
               aria-label="В список покупок"
               className={clsx(
                 'absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-colors',
-                inList ? 'bg-primary text-white' : 'bg-white/90 text-text-secondary',
+                inList ? 'bg-primary-light text-white' : 'bg-white/90 text-primary-light',
               )}
             >
               {inList ? <Check className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />}

@@ -54,7 +54,9 @@ export const FavoriteButton = ({
       disabled={toggleFavorite.isPending}
       className={clsx(
         'rounded-full flex items-center justify-center transition-all duration-300',
-        'active:scale-90 bg-white/90 backdrop-blur-sm shadow-md',
+        'active:scale-90 backdrop-blur-sm shadow-md',
+        // Тот же стиль, что у кнопки списка покупок: белый кружок / мягкий зелёный при активации
+        isFavorite ? 'bg-primary-light' : 'bg-white/90',
         sizeClasses[size],
         className
       )}
@@ -63,9 +65,9 @@ export const FavoriteButton = ({
         className={clsx(
           'transition-all duration-300',
           iconSizes[size],
-          isFavorite 
-            ? 'fill-primary text-primary' 
-            : 'text-white'
+          isFavorite
+            ? 'fill-white text-white'
+            : 'text-primary-light'
         )}
       />
     </button>
