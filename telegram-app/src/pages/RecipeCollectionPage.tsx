@@ -9,8 +9,9 @@ import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check, ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
+import { pluralize } from '@/utils/plural'
 
 // Список покупок: пока тестируем на Сборнике №2 (закрыт у всех).
 // Пустая строка = выключено везде. Чтобы включить во всех сборниках — см. shoppingEnabled ниже.
@@ -120,6 +121,7 @@ export const RecipeCollectionPage = () => {
     }
   })
   const [showList, setShowList] = useState(false)
+  const [showListRecipes, setShowListRecipes] = useState(false)
   const [copied, setCopied] = useState(false)
   const [checkedLines, setCheckedLines] = useState<Set<string>>(new Set())
 
@@ -659,33 +661,81 @@ export const RecipeCollectionPage = () => {
           // Экран не скроллится сам (overflow-hidden), шапка фиксирована (flex-none),
           // прокручивается ТОЛЬКО список ниже. Короткий список не «пружинит».
           <div className="fixed inset-0 z-[60] bg-white flex flex-col overflow-hidden">
-            {/* Шапка + кнопки */}
+            {/* Шапка */}
             <div
               className="flex-none bg-white border-b border-gray-200"
               style={{ paddingTop: 'var(--app-safe-top)' }}
             >
-              <div className="flex items-center gap-3 px-4 pt-4">
+              <div className="flex items-center gap-3 px-4 py-3">
                 <button onClick={() => setShowList(false)}>
                   <ArrowLeft className="w-6 h-6" />
                 </button>
                 <h1 className="text-lg font-bold text-text-primary flex-1">Список покупок</h1>
-                <span className="text-sm text-text-secondary">{selected.length} рец.</span>
-              </div>
-              <div className="flex gap-2 p-4">
+                {/* Компактные действия */}
                 <button
                   onClick={() => handleCopyList(text)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Скопировано' : 'Скопировать'}
+                  {copied ? 'Готово' : 'Копировать'}
                 </button>
                 <button
                   onClick={() => handleShareList(text)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 text-text-primary py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+                  aria-label="Поделиться"
+                  className="w-9 h-9 flex items-center justify-center text-text-secondary bg-gray-100 rounded-full active:scale-95 transition-transform"
                 >
                   <Share2 className="w-4 h-4" />
-                  Поделиться
                 </button>
+              </div>
+
+              {/* Чип «N рецептов» — раскрывает список рецептов */}
+              <div className="px-4 pb-3">
+                <button
+                  onClick={() => setShowListRecipes((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-sm text-text-secondary bg-gray-100 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+                >
+                  <ShoppingBag className="w-4 h-4 text-primary-light" />
+                  {selected.length}{' '}
+                  {pluralize(selected.length, 'рецепт', 'рецепта', 'рецептов')}
+                  <ChevronDown
+                    className={clsx('w-4 h-4 transition-transform', showListRecipes && 'rotate-180')}
+                  />
+                </button>
+
+                {showListRecipes && (
+                  <div className="mt-2 space-y-1">
+                    {selected.map((r: any) => (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setShowList(false)
+                          navigate(`/recipes/${id}/recipe/${r.id}`)
+                        }}
+                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left"
+                      >
+                        {r.coverImage ? (
+                          <img
+                            src={r.coverImage}
+                            alt={r.title}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
+                        )}
+                        <span className="flex-1 text-sm text-text-primary line-clamp-2">
+                          {r.title}
+                        </span>
+                        <X
+                          className="w-4 h-4 text-text-secondary flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleInList(r.id)
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
