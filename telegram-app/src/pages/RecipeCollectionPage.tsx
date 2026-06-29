@@ -695,13 +695,9 @@ export const RecipeCollectionPage = () => {
                 {showListRecipes && (
                   <div className="mt-2 space-y-1">
                     {selected.map((r: any) => (
-                      <button
+                      <div
                         key={r.id}
-                        onClick={() => {
-                          setShowList(false)
-                          navigate(`/recipes/${r.collectionId}/recipe/${r.id}`)
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 text-left"
+                        className="w-full flex items-center gap-3 p-2 rounded-lg"
                       >
                         {r.coverImage ? (
                           <img
@@ -715,14 +711,14 @@ export const RecipeCollectionPage = () => {
                         <span className="flex-1 text-sm text-text-primary line-clamp-2">
                           {r.title}
                         </span>
-                        <X
-                          className="w-4 h-4 text-text-secondary flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleInList(r)
-                          }}
-                        />
-                      </button>
+                        <button
+                          onClick={() => toggleInList(r)}
+                          aria-label="Убрать из списка"
+                          className="flex-shrink-0 p-1 text-text-secondary active:scale-90 transition-transform"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
