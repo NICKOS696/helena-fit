@@ -1,0 +1,2 @@
+# Ежедневный бэкап базы Helena Fit в 03:30 по времени сервера
+30 3 * * * root /usr/local/bin/helena-backup.sh
