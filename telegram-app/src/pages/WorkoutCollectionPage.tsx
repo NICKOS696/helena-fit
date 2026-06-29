@@ -217,6 +217,7 @@ export const WorkoutCollectionPage = () => {
               discount={collection.discount}
               discountType={collection.discountType}
               finalPrice={collection.finalPrice}
+              discountEndDate={collection.discountEndDate}
             />
             <Button 
               fullWidth 

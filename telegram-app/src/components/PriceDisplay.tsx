@@ -3,18 +3,46 @@ interface PriceDisplayProps {
   discount?: number
   discountType?: 'PERCENTAGE' | 'FIXED'
   finalPrice?: number
+  discountEndDate?: string | null
 }
 
-export const PriceDisplay = ({ price, discount, discountType, finalPrice }: PriceDisplayProps) => {
+export const PriceDisplay = ({
+  price,
+  discount,
+  discountType,
+  finalPrice,
+  discountEndDate,
+}: PriceDisplayProps) => {
   // Вычисляем finalPrice если он не передан
-  const calculatedFinalPrice = finalPrice ?? (discount && discount > 0 
-    ? (discountType === 'PERCENTAGE' 
+  const calculatedFinalPrice =
+    finalPrice ??
+    (discount && discount > 0
+      ? discountType === 'PERCENTAGE'
         ? Math.round(price * (1 - discount / 100))
-        : Math.max(0, price - discount))
-    : price)
-  
+        : Math.max(0, price - discount)
+      : price)
+
   const hasDiscount = discount && discount > 0
   const savings = price - calculatedFinalPrice
+
+  // Срок акции: показываем, если задан и ещё не прошёл
+  const end = discountEndDate ? new Date(discountEndDate) : null
+  const now = new Date()
+  const showDeadline = hasDiscount && end && end.getTime() > now.getTime()
+  let deadlineText = ''
+  if (showDeadline && end) {
+    const msLeft = end.getTime() - now.getTime()
+    const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
+    const dateStr = end.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+    if (daysLeft <= 1) {
+      const hoursLeft = Math.max(1, Math.ceil(msLeft / (1000 * 60 * 60)))
+      deadlineText = `Только сегодня! Осталось ~${hoursLeft} ч`
+    } else if (daysLeft <= 5) {
+      deadlineText = `Скидка действует до ${dateStr} — осталось ${daysLeft} дн.`
+    } else {
+      deadlineText = `Скидка действует до ${dateStr}`
+    }
+  }
 
   return (
     <div className="space-y-1">
@@ -25,7 +53,8 @@ export const PriceDisplay = ({ price, discount, discountType, finalPrice }: Pric
               {price.toLocaleString()} сум
             </span>
             <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded">
-              -{discount}{discountType === 'PERCENTAGE' ? '%' : ' сум'}
+              -{discount}
+              {discountType === 'PERCENTAGE' ? '%' : ' сум'}
             </span>
           </>
         )}
@@ -36,8 +65,12 @@ export const PriceDisplay = ({ price, discount, discountType, finalPrice }: Pric
         </span>
       </div>
       {hasDiscount && savings > 0 && (
-        <p className="text-sm text-green-600">
-          Вы экономите {savings.toLocaleString()} сум
+        <p className="text-sm text-green-600">Вы экономите {savings.toLocaleString()} сум</p>
+      )}
+      {deadlineText && (
+        <p className="text-sm font-medium text-red-600 flex items-center gap-1">
+          <span aria-hidden>⏳</span>
+          {deadlineText}
         </p>
       )}
     </div>

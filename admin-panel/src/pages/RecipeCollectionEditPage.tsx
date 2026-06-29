@@ -75,6 +75,7 @@ export const RecipeCollectionEditPage = () => {
     price: '',
     discount: '',
     discountType: 'PERCENTAGE',
+    discountEndDate: '',
   })
   const [recipeForm, setRecipeForm] = useState({
     title: '',
@@ -146,6 +147,9 @@ export const RecipeCollectionEditPage = () => {
         price: collection.price?.toString() || '',
         discount: collection.discount?.toString() || '',
         discountType: collection.discountType || 'PERCENTAGE',
+        discountEndDate: collection.discountEndDate
+          ? String(collection.discountEndDate).slice(0, 10)
+          : '',
       })
     }
     setShowCollectionModal(true)
@@ -162,6 +166,10 @@ export const RecipeCollectionEditPage = () => {
       price: collectionForm.price ? parseFloat(collectionForm.price) : null,
       discount: collectionForm.discount ? parseFloat(collectionForm.discount) : null,
       discountType: collectionForm.discountType,
+      // Скидка действует до конца указанного дня по Ташкенту (UTC+5)
+      discountEndDate: collectionForm.discountEndDate
+        ? new Date(collectionForm.discountEndDate + 'T23:59:59+05:00').toISOString()
+        : null,
     })
   }
 
@@ -790,6 +798,23 @@ export const RecipeCollectionEditPage = () => {
                     </select>
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Скидка действует до <span className="text-gray-400">(необязательно)</span>
+                </label>
+                <input
+                  type="date"
+                  value={collectionForm.discountEndDate}
+                  onChange={(e) =>
+                    setCollectionForm({ ...collectionForm, discountEndDate: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  После этой даты скидка перестанет действовать. Пусто = бессрочная.
+                </p>
               </div>
 
               <div className="flex gap-2 pt-4">

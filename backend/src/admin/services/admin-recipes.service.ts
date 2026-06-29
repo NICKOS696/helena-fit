@@ -63,16 +63,24 @@ export class AdminRecipesService {
     });
   }
 
+  // Приводим дату окончания скидки к Date (или null), если пришла строкой
+  private normalizeDiscountEnd<T extends { discountEndDate?: any }>(data: T): T {
+    if ('discountEndDate' in data) {
+      data.discountEndDate = data.discountEndDate ? new Date(data.discountEndDate) : null;
+    }
+    return data;
+  }
+
   async createCollection(data: CreateRecipeCollectionDto) {
     return this.prisma.recipeCollection.create({
-      data,
+      data: this.normalizeDiscountEnd({ ...data }),
     });
   }
 
   async updateCollection(id: string, data: Partial<CreateRecipeCollectionDto>) {
     return this.prisma.recipeCollection.update({
       where: { id },
-      data,
+      data: this.normalizeDiscountEnd({ ...data }),
     });
   }
 
