@@ -169,7 +169,7 @@ export const RecipeDetailPage = () => {
                 : 'text-text-secondary'
             )}
           >
-            на 1 порцию
+            на всё блюдо
           </button>
           <button
             onClick={() => setNutritionMode('100g')}
