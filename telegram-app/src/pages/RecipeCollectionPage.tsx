@@ -96,31 +96,30 @@ export const RecipeCollectionPage = () => {
     })
   }
 
-  // Собираем позиции списка покупок из выбранных рецептов
+  // Собираем позиции списка покупок из выбранных рецептов.
+  // Объединяем по названию без учёта регистра, складываем количества одной строкой.
   const buildListItems = (selectedRecipes: any[]) => {
-    const map = new Map<string, { amount: string; title: string }[]>()
+    const map = new Map<string, { name: string; amounts: string[] }>()
     selectedRecipes.forEach((r) => {
       extractIngredients(r).forEach(({ name, amount }) => {
-        const key = name.trim()
-        if (!map.has(key)) map.set(key, [])
-        map.get(key)!.push({ amount: amount.trim(), title: r.title })
+        const clean = name.trim()
+        if (!clean) return
+        const key = clean.toLowerCase()
+        if (!map.has(key)) {
+          const display = clean.charAt(0).toUpperCase() + clean.slice(1)
+          map.set(key, { name: display, amounts: [] })
+        }
+        const a = amount.trim()
+        if (a && !map.get(key)!.amounts.includes(a)) map.get(key)!.amounts.push(a)
       })
     })
-    const multi = selectedRecipes.length > 1
-    const items: { name: string; detail: string }[] = []
-    map.forEach((arr, name) => {
-      const parts = arr
-        .map((a) => [a.amount, multi ? `(${a.title})` : ''].filter(Boolean).join(' '))
-        .filter(Boolean)
-      items.push({ name, detail: parts.join(', ') })
-    })
-    return items
+    return [...map.values()].map((e) => ({ name: e.name, detail: e.amounts.join(', ') }))
   }
 
   const buildListText = (selectedRecipes: any[]) =>
     '🛒 Список покупок (Helena Fit)\n\n' +
     buildListItems(selectedRecipes)
-      .map((i) => `☐ ${i.name}${i.detail ? ' — ' + i.detail : ''}`)
+      .map((i) => `• ${i.name}${i.detail ? ' — ' + i.detail : ''}`)
       .join('\n')
 
   const handleCopyList = async (text: string) => {
@@ -597,7 +596,7 @@ export const RecipeCollectionPage = () => {
             </div>
 
             {/* Чек-лист */}
-            <div className="flex-1 overflow-y-auto px-4 pb-6">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
               {items.length === 0 ? (
                 <p className="text-center text-text-secondary py-12">Список пуст</p>
               ) : (
