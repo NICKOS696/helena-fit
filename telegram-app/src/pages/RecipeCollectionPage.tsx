@@ -12,9 +12,10 @@ import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingCart, Copy, Share2, Check } from 'lucide-react'
 import clsx from 'clsx'
 
-// ТЕСТ: список покупок включён пока только в Сборнике №2 (он закрыт у всех).
-// Когда проверим — снимем ограничение и включим везде.
-const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
+// Список покупок временно отключён (нужно додумать объединение ингредиентов).
+// Чтобы снова включить для теста — вернуть сюда ID сборника, напр.:
+// 'f2c682f5-030f-4c3c-908a-6b27055e81a5' (Сборник №2). Пустая строка = выключено.
+const SHOPPING_LIST_TEST_COLLECTION = ''
 
 // Достаём плоский список ингредиентов рецепта (поддержка разделов и старого формата)
 function extractIngredients(recipe: any): { name: string; amount: string }[] {
