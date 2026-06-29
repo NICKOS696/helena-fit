@@ -69,23 +69,30 @@ function canonicalizeIngredient(
   return { key: s || raw.trim().toLowerCase(), display }
 }
 
-// Суммируем количества: если все в одной единице (шт/г/мл) — складываем,
-// иначе перечисляем уникальные значения.
+// Суммируем количества по единицам (г/кг/мл/л/шт). «По вкусу», «щепотка»,
+// диапазоны и прочее без чёткого числа+единицы — игнорируем (ингредиент
+// попадёт в список просто по названию, без граммажа).
 function summarizeAmounts(amounts: string[]): string {
-  const list = amounts.map((a) => a.trim()).filter(Boolean)
-  if (list.length === 0) return ''
-  const units: [string, RegExp][] = [
-    ['шт', /^(\d+(?:[.,]\d+)?)\s*шт/],
-    ['г', /^(\d+(?:[.,]\d+)?)\s*г(?![а-я])/],
-    ['мл', /^(\d+(?:[.,]\d+)?)\s*мл/],
-  ]
-  for (const [unit, re] of units) {
-    if (list.every((a) => re.test(a))) {
-      const sum = list.reduce((acc, a) => acc + parseFloat(a.match(re)![1].replace(',', '.')), 0)
-      return `${Math.round(sum * 10) / 10} ${unit}`
+  // число + единица в начале строки; единица не должна продолжаться буквой
+  // (чтобы «1 лимон» не посчитать как «1 л»)
+  const re = /^\s*(\d+(?:[.,]\d+)?)\s*(кг|грамм|гр|г|мл|л|шт|штук)(?![а-яё])/i
+  const sums: Record<string, number> = {}
+  const order: string[] = []
+  for (const a of amounts) {
+    const m = a.trim().match(re)
+    if (!m) continue
+    const num = parseFloat(m[1].replace(',', '.'))
+    if (isNaN(num)) continue
+    let unit = m[2].toLowerCase()
+    if (unit === 'грамм' || unit === 'гр') unit = 'г'
+    if (unit === 'штук') unit = 'шт'
+    if (!(unit in sums)) {
+      sums[unit] = 0
+      order.push(unit)
     }
+    sums[unit] += num
   }
-  return [...new Set(list)].join(', ')
+  return order.map((u) => `${Math.round(sums[u] * 100) / 100} ${u}`).join(', ')
 }
 
 const categories = [

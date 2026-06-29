@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
-import { ArrowLeft, Plus, Edit, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react'
 import { ImageUpload } from '@/components/ImageUpload'
 import { ImageFocusPicker } from '@/components/ImageFocusPicker'
 
@@ -47,6 +47,18 @@ export const RecipeCollectionEditPage = () => {
   const removeItem = (gi: number, ii: number) =>
     setIngredientGroups((gs) =>
       gs.map((g, i) => (i === gi ? { ...g, items: g.items.filter((_, j) => j !== ii) } : g)),
+    )
+  // Перестановка ингредиента внутри группы (вверх/вниз)
+  const moveItem = (gi: number, ii: number, dir: -1 | 1) =>
+    setIngredientGroups((gs) =>
+      gs.map((g, i) => {
+        if (i !== gi) return g
+        const target = ii + dir
+        if (target < 0 || target >= g.items.length) return g
+        const items = [...g.items]
+        ;[items[ii], items[target]] = [items[target], items[ii]]
+        return { ...g, items }
+      }),
     )
   const addGroup = () =>
     setIngredientGroups((gs) => [...gs, { title: '', items: [{ name: '', amount: '' }] }])
@@ -481,6 +493,28 @@ export const RecipeCollectionEditPage = () => {
                             placeholder="Количество"
                             className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                           />
+                          {group.items.length > 1 && (
+                            <div className="flex flex-col">
+                              <button
+                                type="button"
+                                onClick={() => moveItem(gi, ii, -1)}
+                                disabled={ii === 0}
+                                title="Выше"
+                                className="px-2 text-gray-500 hover:text-gray-800 disabled:opacity-30"
+                              >
+                                <ChevronUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveItem(gi, ii, 1)}
+                                disabled={ii === group.items.length - 1}
+                                title="Ниже"
+                                className="px-2 text-gray-500 hover:text-gray-800 disabled:opacity-30"
+                              >
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                           {group.items.length > 1 && (
                             <button
                               type="button"
