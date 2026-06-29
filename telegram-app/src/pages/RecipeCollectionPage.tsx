@@ -9,8 +9,26 @@ import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingCart, Copy, Share2, Check } from 'lucide-react'
 import clsx from 'clsx'
+
+// ТЕСТ: список покупок включён пока только в Сборнике №2 (он закрыт у всех).
+// Когда проверим — снимем ограничение и включим везде.
+const SHOPPING_LIST_TEST_COLLECTION = 'f2c682f5-030f-4c3c-908a-6b27055e81a5'
+
+// Достаём плоский список ингредиентов рецепта (поддержка разделов и старого формата)
+function extractIngredients(recipe: any): { name: string; amount: string }[] {
+  const raw = Array.isArray(recipe.ingredients) ? recipe.ingredients : []
+  const groups =
+    raw.length && raw[0] && Array.isArray(raw[0].items) ? raw : [{ title: '', items: raw }]
+  const out: { name: string; amount: string }[] = []
+  groups.forEach((g: any) =>
+    (g.items || []).forEach((it: any) => {
+      if (it && it.name) out.push({ name: String(it.name), amount: String(it.amount || '') })
+    }),
+  )
+  return out
+}
 
 const categories = [
   { value: 'all', label: 'Все' },
@@ -46,6 +64,88 @@ export const RecipeCollectionPage = () => {
     )
   }
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+
+  // --- Список покупок (тест на Сборнике №2) ---
+  const shoppingEnabled = id === SHOPPING_LIST_TEST_COLLECTION
+  const listKey = id ? `shopping_list_${id}` : ''
+  const [listIds, setListIds] = useState<Set<string>>(() => {
+    try {
+      const raw = listKey ? localStorage.getItem(listKey) : null
+      return new Set(raw ? JSON.parse(raw) : [])
+    } catch {
+      return new Set()
+    }
+  })
+  const [showList, setShowList] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [checkedLines, setCheckedLines] = useState<Set<string>>(new Set())
+
+  const toggleInList = (recipeId: string) => {
+    haptic.selection()
+    setListIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(recipeId)) {
+        next.delete(recipeId)
+      } else {
+        next.add(recipeId)
+      }
+      try {
+        if (listKey) localStorage.setItem(listKey, JSON.stringify([...next]))
+      } catch {}
+      return next
+    })
+  }
+
+  // Собираем позиции списка покупок из выбранных рецептов
+  const buildListItems = (selectedRecipes: any[]) => {
+    const map = new Map<string, { amount: string; title: string }[]>()
+    selectedRecipes.forEach((r) => {
+      extractIngredients(r).forEach(({ name, amount }) => {
+        const key = name.trim()
+        if (!map.has(key)) map.set(key, [])
+        map.get(key)!.push({ amount: amount.trim(), title: r.title })
+      })
+    })
+    const multi = selectedRecipes.length > 1
+    const items: { name: string; detail: string }[] = []
+    map.forEach((arr, name) => {
+      const parts = arr
+        .map((a) => [a.amount, multi ? `(${a.title})` : ''].filter(Boolean).join(' '))
+        .filter(Boolean)
+      items.push({ name, detail: parts.join(', ') })
+    })
+    return items
+  }
+
+  const buildListText = (selectedRecipes: any[]) =>
+    '🛒 Список покупок (Helena Fit)\n\n' +
+    buildListItems(selectedRecipes)
+      .map((i) => `☐ ${i.name}${i.detail ? ' — ' + i.detail : ''}`)
+      .join('\n')
+
+  const handleCopyList = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      haptic.notify('success')
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // молча — буфер может быть недоступен
+    }
+  }
+
+  const handleShareList = async (text: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+      } else {
+        await handleCopyList(text)
+      }
+    } catch {
+      // пользователь отменил шеринг — ничего не делаем
+    }
+  }
+
   // Опрос статуса оплаты переживает перезагрузку Mini App (флаг в sessionStorage).
   const pollKey = id ? `payment_polling_${id}` : ''
   const [isPollingPayment, setIsPollingPayment] = useState(
@@ -359,6 +459,28 @@ export const RecipeCollectionPage = () => {
                     />
                   </div>
                 )}
+                {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
+                {shoppingEnabled && !recipe.locked && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleInList(recipe.id)
+                    }}
+                    aria-label="В список покупок"
+                    className={clsx(
+                      'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-colors',
+                      listIds.has(recipe.id)
+                        ? 'bg-primary text-white'
+                        : 'bg-white/90 text-text-secondary',
+                    )}
+                  >
+                    {listIds.has(recipe.id) ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <ShoppingCart className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Content */}
@@ -422,6 +544,102 @@ export const RecipeCollectionPage = () => {
           )
         })()}
       </div>
+
+      {/* Плавающая кнопка «Список покупок» (тест на Сборнике №2) */}
+      {shoppingEnabled && collection.hasAccess && listIds.size > 0 && !showList && (
+        <button
+          onClick={() => {
+            haptic.impact('light')
+            setShowList(true)
+          }}
+          className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30 flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full shadow-lg active:scale-95 transition-transform"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          <span className="font-medium">Список • {listIds.size}</span>
+        </button>
+      )}
+
+      {/* Экран списка покупок */}
+      {shoppingEnabled && showList && (() => {
+        const selected = (collection.recipes || []).filter((r: any) => listIds.has(r.id))
+        const items = buildListItems(selected)
+        const text = buildListText(selected)
+        return (
+          <div className="fixed inset-0 z-50 bg-white flex flex-col">
+            {/* Шапка */}
+            <div
+              className="flex items-center gap-3 p-4 border-b border-gray-200"
+              style={{ paddingTop: 'calc(1rem + var(--app-safe-top))' }}
+            >
+              <button onClick={() => setShowList(false)}>
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <h1 className="text-lg font-bold text-text-primary flex-1">Список покупок</h1>
+              <span className="text-sm text-text-secondary">{selected.length} рец.</span>
+            </div>
+
+            {/* Кнопки действий */}
+            <div className="flex gap-2 p-4">
+              <button
+                onClick={() => handleCopyList(text)}
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Скопировано' : 'Скопировать'}
+              </button>
+              <button
+                onClick={() => handleShareList(text)}
+                className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 text-text-primary py-2.5 rounded-xl font-medium active:scale-95 transition-transform"
+              >
+                <Share2 className="w-4 h-4" />
+                Поделиться
+              </button>
+            </div>
+
+            {/* Чек-лист */}
+            <div className="flex-1 overflow-y-auto px-4 pb-6">
+              {items.length === 0 ? (
+                <p className="text-center text-text-secondary py-12">Список пуст</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {items.map((it) => {
+                    const done = checkedLines.has(it.name)
+                    return (
+                      <button
+                        key={it.name}
+                        onClick={() =>
+                          setCheckedLines((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(it.name)) next.delete(it.name)
+                            else next.add(it.name)
+                            return next
+                          })
+                        }
+                        className="w-full flex items-start gap-3 py-3 text-left"
+                      >
+                        <span
+                          className={clsx(
+                            'flex-shrink-0 w-5 h-5 mt-0.5 rounded border flex items-center justify-center',
+                            done ? 'bg-primary border-primary' : 'border-gray-300',
+                          )}
+                        >
+                          {done && <Check className="w-3.5 h-3.5 text-white" />}
+                        </span>
+                        <span className={clsx('flex-1', done && 'line-through text-text-secondary')}>
+                          <span className="text-text-primary font-medium">{it.name}</span>
+                          {it.detail && (
+                            <span className="text-text-secondary text-sm"> — {it.detail}</span>
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
