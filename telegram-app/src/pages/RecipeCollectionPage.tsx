@@ -192,7 +192,7 @@ export const RecipeCollectionPage = () => {
   }
 
   const buildListText = (selectedRecipes: any[]) =>
-    'Список продуктов для рецептов от Helena Fit 🌱\n\n' +
+    'Список продуктов для рецептов от Helena Fit\n\n' +
     buildListItems(selectedRecipes)
       .map((i) => `• ${i.name}${i.detail ? ' — ' + i.detail : ''}`)
       .join('\n')
