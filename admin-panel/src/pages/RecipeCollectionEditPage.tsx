@@ -329,7 +329,9 @@ export const RecipeCollectionEditPage = () => {
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {collection.recipes?.map((recipe: any) => (
+            {[...(collection.recipes || [])]
+              .sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', 'ru'))
+              .map((recipe: any) => (
               <div key={recipe.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex gap-4">
                   {recipe.coverImage && (
