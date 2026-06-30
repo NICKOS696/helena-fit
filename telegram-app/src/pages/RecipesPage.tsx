@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { recipesApi, paymeApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
+import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { haptic } from '@/lib/telegram'
 import { Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -12,6 +13,7 @@ export const RecipesPage = () => {
   const navigate = useNavigate()
   const [loadingCollectionId, setLoadingCollectionId] = useState<string | null>(null)
   const [isPollingPayment, setIsPollingPayment] = useState(false)
+  const [payCollection, setPayCollection] = useState<any | null>(null)
   
   const { data, isLoading } = useQuery({
     queryKey: ['recipes'],
@@ -159,10 +161,10 @@ export const RecipesPage = () => {
                     <Lock className="w-4 h-4 mr-2 inline" />
                     Просмотр
                   </Button>
-                  <Button 
-                    fullWidth 
+                  <Button
+                    fullWidth
                     className="bg-primary"
-                    onClick={() => handlePurchase(collection)}
+                    onClick={() => setPayCollection(collection)}
                     disabled={loadingCollectionId === collection.id}
                   >
                     {loadingCollectionId === collection.id ? 'Загрузка...' : 'Купить'}
@@ -173,6 +175,20 @@ export const RecipesPage = () => {
           </Card>
         ))}
       </div>
+
+      {/* Выбор способа оплаты (Payme / Карта МИР) */}
+      <PaymentMethodSheet
+        open={!!payCollection}
+        onClose={() => setPayCollection(null)}
+        finalPriceSum={payCollection?.finalPrice || 0}
+        collectionTitle={payCollection?.title || ''}
+        isPaymeLoading={loadingCollectionId === payCollection?.id}
+        onPayme={() => {
+          const c = payCollection
+          setPayCollection(null)
+          if (c) handlePurchase(c)
+        }}
+      />
     </div>
   )
 }
