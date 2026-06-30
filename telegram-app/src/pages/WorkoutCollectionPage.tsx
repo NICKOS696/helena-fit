@@ -4,6 +4,7 @@ import { workoutsApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
+import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
@@ -17,6 +18,7 @@ export const WorkoutCollectionPage = () => {
   const navigate = useNavigate()
   useTelegramBackButton()
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [showPayMethods, setShowPayMethods] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
   const toggleSection = (sectionId: string) => {
@@ -219,16 +221,29 @@ export const WorkoutCollectionPage = () => {
               finalPrice={collection.finalPrice}
               discountEndDate={collection.discountEndDate}
             />
-            <Button 
-              fullWidth 
-              className="mt-4" 
-              onClick={handlePurchase}
+            <Button
+              fullWidth
+              className="mt-4"
+              onClick={() => setShowPayMethods(true)}
               disabled={isPaymentLoading}
             >
               {isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
             </Button>
           </Card>
         )}
+
+        {/* Выбор способа оплаты (Payme / Карта МИР) */}
+        <PaymentMethodSheet
+          open={showPayMethods}
+          onClose={() => setShowPayMethods(false)}
+          finalPriceSum={collection.finalPrice}
+          collectionTitle={collection.title}
+          isPaymeLoading={isPaymentLoading}
+          onPayme={() => {
+            setShowPayMethods(false)
+            handlePurchase()
+          }}
+        />
 
         {/* Что входит - только если нет доступа */}
         {!collection.hasAccess && collection.sections && collection.sections.length > 0 && (

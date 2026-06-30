@@ -12,6 +12,7 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { FavoriteButton } from '@/components/FavoriteButton'
+import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
@@ -110,6 +111,7 @@ export const RecipeCollectionPage = () => {
     )
   }
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [showPayMethods, setShowPayMethods] = useState(false)
 
   // --- Список покупок (общий, сквозной для всех сборников; тест на Сборнике №2) ---
   const shoppingEnabled = true // список покупок включён во всех сборниках
@@ -368,16 +370,29 @@ export const RecipeCollectionPage = () => {
               finalPrice={collection.finalPrice}
               discountEndDate={collection.discountEndDate}
             />
-            <Button 
-              fullWidth 
+            <Button
+              fullWidth
               className="mt-4"
-              onClick={handlePurchase}
+              onClick={() => setShowPayMethods(true)}
               disabled={isPaymentLoading}
             >
               {isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
             </Button>
           </Card>
         )}
+
+        {/* Выбор способа оплаты (Payme / Карта МИР) */}
+        <PaymentMethodSheet
+          open={showPayMethods}
+          onClose={() => setShowPayMethods(false)}
+          finalPriceSum={collection.finalPrice}
+          collectionTitle={collection.title}
+          isPaymeLoading={isPaymentLoading}
+          onPayme={() => {
+            setShowPayMethods(false)
+            handlePurchase()
+          }}
+        />
 
         {/* Что входит - только если нет доступа */}
         {!collection.hasAccess && (
