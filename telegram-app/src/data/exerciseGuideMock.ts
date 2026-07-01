@@ -3,6 +3,26 @@
 // В боевой версии всё это будет приходить с бэкенда (модели MuscleGroup / Exercise),
 // видео — короткие зацикленные MP4-петли, залитые на наш сервер (/uploads/exercises/...).
 
+// Ключи мышц для анатомической карты (см. components/MuscleMap.tsx).
+export type MuscleKey =
+  | 'delts_front'
+  | 'chest'
+  | 'biceps'
+  | 'forearms'
+  | 'abs'
+  | 'obliques'
+  | 'quads'
+  | 'adductors'
+  | 'tibialis'
+  | 'traps'
+  | 'delts_rear'
+  | 'lats'
+  | 'triceps'
+  | 'lower_back'
+  | 'glutes'
+  | 'hamstrings'
+  | 'calves'
+
 export interface MockExercise {
   id: string
   name: string
@@ -13,6 +33,8 @@ export interface MockExercise {
   level: 'Новичок' | 'Средний' | 'Продвинутый'
   equipment: string
   targetMuscles: string[]
+  /** Подсветка на анатомической карте */
+  muscles: { primary: MuscleKey[]; secondary: MuscleKey[] }
   description: string
   /** Пошаговая техника */
   technique: string[]
@@ -44,6 +66,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Средний',
         equipment: 'Блин (2.5–5 кг)',
         targetMuscles: ['Большая грудная', 'Передняя дельта'],
+        muscles: { primary: ['chest'], secondary: ['delts_front'] },
         description:
           'Жим Свенда — эффективное упражнение для развития грудных мышц. В отличие от обычного жима, позволяет максимально свести локти и получить пиковую нагрузку на внутреннюю часть груди. Улучшает нейромышечную связь и мышечный контроль.',
         technique: [
@@ -67,6 +90,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Новичок',
         equipment: 'Без инвентаря',
         targetMuscles: ['Большая грудная', 'Трицепс', 'Кор'],
+        muscles: { primary: ['chest'], secondary: ['triceps', 'abs'] },
         description:
           'Базовое упражнение с собственным весом. Прорабатывает грудь, трицепс и мышцы кора, укрепляет плечевой пояс. Подходит для дома и разминки.',
         technique: [
@@ -96,6 +120,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Продвинутый',
         equipment: 'Турник',
         targetMuscles: ['Широчайшие', 'Бицепс', 'Задняя дельта'],
+        muscles: { primary: ['lats'], secondary: ['biceps', 'delts_rear'] },
         description:
           'Лучшее базовое упражнение для развития широчайших мышц спины и создания V-образного силуэта. Развивает силу хвата и мышцы кора.',
         technique: [
@@ -125,6 +150,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Новичок',
         equipment: 'Гантель / гиря',
         targetMuscles: ['Квадрицепс', 'Ягодичные', 'Кор'],
+        muscles: { primary: ['quads', 'glutes'], secondary: ['abs', 'adductors'] },
         description:
           'Отличное упражнение для освоения правильной техники приседа. Вес у груди помогает держать спину прямой и активнее включает ягодицы и квадрицепсы.',
         technique: [
@@ -154,6 +180,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Средний',
         equipment: 'Скамья, блин (опц.)',
         targetMuscles: ['Большая ягодичная', 'Бицепс бедра'],
+        muscles: { primary: ['glutes'], secondary: ['hamstrings'] },
         description:
           'Целевое упражнение №1 для ягодиц. Изолированно нагружает большую ягодичную мышцу в пиковом сокращении.',
         technique: [
@@ -183,6 +210,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Новичок',
         equipment: 'Гантели',
         targetMuscles: ['Средняя дельта'],
+        muscles: { primary: ['delts_front', 'delts_rear'], secondary: ['traps'] },
         description:
           'Изолирующее упражнение для средних пучков дельт — придаёт плечам ширину и округлую форму.',
         technique: [
@@ -212,6 +240,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         level: 'Новичок',
         equipment: 'Без инвентаря',
         targetMuscles: ['Прямая мышца живота', 'Поперечная мышца', 'Кор'],
+        muscles: { primary: ['abs'], secondary: ['obliques', 'lower_back'] },
         description:
           'Базовое статическое упражнение для укрепления всего кора, спины и стабилизаторов. Улучшает осанку.',
         technique: [
