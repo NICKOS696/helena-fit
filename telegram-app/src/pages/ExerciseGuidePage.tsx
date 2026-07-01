@@ -49,11 +49,9 @@ export const ExerciseGuidePage = () => {
               navigate(`/guide/${g.id}`)
             }}
             className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform relative"
-            style={
-              g.image
-                ? { background: 'linear-gradient(120deg, #12293a, #0b1a27)' }
-                : { background: `linear-gradient(110deg, ${g.gradient[0]}, ${g.gradient[1]})` }
-            }
+            style={{
+              background: `linear-gradient(110deg, ${g.gradient[0]}, ${g.gradient[1]})`,
+            }}
           >
             {g.image ? (
               // Стиль референса: тело с подсветкой справа, название слева

@@ -177,6 +177,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
     name: 'Ягодичные',
     emoji: '🍑',
     gradient: ['#A0AB82', '#79855B'],
+    image: 'https://helena-fit.ru/uploads/exercises/demo-anatomy-glutes.png',
     exercises: [
       {
         id: 'hip-thrust',
@@ -187,6 +188,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         equipment: 'Скамья, блин (опц.)',
         targetMuscles: ['Большая ягодичная', 'Бицепс бедра'],
         muscles: { primary: ['glutes'], secondary: ['hamstrings'] },
+        anatomyImage: 'https://helena-fit.ru/uploads/exercises/demo-anatomy-glutes.png',
         description:
           'Целевое упражнение №1 для ягодиц. Изолированно нагружает большую ягодичную мышцу в пиковом сокращении.',
         technique: [
