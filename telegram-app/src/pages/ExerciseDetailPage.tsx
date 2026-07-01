@@ -135,13 +135,26 @@ export const ExerciseDetailPage = () => {
 
         {tab === 'muscles' && (
           <div className="space-y-3">
-            {/* Заглушка под будущую фотореалистичную анатомию (генерируем картинки) */}
-            <div className="rounded-card bg-background-card border border-dashed border-gray-300 p-6 text-center">
-              <div className="text-3xl mb-1">🫀</div>
-              <p className="text-sm text-text-secondary">
-                Здесь появится анатомическая карта с подсветкой работающих мышц
-              </p>
-            </div>
+            {exercise.anatomyImage ? (
+              <div
+                className="rounded-card overflow-hidden"
+                style={{ background: 'radial-gradient(circle at 50% 35%, #3a3f46, #16181c)' }}
+              >
+                <img
+                  src={exercise.anatomyImage}
+                  alt="Анатомия — работающие мышцы"
+                  className="w-full h-auto object-contain max-h-[70vh] mx-auto"
+                />
+              </div>
+            ) : (
+              /* Заглушка под будущую фотореалистичную анатомию (генерируем картинки) */
+              <div className="rounded-card bg-background-card border border-dashed border-gray-300 p-6 text-center">
+                <div className="text-3xl mb-1">🫀</div>
+                <p className="text-sm text-text-secondary">
+                  Здесь появится анатомическая карта с подсветкой работающих мышц
+                </p>
+              </div>
+            )}
             <p className="text-sm text-text-secondary">Работающие мышцы:</p>
             <div className="flex flex-wrap gap-2">
               {exercise.targetMuscles.map((m) => (

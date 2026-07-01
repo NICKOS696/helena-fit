@@ -35,6 +35,8 @@ export interface MockExercise {
   targetMuscles: string[]
   /** Подсветка на анатомической карте */
   muscles: { primary: MuscleKey[]; secondary: MuscleKey[] }
+  /** Фотореалистичная анатомия (URL картинки), опционально — демо */
+  anatomyImage?: string
   description: string
   /** Пошаговая техника */
   technique: string[]
@@ -67,6 +69,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
         equipment: 'Блин (2.5–5 кг)',
         targetMuscles: ['Большая грудная', 'Передняя дельта'],
         muscles: { primary: ['chest'], secondary: ['delts_front'] },
+        anatomyImage: 'https://helena-fit.ru/uploads/exercises/demo-anatomy-front.png',
         description:
           'Жим Свенда — эффективное упражнение для развития грудных мышц. В отличие от обычного жима, позволяет максимально свести локти и получить пиковую нагрузку на внутреннюю часть груди. Улучшает нейромышечную связь и мышечный контроль.',
         technique: [
