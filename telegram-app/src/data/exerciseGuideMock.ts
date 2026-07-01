@@ -50,6 +50,8 @@ export interface MockMuscleGroup {
   emoji: string
   /** Цвета градиента-обложки (from → to) */
   gradient: [string, string]
+  /** Фотореалистичное тело с подсветкой группы (URL), опционально — демо */
+  image?: string
   exercises: MockExercise[]
 }
 
@@ -59,6 +61,7 @@ export const MOCK_GROUPS: MockMuscleGroup[] = [
     name: 'Грудь',
     emoji: '💪',
     gradient: ['#8A9A6E', '#717C5A'],
+    image: 'https://helena-fit.ru/uploads/exercises/demo-anatomy-front.png',
     exercises: [
       {
         id: 'svend-press',

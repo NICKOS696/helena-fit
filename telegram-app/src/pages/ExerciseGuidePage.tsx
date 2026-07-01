@@ -48,24 +48,53 @@ export const ExerciseGuidePage = () => {
               haptic.selection()
               navigate(`/guide/${g.id}`)
             }}
-            className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform"
-            style={{
-              background: `linear-gradient(110deg, ${g.gradient[0]}, ${g.gradient[1]})`,
-            }}
+            className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform relative"
+            style={
+              g.image
+                ? { background: 'linear-gradient(120deg, #12293a, #0b1a27)' }
+                : { background: `linear-gradient(110deg, ${g.gradient[0]}, ${g.gradient[1]})` }
+            }
           >
-            <div className="flex items-center justify-between px-5 py-6">
-              <div>
-                <div className="text-white text-xl font-bold">{g.name}</div>
-                <div className="text-white/80 text-xs mt-1">
-                  {g.exercises.length}{' '}
-                  {g.exercises.length === 1 ? 'упражнение' : 'упражнения'}
+            {g.image ? (
+              // Стиль референса: тело с подсветкой справа, название слева
+              <div className="relative h-40">
+                <img
+                  src={g.image}
+                  alt={g.name}
+                  className="absolute right-0 top-0 h-full w-1/2 object-cover object-top"
+                  style={{
+                    maskImage:
+                      'linear-gradient(to right, transparent, #000 22%)',
+                    WebkitMaskImage:
+                      'linear-gradient(to right, transparent, #000 22%)',
+                  }}
+                />
+                <div className="relative h-full flex flex-col justify-center px-5">
+                  <div className="text-white text-2xl font-bold drop-shadow">
+                    {g.name}
+                  </div>
+                  <div className="text-white/70 text-xs mt-1">
+                    {g.exercises.length}{' '}
+                    {g.exercises.length === 1 ? 'упражнение' : 'упражнения'}
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/60 absolute right-3 top-1/2 -translate-y-1/2" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-5 py-6">
+                <div>
+                  <div className="text-white text-xl font-bold">{g.name}</div>
+                  <div className="text-white/80 text-xs mt-1">
+                    {g.exercises.length}{' '}
+                    {g.exercises.length === 1 ? 'упражнение' : 'упражнения'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-4xl drop-shadow-sm">{g.emoji}</span>
+                  <ChevronRight className="w-5 h-5 text-white/70" />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-4xl drop-shadow-sm">{g.emoji}</span>
-                <ChevronRight className="w-5 h-5 text-white/70" />
-              </div>
-            </div>
+            )}
           </button>
         ))}
         {groups.length === 0 && (
