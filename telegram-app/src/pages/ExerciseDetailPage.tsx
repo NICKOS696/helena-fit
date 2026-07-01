@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { ArrowLeft, AlertTriangle, Repeat, Dumbbell, Target } from 'lucide-react'
 import { getMockExercise } from '@/data/exerciseGuideMock'
-import { MuscleMap } from '@/components/MuscleMap'
 import { isPreviewUser } from '@/lib/preview'
 import { haptic } from '@/lib/telegram'
 import clsx from 'clsx'
@@ -136,10 +135,13 @@ export const ExerciseDetailPage = () => {
 
         {tab === 'muscles' && (
           <div className="space-y-3">
-            <MuscleMap
-              primary={exercise.muscles.primary}
-              secondary={exercise.muscles.secondary}
-            />
+            {/* Заглушка под будущую фотореалистичную анатомию (генерируем картинки) */}
+            <div className="rounded-card bg-background-card border border-dashed border-gray-300 p-6 text-center">
+              <div className="text-3xl mb-1">🫀</div>
+              <p className="text-sm text-text-secondary">
+                Здесь появится анатомическая карта с подсветкой работающих мышц
+              </p>
+            </div>
             <p className="text-sm text-text-secondary">Работающие мышцы:</p>
             <div className="flex flex-wrap gap-2">
               {exercise.targetMuscles.map((m) => (
