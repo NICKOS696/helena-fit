@@ -5,8 +5,9 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { haptic } from '@/lib/telegram'
+import { isPreviewUser } from '@/lib/preview'
 import { pluralize } from '@/utils/plural'
-import { Lock } from 'lucide-react'
+import { Lock, Dumbbell, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 
@@ -84,6 +85,36 @@ export const WorkoutsPage = () => {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">Тренировки</h1>
+
+      {/* Превью «Справочник упражнений» — виден только владельцу */}
+      {isPreviewUser() && (
+        <button
+          onClick={() => {
+            haptic.selection()
+            navigate('/guide')
+          }}
+          className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(110deg, #8A9A6E, #5F6A49)' }}
+        >
+          <div className="flex items-center gap-3 px-5 py-4">
+            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Dumbbell className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white font-bold flex items-center gap-2">
+                Справочник упражнений
+                <span className="text-[9px] font-bold uppercase bg-yellow-300 text-yellow-900 px-1.5 py-0.5 rounded-full">
+                  Превью
+                </span>
+              </div>
+              <div className="text-white/80 text-xs mt-0.5">
+                Техника, разбор и короткие видео по группам мышц
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
+          </div>
+        </button>
+      )}
 
       <div className="space-y-6">
         {collections.map((collection: any) => (
