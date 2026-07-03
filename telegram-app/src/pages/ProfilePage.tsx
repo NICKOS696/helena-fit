@@ -1,12 +1,14 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTelegram } from '@/providers/TelegramProvider'
 import { usersApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { CalorieCalculator } from '@/components/CalorieCalculator'
-import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle } from 'lucide-react'
+import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle, ChevronDown } from 'lucide-react'
 
 export const ProfilePage = () => {
   const { user } = useTelegram()
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const { data: profileData } = useQuery({
     queryKey: ['profile'],
@@ -109,12 +111,28 @@ export const ProfilePage = () => {
       </Card>
 
       <Card>
-        <h3 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
-          <Receipt className="w-5 h-5 text-primary" />
-          История покупок
-        </h3>
-        {transactions.length > 0 ? (
-          <div className="space-y-3">
+        <button
+          onClick={() => setHistoryOpen((v) => !v)}
+          className="w-full flex items-center justify-between"
+        >
+          <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-primary" />
+            История покупок
+            {transactions.length > 0 && (
+              <span className="text-sm font-normal text-text-secondary">
+                ({transactions.length})
+              </span>
+            )}
+          </h3>
+          <ChevronDown
+            className={`w-5 h-5 text-text-secondary transition-transform ${
+              historyOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        {historyOpen &&
+          (transactions.length > 0 ? (
+          <div className="space-y-3 mt-3">
             {transactions.map((transaction: any) => (
               <div key={transaction.id} className="border-b border-gray-100 pb-3 last:border-0">
                 <div className="flex justify-between items-start mb-1">
@@ -145,8 +163,8 @@ export const ProfilePage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-text-secondary">История покупок пуста</p>
-        )}
+          <p className="text-text-secondary mt-3">История покупок пуста</p>
+        ))}
       </Card>
 
       <div className="pt-4 pb-2 flex justify-center">
