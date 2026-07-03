@@ -12,32 +12,33 @@ import clsx from 'clsx'
 export const RecipesPage = () => {
   const navigate = useNavigate()
   const [loadingCollectionId, setLoadingCollectionId] = useState<string | null>(null)
-  const [isPollingPayment, setIsPollingPayment] = useState(false)
+  const [pollingCollectionId, setPollingCollectionId] = useState<string | null>(null)
   const [payCollection, setPayCollection] = useState<any | null>(null)
-  
+
   const { data, isLoading } = useQuery({
     queryKey: ['recipes'],
     queryFn: () => recipesApi.getCollections(),
   })
 
-  // После клика "Купить" опрос API каждые 2 сек
+  // После клика "Купить" опрос API каждые 2 сек — проверяем доступ ИМЕННО к
+  // купленному сборнику, а не к любому (иначе у повторных покупателей срабатывало ложно).
   useEffect(() => {
-    if (!isPollingPayment) return
+    if (!pollingCollectionId) return
     const interval = setInterval(async () => {
       try {
         const res = await recipesApi.getCollections()
         const items = (res.data || []) as any[]
-        if (items.some((c: any) => c.hasAccess)) {
+        if (items.find((c: any) => c.id === pollingCollectionId)?.hasAccess) {
           window.location.reload()
         }
       } catch {}
     }, 2000)
-    const stopTimeout = setTimeout(() => setIsPollingPayment(false), 10 * 60 * 1000)
+    const stopTimeout = setTimeout(() => setPollingCollectionId(null), 10 * 60 * 1000)
     return () => {
       clearInterval(interval)
       clearTimeout(stopTimeout)
     }
-  }, [isPollingPayment])
+  }, [pollingCollectionId])
 
   const handlePurchase = async (collection: any) => {
     try {
@@ -56,8 +57,8 @@ export const RecipesPage = () => {
         window.open(response.data.paymentUrl, '_blank')
       }
 
-      // Запускаем опрос статуса оплаты
-      setIsPollingPayment(true)
+      // Запускаем опрос статуса оплаты по этому сборнику
+      setPollingCollectionId(collection.id)
     } catch (error) {
       console.error('Payment error:', error)
       alert('Ошибка при создании платежа. Попробуйте еще раз.')
