@@ -372,6 +372,22 @@ enum ContentType {
   NEWS
 }
 
+// Ручной учёт оплат «мимо Payme» (рублёвая карта МИР).
+// Владелец отмечает в админке прошедшую оплату — сумма попадает в общий доход.
+model ManualPayment {
+  id             String   @id @default(uuid())
+  collectionId   String
+  collectionType ItemType // WORKOUT_COLLECTION | RECIPE_COLLECTION
+  amount         Int      // в сумах (единообразно с Transaction.amount)
+  telegramId     String?  // кому (опционально, для истории)
+  note           String?
+  paidAt         DateTime @default(now()) // дата оплаты (используется в разбивке дохода)
+  createdAt      DateTime @default(now())
+
+  @@index([paidAt])
+  @@map("manual_payments")
+}
+
 model FavoriteRecipe {
   id        String   @id @default(uuid())
   userId    String

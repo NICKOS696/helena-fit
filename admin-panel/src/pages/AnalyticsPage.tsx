@@ -1,9 +1,21 @@
 import { useState, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { analyticsApi } from '@/lib/api'
-import { BarChart3, Eye, Users, TrendingUp, ChevronDown, ShoppingBag } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { analyticsApi, adminRecipesApi, adminWorkoutsApi } from '@/lib/api'
+import {
+  BarChart3,
+  Eye,
+  Users,
+  TrendingUp,
+  ChevronDown,
+  ShoppingBag,
+  Banknote,
+  Trash2,
+} from 'lucide-react'
 
 const formatMoney = (n: number) => (n || 0).toLocaleString('ru-RU') + ' сум'
+
+// Курс для рублёвой карты (как в telegram-app/lib/payments.ts)
+const RUBLE_RATE = 155
 
 // Сворачиваемый блок: по умолчанию закрыт, раскрывается по клику на заголовок.
 const CollapsibleSection = ({
@@ -268,6 +280,229 @@ const ActiveUserRow = ({ item, index }: { item: any; index: number }) => {
   )
 }
 
+// Секция «Рублёвые оплаты»: ручной учёт оплат картой МИР — попадают в общий доход.
+const ManualPaymentsSection = () => {
+  const [open, setOpen] = useState(false)
+  const qc = useQueryClient()
+  const [type, setType] = useState<'RECIPE_COLLECTION' | 'WORKOUT_COLLECTION'>('RECIPE_COLLECTION')
+  const [collectionId, setCollectionId] = useState('')
+  const [amount, setAmount] = useState('')
+  const [telegramId, setTelegramId] = useState('')
+  const [note, setNote] = useState('')
+  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10))
+
+  const { data: recipesData } = useQuery({
+    queryKey: ['admin-recipes-all'],
+    queryFn: () => adminRecipesApi.getCollections(),
+    enabled: open,
+  })
+  const { data: workoutsData } = useQuery({
+    queryKey: ['admin-workouts-all'],
+    queryFn: () => adminWorkoutsApi.getCollections(),
+    enabled: open,
+  })
+  const collections: any[] =
+    (type === 'RECIPE_COLLECTION' ? recipesData?.data : workoutsData?.data) || []
+
+  const { data: listData } = useQuery({
+    queryKey: ['analytics-manual-payments'],
+    queryFn: () => analyticsApi.getManualPayments(),
+    enabled: open,
+  })
+  const items: any[] = listData?.data || []
+
+  const selectCollection = (id: string) => {
+    setCollectionId(id)
+    const c = collections.find((x) => x.id === id)
+    if (c && (c.price ?? null) !== null) setAmount(String(c.price))
+  }
+
+  const createMut = useMutation({
+    mutationFn: () =>
+      analyticsApi.createManualPayment({
+        collectionId,
+        collectionType: type,
+        amount: Number(amount),
+        telegramId: telegramId.trim() || undefined,
+        note: note.trim() || undefined,
+        paidAt: paidAt ? new Date(paidAt).toISOString() : undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analytics-manual-payments'] })
+      qc.invalidateQueries({ queryKey: ['analytics-purchases'] })
+      setCollectionId('')
+      setAmount('')
+      setTelegramId('')
+      setNote('')
+    },
+    onError: () => alert('Не удалось записать оплату. Проверьте поля и соединение.'),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => analyticsApi.deleteManualPayment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analytics-manual-payments'] })
+      qc.invalidateQueries({ queryKey: ['analytics-purchases'] })
+    },
+    onError: () => alert('Не удалось удалить запись.'),
+  })
+
+  const amountNum = Number(amount)
+  const canSubmit = !!collectionId && amountNum > 0 && !createMut.isPending
+  const rub = amountNum > 0 ? Math.round(amountNum / RUBLE_RATE) : 0
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+          open ? 'border-b' : ''
+        }`}
+      >
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Banknote className="w-6 h-6 text-primary" />
+          Рублёвые оплаты
+          {items.length > 0 && (
+            <span className="text-sm font-normal text-gray-400">({items.length})</span>
+          )}
+        </h2>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="p-6">
+          {/* Форма записи оплаты */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Тип</label>
+                <select
+                  value={type}
+                  onChange={(e) => {
+                    setType(e.target.value as any)
+                    setCollectionId('')
+                    setAmount('')
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="RECIPE_COLLECTION">🍽️ Рецепты</option>
+                  <option value="WORKOUT_COLLECTION">🏋️ Тренировки</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Сборник</label>
+                <select
+                  value={collectionId}
+                  onChange={(e) => selectCollection(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="">— выберите —</option>
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Сумма (сум)</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="напр. 50000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+                {rub > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">≈ {rub.toLocaleString('ru-RU')} ₽ по курсу {RUBLE_RATE}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Дата оплаты</label>
+                <input
+                  type="date"
+                  value={paidAt}
+                  onChange={(e) => setPaidAt(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Telegram ID (необязательно)</label>
+                <input
+                  type="text"
+                  value={telegramId}
+                  onChange={(e) => setTelegramId(e.target.value)}
+                  placeholder="кому открыли"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Заметка (необязательно)</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="комментарий"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => createMut.mutate()}
+              disabled={!canSubmit}
+              className="w-full sm:w-auto bg-primary text-white px-6 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+            >
+              {createMut.isPending ? 'Записываю…' : 'Записать оплату'}
+            </button>
+          </div>
+
+          {/* Список записанных оплат */}
+          {items.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Пока нет записанных рублёвых оплат</p>
+          ) : (
+            <div className="space-y-2">
+              {items.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {m.title}
+                      <span className="ml-2 text-[10px] font-bold uppercase bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                        ₽ карта
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {m.userName || (m.telegramId ? `ID ${m.telegramId}` : 'без привязки')}
+                      {m.note ? ` · ${m.note}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-primary whitespace-nowrap">{formatMoney(m.amount)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(m.paidAt)}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить запись об оплате?')) deleteMut.mutate(m.id)
+                    }}
+                    className="text-red-500 hover:text-red-700 flex-shrink-0"
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const AnalyticsPage = () => {
   const { data: overallData } = useQuery({
     queryKey: ['analytics-overall'],
@@ -343,6 +578,9 @@ export const AnalyticsPage = () => {
 
       {/* Покупки: кто, что и когда купил */}
       <PurchasesSection />
+
+      {/* Рублёвые оплаты (ручной учёт) */}
+      <ManualPaymentsSection />
 
       {/* Популярный контент (коллекции) */}
       <CollapsibleSection

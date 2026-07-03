@@ -304,7 +304,7 @@ export class AnalyticsService {
       },
     });
 
-    const purchases = await Promise.all(
+    const txPurchases = await Promise.all(
       transactions.map(async (t) => {
         const meta = await this.resolveContentMeta(t.itemType, t.itemId);
         return {
@@ -316,8 +316,51 @@ export class AnalyticsService {
           amount: t.amount,
           paymentMethod: t.paymentMethod,
           createdAt: t.createdAt,
+          manual: false,
         };
       }),
+    );
+
+    // Ручные (рублёвые) оплаты — добавляем в тот же список
+    const manuals = await this.prisma.manualPayment.findMany({
+      orderBy: { paidAt: 'desc' },
+      take: 500,
+    });
+    const manualPurchases = await Promise.all(
+      manuals.map(async (m) => {
+        const meta = await this.resolveContentMeta(m.collectionType, m.collectionId);
+        let user: any = null;
+        if (m.telegramId) {
+          user = await this.prisma.user.findUnique({
+            where: { telegramId: m.telegramId },
+            select: {
+              firstName: true,
+              lastName: true,
+              username: true,
+              telegramId: true,
+              photoUrl: true,
+            },
+          });
+          if (!user) user = { firstName: `ID ${m.telegramId}`, telegramId: m.telegramId };
+        }
+        return {
+          id: m.id,
+          user,
+          itemType: m.collectionType,
+          title: meta?.title ?? 'Удалённый контент',
+          coverImage: meta?.coverImage ?? null,
+          amount: m.amount,
+          paymentMethod: 'RUBLE',
+          createdAt: m.paidAt,
+          manual: true,
+          note: m.note,
+        };
+      }),
+    );
+
+    const purchases = [...txPurchases, ...manualPurchases].sort(
+      (a, b) =>
+        new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime(),
     );
 
     const totalRevenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -350,17 +393,92 @@ export class AnalyticsService {
     };
   }
 
-  /** Сумма выручки и число покупок начиная с даты (только завершённые покупки). */
+  /**
+   * Сумма выручки и число покупок начиная с даты.
+   * Учитываются завершённые Payme-покупки + ручные (рублёвые) оплаты.
+   */
   private async revenueSince(date: Date) {
-    const r = await this.prisma.transaction.aggregate({
-      where: {
-        status: 'COMPLETED',
-        type: 'PURCHASE',
-        createdAt: { gte: date },
+    const [tx, manual] = await Promise.all([
+      this.prisma.transaction.aggregate({
+        where: {
+          status: 'COMPLETED',
+          type: 'PURCHASE',
+          createdAt: { gte: date },
+        },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.manualPayment.aggregate({
+        where: { paidAt: { gte: date } },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+    ]);
+    return {
+      revenue: (tx._sum.amount || 0) + (manual._sum.amount || 0),
+      count: tx._count._all + manual._count._all,
+    };
+  }
+
+  /**
+   * Записать ручную (рублёвую) оплату — попадёт в общий доход.
+   */
+  async createManualPayment(dto: {
+    collectionId: string;
+    collectionType: 'WORKOUT_COLLECTION' | 'RECIPE_COLLECTION';
+    amount: number;
+    telegramId?: string;
+    note?: string;
+    paidAt?: string;
+  }) {
+    return this.prisma.manualPayment.create({
+      data: {
+        collectionId: dto.collectionId,
+        collectionType: dto.collectionType as any,
+        amount: dto.amount,
+        telegramId: dto.telegramId || null,
+        note: dto.note || null,
+        paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
       },
-      _sum: { amount: true },
-      _count: { _all: true },
     });
-    return { revenue: r._sum.amount || 0, count: r._count._all };
+  }
+
+  /**
+   * Список ручных оплат (для управления в админке).
+   */
+  async listManualPayments() {
+    const items = await this.prisma.manualPayment.findMany({
+      orderBy: { paidAt: 'desc' },
+      take: 500,
+    });
+    return Promise.all(
+      items.map(async (m) => {
+        const meta = await this.resolveContentMeta(m.collectionType, m.collectionId);
+        let userName: string | null = null;
+        if (m.telegramId) {
+          const u = await this.prisma.user.findUnique({
+            where: { telegramId: m.telegramId },
+            select: { firstName: true, lastName: true },
+          });
+          userName = u ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() : null;
+        }
+        return {
+          id: m.id,
+          collectionType: m.collectionType,
+          title: meta?.title ?? 'Удалённый сборник',
+          amount: m.amount,
+          telegramId: m.telegramId,
+          userName,
+          note: m.note,
+          paidAt: m.paidAt,
+        };
+      }),
+    );
+  }
+
+  /** Удалить ручную оплату (если ошибочно внесена). */
+  async deleteManualPayment(id: string) {
+    await this.prisma.manualPayment.delete({ where: { id } });
+    return { success: true };
   }
 }

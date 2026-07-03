@@ -138,4 +138,16 @@ export const analyticsApi = {
     api.get('/analytics/user-views', { params: { userId } }),
   getPurchases: () =>
     api.get('/analytics/purchases'),
+  getManualPayments: () =>
+    api.get('/analytics/manual-payments'),
+  createManualPayment: (data: {
+    collectionId: string
+    collectionType: 'WORKOUT_COLLECTION' | 'RECIPE_COLLECTION'
+    amount: number
+    telegramId?: string
+    note?: string
+    paidAt?: string
+  }) => api.post('/analytics/manual-payments', data),
+  deleteManualPayment: (id: string) =>
+    api.delete(`/analytics/manual-payments/${id}`),
 }

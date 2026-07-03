@@ -1,8 +1,19 @@
-import { Controller, Post, Get, Body, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  Query,
+} from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { TrackViewDto, ContentType } from './dto/track-view.dto';
+import { CreateManualPaymentDto } from './dto/manual-payment.dto';
 
 @Controller('analytics')
 export class AnalyticsController {
@@ -79,5 +90,26 @@ export class AnalyticsController {
   @UseGuards(JwtAuthGuard, AdminGuard)
   async getPurchases() {
     return this.analyticsService.getPurchases();
+  }
+
+  /**
+   * Ручные (рублёвые) оплаты — учёт «мимо Payme» (для админов)
+   */
+  @Get('manual-payments')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async listManualPayments() {
+    return this.analyticsService.listManualPayments();
+  }
+
+  @Post('manual-payments')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async createManualPayment(@Body() dto: CreateManualPaymentDto) {
+    return this.analyticsService.createManualPayment(dto);
+  }
+
+  @Delete('manual-payments/:id')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async deleteManualPayment(@Param('id') id: string) {
+    return this.analyticsService.deleteManualPayment(id);
   }
 }
