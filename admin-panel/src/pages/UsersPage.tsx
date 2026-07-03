@@ -12,6 +12,9 @@ export const UsersPage = () => {
   const [newTelegramId, setNewTelegramId] = useState('')
   const [selectedWorkouts, setSelectedWorkouts] = useState<string[]>([])
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([])
+  // Для какого пользователя доступы уже загружены в галочки — предохранитель от
+  // сохранения пустого набора (иначе бэкенд удалит все покупки пользователя).
+  const [accessLoadedFor, setAccessLoadedFor] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -32,7 +35,7 @@ export const UsersPage = () => {
     enabled: showAccessModal,
   })
 
-  const { data: userAccessData } = useQuery({
+  const { data: userAccessData, dataUpdatedAt: accessUpdatedAt } = useQuery({
     queryKey: ['user-access', selectedUser?.id],
     queryFn: () => adminUsersApi.getUserAccess(selectedUser!.id),
     enabled: !!selectedUser && showAccessModal,
@@ -55,6 +58,10 @@ export const UsersPage = () => {
       queryClient.invalidateQueries({ queryKey: ['user-access'] })
       setShowAccessModal(false)
       setSelectedUser(null)
+      setAccessLoadedFor(null)
+    },
+    onError: () => {
+      alert('Не удалось сохранить доступы. Проверьте соединение и попробуйте ещё раз.')
     },
   })
 
@@ -66,35 +73,44 @@ export const UsersPage = () => {
   })
 
   const handleOpenAccessModal = (user: any) => {
+    // Сбрасываем прошлый выбор и флаг «загружено» — галочки заполнятся заново,
+    // когда придут доступы именно этого пользователя.
+    setSelectedWorkouts([])
+    setSelectedRecipes([])
+    setAccessLoadedFor(null)
     setSelectedUser(user)
     setShowAccessModal(true)
   }
 
   const handleSubmitAccess = () => {
-    if (selectedUser) {
-      updateAccessMutation.mutate({
-        userId: selectedUser.id,
-        workoutIds: selectedWorkouts,
-        recipeIds: selectedRecipes,
-      })
-    }
+    // Не даём сохранить, пока доступы текущего пользователя не загружены в галочки,
+    // иначе можно случайно отправить пустой набор и стереть все покупки.
+    if (!selectedUser || accessLoadedFor !== selectedUser.id) return
+    updateAccessMutation.mutate({
+      userId: selectedUser.id,
+      workoutIds: selectedWorkouts,
+      recipeIds: selectedRecipes,
+    })
   }
 
-  // Загружаем текущие доступы пользователя
+  // Загружаем текущие доступы пользователя в галочки ровно один раз на открытие.
+  // accessUpdatedAt в зависимостях гарантирует срабатывание даже когда React Query
+  // отдаёт закэшированный объект с прежней ссылкой (иначе эффект бы не сработал).
   useEffect(() => {
-    if (userAccessData?.data) {
-      const access = userAccessData.data
-      // Фильтруем только те, у которых hasAccess = true
-      const workoutIds = access.workouts?.filter((w: any) => w.hasAccess).map((w: any) => w.id) || []
-      const recipeIds = access.recipes?.filter((r: any) => r.hasAccess).map((r: any) => r.id) || []
-      
-      console.log('Loading user access:', { workoutIds, recipeIds })
-      setSelectedWorkouts(workoutIds)
-      setSelectedRecipes(recipeIds)
-    }
-  }, [userAccessData])
+    if (!showAccessModal || !selectedUser) return
+    const access = userAccessData?.data
+    if (!access) return
+    if (accessLoadedFor === selectedUser.id) return
+    const workoutIds = access.workouts?.filter((w: any) => w.hasAccess).map((w: any) => w.id) || []
+    const recipeIds = access.recipes?.filter((r: any) => r.hasAccess).map((r: any) => r.id) || []
+    setSelectedWorkouts(workoutIds)
+    setSelectedRecipes(recipeIds)
+    setAccessLoadedFor(selectedUser.id)
+  }, [userAccessData, accessUpdatedAt, selectedUser, showAccessModal, accessLoadedFor])
 
   const users = data?.data || []
+  // Доступы текущего пользователя реально загружены — только тогда можно сохранять
+  const accessReady = !!userAccessData?.data && accessLoadedFor === selectedUser?.id
 
   return (
     <div className="p-4 md:p-8">
@@ -314,6 +330,7 @@ export const UsersPage = () => {
                   setSelectedUser(null)
                   setSelectedWorkouts([])
                   setSelectedRecipes([])
+                  setAccessLoadedFor(null)
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -378,10 +395,14 @@ export const UsersPage = () => {
             <div className="flex gap-2 mt-6 pt-4 border-t">
               <button
                 onClick={handleSubmitAccess}
-                disabled={updateAccessMutation.isPending}
+                disabled={updateAccessMutation.isPending || !accessReady}
                 className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
               >
-                {updateAccessMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                {updateAccessMutation.isPending
+                  ? 'Сохранение...'
+                  : !accessReady
+                  ? 'Загрузка доступов…'
+                  : 'Сохранить'}
               </button>
               <button
                 onClick={() => {
@@ -389,6 +410,7 @@ export const UsersPage = () => {
                   setSelectedUser(null)
                   setSelectedWorkouts([])
                   setSelectedRecipes([])
+                  setAccessLoadedFor(null)
                 }}
                 className="px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
