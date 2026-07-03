@@ -164,8 +164,10 @@ export class RecipesService {
       isFavorite = !!favorite;
     }
 
-    const recipe = await this.prisma.recipe.findUnique({
-      where: { id: recipeId },
+    // Рецепт должен принадлежать именно этому сборнику — иначе доступ к сборнику A
+    // нельзя использовать для чтения рецепта из платного сборника B (IDOR).
+    const recipe = await this.prisma.recipe.findFirst({
+      where: { id: recipeId, collectionId },
     });
 
     if (!recipe) {

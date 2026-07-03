@@ -50,7 +50,7 @@ export class RecipesController {
   @UseGuards(JwtAuthGuard)
   async getFavorites(@Request() req) {
     const userId = req.user.id;
-    return this.favoritesService.getFavorites(userId);
+    return this.favoritesService.getFavorites(userId, req.user.telegramId);
   }
 
   @Post('favorites/:recipeId')

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Те же превью-ID, что и в RecipesService — им отдаём полный контент для предпросмотра.
+const PREVIEW_TELEGRAM_IDS = ['89761488', '449178486'];
+
 @Injectable()
 export class FavoritesService {
   constructor(private prisma: PrismaService) {}
@@ -30,9 +33,11 @@ export class FavoritesService {
   }
 
   /**
-   * Получить все избранные рецепты пользователя
+   * Получить все избранные рецепты пользователя.
+   * Полный контент (ингредиенты/инструкции/КБЖУ) отдаём только для рецептов,
+   * к сборнику которых есть доступ; остальным — превью (как в RecipesService.getRecipe).
    */
-  async getFavorites(userId: string) {
+  async getFavorites(userId: string, telegramId?: string) {
     const favorites = await this.prisma.favoriteRecipe.findMany({
       where: { userId },
       include: {
@@ -50,10 +55,43 @@ export class FavoritesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return favorites.map((fav) => ({
-      ...fav.recipe,
-      collectionTitle: fav.recipe.collection.title,
-    }));
+    // Сборники, к которым у пользователя реально есть доступ
+    const access = await this.prisma.recipeCollectionAccess.findMany({
+      where: { userId },
+      select: { collectionId: true },
+    });
+    const accessIds = new Set(access.map((a) => a.collectionId));
+    const isPreviewer = !!telegramId && PREVIEW_TELEGRAM_IDS.includes(telegramId);
+
+    return favorites.map((fav) => {
+      const recipe = fav.recipe;
+      const hasAccess = isPreviewer || accessIds.has(recipe.collectionId);
+
+      if (!hasAccess) {
+        // Превью — без ингредиентов, инструкций и КБЖУ
+        return {
+          id: recipe.id,
+          collectionId: recipe.collectionId,
+          title: recipe.title,
+          description: recipe.description,
+          coverImage: recipe.coverImage,
+          coverImageFit: recipe.coverImageFit,
+          coverImagePosition: recipe.coverImagePosition,
+          category: recipe.category,
+          cookingTime: recipe.cookingTime,
+          locked: true,
+          isFavorite: true,
+          collectionTitle: recipe.collection.title,
+        };
+      }
+
+      return {
+        ...recipe,
+        locked: false,
+        isFavorite: true,
+        collectionTitle: recipe.collection.title,
+      };
+    });
   }
 
   /**
