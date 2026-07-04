@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getTelegramInitData } from '@/lib/telegram'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -16,6 +17,54 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Тихий повторный вход по initData. Общий промис — чтобы пачка одновременных 401
+// не породила несколько параллельных логинов.
+let reloginPromise: Promise<string | null> | null = null
+
+const relogin = async (): Promise<string | null> => {
+  const initData = getTelegramInitData()
+  if (!initData) return null
+  try {
+    // Чистый axios, мимо интерсепторов — иначе рекурсия
+    const res = await axios.post(`${API_URL}/auth/telegram`, { initData })
+    const token = res.data?.access_token
+    if (token) {
+      localStorage.setItem('token', token)
+      return token
+    }
+  } catch {
+    /* initData устарела или сеть — вернём null */
+  }
+  return null
+}
+
+// Токен мог протухнуть (JWT 7 дней, а Telegram держит Mini App «замороженным»
+// неделями) или стартовый логин моргнул из-за VPN. На 401 тихо перелогиниваемся
+// и повторяем исходный запрос — пользователь ничего не замечает.
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config || {}
+    const url: string = config.url || ''
+    if (error.response?.status === 401 && !config._retried && !url.includes('/auth/')) {
+      config._retried = true
+      if (!reloginPromise) {
+        reloginPromise = relogin().finally(() => {
+          reloginPromise = null
+        })
+      }
+      const token = await reloginPromise
+      if (token) {
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
+        return api.request(config)
+      }
+      localStorage.removeItem('token')
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const authApi = {
   loginTelegram: (initData: string) =>

@@ -171,7 +171,7 @@ export const WorkoutCollectionPage = () => {
       setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
-      alert('Ошибка при создании платежа. Попробуйте еще раз.')
+      alert('Не удалось создать платёж. Попробуйте ещё раз, а если не поможет — закройте приложение полностью и откройте заново.')
     } finally {
       setIsPaymentLoading(false)
     }
