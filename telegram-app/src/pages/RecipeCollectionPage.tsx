@@ -13,6 +13,7 @@ import { Button } from '@/components/Button'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
+import { showPaymentError } from '@/lib/payments'
 import { ErrorState } from '@/components/ErrorState'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
@@ -293,7 +294,7 @@ export const RecipeCollectionPage = () => {
       setIsPollingPayment(true)
     } catch (error) {
       console.error('Payment error:', error)
-      alert('Не удалось создать платёж. Попробуйте ещё раз, а если не поможет — закройте приложение полностью и откройте заново.')
+      showPaymentError()
     } finally {
       setIsPaymentLoading(false)
     }

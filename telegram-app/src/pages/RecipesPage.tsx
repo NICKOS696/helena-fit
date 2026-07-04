@@ -4,6 +4,7 @@ import { recipesApi, paymeApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
+import { showPaymentError } from '@/lib/payments'
 import { haptic } from '@/lib/telegram'
 import { Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -61,7 +62,7 @@ export const RecipesPage = () => {
       setPollingCollectionId(collection.id)
     } catch (error) {
       console.error('Payment error:', error)
-      alert('Не удалось создать платёж. Попробуйте ещё раз, а если не поможет — закройте приложение полностью и откройте заново.')
+      showPaymentError()
     } finally {
       setLoadingCollectionId(null)
     }
