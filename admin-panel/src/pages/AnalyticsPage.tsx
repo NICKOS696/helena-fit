@@ -199,7 +199,7 @@ const SalesSection = () => {
           ) : (
             <>
               {/* Итоги за выбранный период */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 mb-1">Выручка</p>
                   <p className="text-base md:text-lg font-bold text-primary leading-tight">
@@ -209,12 +209,6 @@ const SalesSection = () => {
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500 mb-1">Покупок</p>
                   <p className="text-base md:text-lg font-bold leading-tight">{result.count}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500 mb-1">Средний чек</p>
-                  <p className="text-base md:text-lg font-bold leading-tight">
-                    {formatMoney(result.avgCheck)}
-                  </p>
                 </div>
               </div>
 
