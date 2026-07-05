@@ -93,6 +93,19 @@ export class AnalyticsController {
   }
 
   /**
+   * Продажи с фильтрами: период (from/to, даты YYYY-MM-DD по Ташкенту) и сборник
+   */
+  @Get('sales')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getSales(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('collectionId') collectionId?: string,
+  ) {
+    return this.analyticsService.getSales(from, to, collectionId);
+  }
+
+  /**
    * Ручные (рублёвые) оплаты — учёт «мимо Payme» (для админов)
    */
   @Get('manual-payments')

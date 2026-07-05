@@ -138,6 +138,8 @@ export const analyticsApi = {
     api.get('/analytics/user-views', { params: { userId } }),
   getPurchases: () =>
     api.get('/analytics/purchases'),
+  getSales: (params: { from?: string; to?: string; collectionId?: string }) =>
+    api.get('/analytics/sales', { params }),
   getManualPayments: () =>
     api.get('/analytics/manual-payments'),
   createManualPayment: (data: {

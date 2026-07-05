@@ -481,4 +481,153 @@ export class AnalyticsService {
     await this.prisma.manualPayment.delete({ where: { id } });
     return { success: true };
   }
+
+  /**
+   * Продажи с фильтрами для аналитики: период (даты по Ташкенту, UTC+5) и сборник.
+   * Объединяет Payme-покупки и ручные (рублёвые) оплаты; отдаёт список,
+   * итоги, разбивку по сборникам и по дням.
+   */
+  async getSales(fromStr?: string, toStr?: string, collectionId?: string) {
+    const TZ_MS = 5 * 3600 * 1000;
+    // from: начало дня по Ташкенту; по умолчанию — день запуска
+    const from = fromStr
+      ? new Date(new Date(`${fromStr}T00:00:00Z`).getTime() - TZ_MS)
+      : AnalyticsService.LAUNCH_DATE;
+    // to: конец дня по Ташкенту (исключающая граница — полночь следующего дня)
+    const to = toStr
+      ? new Date(new Date(`${toStr}T00:00:00Z`).getTime() - TZ_MS + 24 * 3600 * 1000)
+      : new Date();
+
+    const txWhere: any = {
+      status: 'COMPLETED',
+      type: 'PURCHASE',
+      createdAt: { gte: from, lt: to },
+    };
+    if (collectionId) txWhere.itemId = collectionId;
+
+    const mWhere: any = { paidAt: { gte: from, lt: to } };
+    if (collectionId) mWhere.collectionId = collectionId;
+
+    const [transactions, manuals] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: txWhere,
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              username: true,
+              telegramId: true,
+            },
+          },
+        },
+      }),
+      this.prisma.manualPayment.findMany({
+        where: mWhere,
+        orderBy: { paidAt: 'desc' },
+        take: 1000,
+      }),
+    ]);
+
+    // Названия/обложки сборников — по одному запросу на уникальный id
+    const metaCache = new Map<string, { title: string; coverImage: string | null } | null>();
+    const getMeta = async (itemType: string, itemId: string) => {
+      const key = `${itemType}:${itemId}`;
+      if (!metaCache.has(key)) {
+        metaCache.set(key, await this.resolveContentMeta(itemType, itemId));
+      }
+      return metaCache.get(key);
+    };
+
+    const rows: any[] = [];
+    for (const t of transactions) {
+      const meta = await getMeta(t.itemType, t.itemId);
+      rows.push({
+        id: t.id,
+        itemId: t.itemId,
+        itemType: t.itemType,
+        title: meta?.title ?? 'Удалённый контент',
+        coverImage: meta?.coverImage ?? null,
+        amount: t.amount,
+        user: t.user,
+        createdAt: t.createdAt,
+        manual: false,
+      });
+    }
+    for (const m of manuals) {
+      const meta = await getMeta(m.collectionType, m.collectionId);
+      let user: any = null;
+      if (m.telegramId) {
+        user = await this.prisma.user.findUnique({
+          where: { telegramId: m.telegramId },
+          select: { firstName: true, lastName: true, username: true, telegramId: true },
+        });
+        if (!user) user = { firstName: `ID ${m.telegramId}`, telegramId: m.telegramId };
+      }
+      rows.push({
+        id: m.id,
+        itemId: m.collectionId,
+        itemType: m.collectionType,
+        title: meta?.title ?? 'Удалённый сборник',
+        coverImage: meta?.coverImage ?? null,
+        amount: m.amount,
+        user,
+        createdAt: m.paidAt,
+        manual: true,
+        note: m.note,
+      });
+    }
+
+    rows.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    const totalRevenue = rows.reduce((s, r) => s + (r.amount || 0), 0);
+
+    // Разбивка по сборникам
+    const byCollectionMap = new Map<string, any>();
+    for (const r of rows) {
+      const key = r.itemId;
+      const acc = byCollectionMap.get(key) || {
+        collectionId: r.itemId,
+        itemType: r.itemType,
+        title: r.title,
+        coverImage: r.coverImage,
+        revenue: 0,
+        count: 0,
+      };
+      acc.revenue += r.amount || 0;
+      acc.count += 1;
+      byCollectionMap.set(key, acc);
+    }
+    const byCollection = [...byCollectionMap.values()].sort(
+      (a, b) => b.revenue - a.revenue,
+    );
+
+    // Разбивка по дням (дата по Ташкенту)
+    const byDayMap = new Map<string, { revenue: number; count: number }>();
+    for (const r of rows) {
+      const day = new Date(new Date(r.createdAt).getTime() + TZ_MS)
+        .toISOString()
+        .slice(0, 10);
+      const acc = byDayMap.get(day) || { revenue: 0, count: 0 };
+      acc.revenue += r.amount || 0;
+      acc.count += 1;
+      byDayMap.set(day, acc);
+    }
+    const byDay = [...byDayMap.entries()]
+      .map(([date, v]) => ({ date, ...v }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      purchases: rows,
+      totalRevenue,
+      count: rows.length,
+      avgCheck: rows.length ? Math.round(totalRevenue / rows.length) : 0,
+      byCollection,
+      byDay,
+    };
+  }
 }

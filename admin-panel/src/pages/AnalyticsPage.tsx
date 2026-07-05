@@ -73,16 +73,58 @@ const formatDate = (d?: string) => {
   })
 }
 
-// Секция «Покупки»: кто, что и когда купил. Сворачиваемая, грузится лениво.
-const PurchasesSection = () => {
+// Дата YYYY-MM-DD «сегодня» по Ташкенту (UTC+5)
+const tashkentToday = (shiftDays = 0) => {
+  const d = new Date(Date.now() + 5 * 3600 * 1000 + shiftDays * 24 * 3600 * 1000)
+  return d.toISOString().slice(0, 10)
+}
+
+const PERIODS = [
+  { key: 'today', label: 'Сегодня' },
+  { key: '7d', label: '7 дней' },
+  { key: '30d', label: '30 дней' },
+  { key: 'all', label: 'Всё время' },
+  { key: 'custom', label: 'Период…' },
+] as const
+
+// Секция «Продажи»: фильтры по периоду и сборнику, итоги, разбивки, список.
+const SalesSection = () => {
   const [open, setOpen] = useState(false)
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]['key']>('all')
+  const [customFrom, setCustomFrom] = useState(tashkentToday(-6))
+  const [customTo, setCustomTo] = useState(tashkentToday())
+  const [collectionId, setCollectionId] = useState('')
+
+  // Даты фильтра из выбранного периода
+  let from: string | undefined
+  let to: string | undefined
+  if (period === 'today') { from = tashkentToday(); to = tashkentToday() }
+  else if (period === '7d') { from = tashkentToday(-6); to = tashkentToday() }
+  else if (period === '30d') { from = tashkentToday(-29); to = tashkentToday() }
+  else if (period === 'custom') { from = customFrom || undefined; to = customTo || undefined }
+  // 'all' — без дат (бэкенд возьмёт с запуска)
+
+  const { data: recipesData } = useQuery({
+    queryKey: ['admin-recipes-all'],
+    queryFn: () => adminRecipesApi.getCollections(),
+    enabled: open,
+  })
+  const { data: workoutsData } = useQuery({
+    queryKey: ['admin-workouts-all'],
+    queryFn: () => adminWorkoutsApi.getCollections(),
+    enabled: open,
+  })
+
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics-purchases'],
-    queryFn: () => analyticsApi.getPurchases(),
+    queryKey: ['analytics-sales', from, to, collectionId],
+    queryFn: () => analyticsApi.getSales({ from, to, collectionId: collectionId || undefined }),
     enabled: open,
   })
   const result = data?.data
-  const purchases = result?.purchases || []
+  const purchases: any[] = result?.purchases || []
+  const byCollection: any[] = result?.byCollection || []
+  const byDay: any[] = result?.byDay || []
+  const maxDayRevenue = Math.max(1, ...byDay.map((d: any) => d.revenue))
 
   return (
     <div className="bg-white rounded-lg shadow mb-8">
@@ -94,10 +136,7 @@ const PurchasesSection = () => {
       >
         <h2 className="text-xl font-bold flex items-center gap-2">
           <ShoppingBag className="w-6 h-6 text-primary" />
-          Покупки
-          {result && (
-            <span className="text-sm font-normal text-gray-400">({result.count})</span>
-          )}
+          Продажи
         </h2>
         <ChevronDown
           className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -106,79 +145,187 @@ const PurchasesSection = () => {
 
       {open && (
         <div className="p-6">
-          {isLoading ? (
-            <p className="text-center text-gray-500 py-4">Загрузка…</p>
-          ) : purchases.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">Пока нет покупок</p>
+          {/* Фильтры */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                  period === p.key
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+            <select
+              value={collectionId}
+              onChange={(e) => setCollectionId(e.target.value)}
+              className="ml-auto px-3 py-1.5 border border-gray-300 rounded-lg text-sm max-w-[220px]"
+            >
+              <option value="">Все сборники</option>
+              {(recipesData?.data || []).map((c: any) => (
+                <option key={c.id} value={c.id}>🍽 {c.title}</option>
+              ))}
+              {(workoutsData?.data || []).map((c: any) => (
+                <option key={c.id} value={c.id}>🏋️ {c.title}</option>
+              ))}
+            </select>
+          </div>
+
+          {period === 'custom' && (
+            <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
+              <label className="text-gray-500">с</label>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg"
+              />
+              <label className="text-gray-500">по</label>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg"
+              />
+            </div>
+          )}
+
+          {isLoading || !result ? (
+            <p className="text-center text-gray-500 py-6">Загрузка…</p>
           ) : (
             <>
-              {/* Разбивка выручки за сегодня / неделю / месяц */}
-              {result.breakdown && (
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[
-                    { label: 'Сегодня', data: result.breakdown.today },
-                    { label: 'За неделю', data: result.breakdown.week },
-                    { label: 'За месяц', data: result.breakdown.month },
-                  ].map((b) => (
-                    <div key={b.label} className="bg-gray-50 rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-500 mb-1">{b.label}</p>
-                      <p className="text-base md:text-lg font-bold text-primary leading-tight">
-                        {formatMoney(b.data?.revenue || 0)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {b.data?.count || 0} покупок
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                <span className="text-gray-600">
-                  Всего с запуска:{' '}
-                  <span className="font-bold text-primary">
+              {/* Итоги за выбранный период */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Выручка</p>
+                  <p className="text-base md:text-lg font-bold text-primary leading-tight">
                     {formatMoney(result.totalRevenue)}
-                  </span>
-                </span>
-                <span className="text-gray-600">
-                  Покупок: <span className="font-bold">{result.count}</span>
-                </span>
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Покупок</p>
+                  <p className="text-base md:text-lg font-bold leading-tight">{result.count}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">Средний чек</p>
+                  <p className="text-base md:text-lg font-bold leading-tight">
+                    {formatMoney(result.avgCheck)}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                {purchases.map((p: any) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
-                  >
-                    {p.coverImage ? (
-                      <img
-                        src={p.coverImage}
-                        alt={p.title}
-                        className="w-10 h-10 object-cover rounded flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{p.title}</p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {p.user?.firstName || 'Пользователь'} {p.user?.lastName || ''}
-                        {p.user?.username
-                          ? ` · @${p.user.username}`
-                          : p.user?.telegramId
-                          ? ` · ${p.user.telegramId}`
-                          : ''}
-                      </p>
+
+              {result.count === 0 ? (
+                <p className="text-center text-gray-500 py-6">
+                  Продаж за выбранный период нет
+                </p>
+              ) : (
+                <>
+                  {/* График по дням (когда дней 2–62) */}
+                  {byDay.length >= 2 && byDay.length <= 62 && (
+                    <div className="mb-5">
+                      <p className="text-xs text-gray-500 mb-2">По дням</p>
+                      <div className="flex items-end gap-[3px] h-16">
+                        {byDay.map((d: any) => (
+                          <div
+                            key={d.date}
+                            title={`${d.date.slice(8, 10)}.${d.date.slice(5, 7)} — ${formatMoney(d.revenue)} (${d.count})`}
+                            className="flex-1 bg-primary/70 hover:bg-primary rounded-t"
+                            style={{ height: `${Math.max(6, (d.revenue / maxDayRevenue) * 100)}%` }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                        <span>{byDay[0].date.slice(8, 10)}.{byDay[0].date.slice(5, 7)}</span>
+                        <span>
+                          {byDay[byDay.length - 1].date.slice(8, 10)}.
+                          {byDay[byDay.length - 1].date.slice(5, 7)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-primary whitespace-nowrap">
-                        {formatMoney(p.amount)}
-                      </p>
-                      <p className="text-xs text-gray-500">{formatDate(p.createdAt)}</p>
+                  )}
+
+                  {/* Разбивка по сборникам */}
+                  {byCollection.length > 1 && (
+                    <div className="mb-5">
+                      <p className="text-xs text-gray-500 mb-2">По сборникам</p>
+                      <div className="space-y-2">
+                        {byCollection.map((c: any) => (
+                          <div key={c.collectionId} className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="font-medium truncate">
+                                  {c.itemType === 'WORKOUT_COLLECTION' ? '🏋️ ' : '🍽 '}
+                                  {c.title}
+                                </span>
+                                <span className="text-gray-500 flex-shrink-0 ml-2">
+                                  {c.count} · <b className="text-primary">{formatMoney(c.revenue)}</b>
+                                </span>
+                              </div>
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full"
+                                  style={{
+                                    width: `${Math.round((c.revenue / Math.max(1, result.totalRevenue)) * 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  )}
+
+                  {/* Список покупок */}
+                  <p className="text-xs text-gray-500 mb-2">Покупки ({result.count})</p>
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                    {purchases.map((p: any) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
+                      >
+                        {p.coverImage ? (
+                          <img
+                            src={p.coverImage}
+                            alt={p.title}
+                            className="w-10 h-10 object-cover rounded flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {p.title}
+                            {p.manual && (
+                              <span className="ml-2 text-[10px] font-bold uppercase bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                                ₽ карта
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {p.user?.firstName || 'Пользователь'} {p.user?.lastName || ''}
+                            {p.user?.username
+                              ? ` · @${p.user.username}`
+                              : p.user?.telegramId
+                              ? ` · ${p.user.telegramId}`
+                              : ''}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-primary whitespace-nowrap">
+                            {formatMoney(p.amount)}
+                          </p>
+                          <p className="text-xs text-gray-500">{formatDate(p.createdAt)}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -576,8 +723,8 @@ export const AnalyticsPage = () => {
         </div>
       </div>
 
-      {/* Покупки: кто, что и когда купил */}
-      <PurchasesSection />
+      {/* Продажи: фильтры, итоги, разбивки */}
+      <SalesSection />
 
       {/* Рублёвые оплаты (ручной учёт) */}
       <ManualPaymentsSection />
