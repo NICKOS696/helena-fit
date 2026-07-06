@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminRecipesApi } from '@/lib/api'
-import { ArrowLeft, Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, X, ChevronUp, ChevronDown, Search } from 'lucide-react'
 import { ImageUpload } from '@/components/ImageUpload'
 import { ImageFocusPicker } from '@/components/ImageFocusPicker'
 
@@ -24,6 +24,7 @@ export const RecipeCollectionEditPage = () => {
   
   const [showCollectionModal, setShowCollectionModal] = useState(false)
   const [showRecipeModal, setShowRecipeModal] = useState(false)
+  const [recipeSearch, setRecipeSearch] = useState('')
   const [editingRecipe, setEditingRecipe] = useState<any>(null)
   // Ингредиенты с разделами: [{ title, items: [{name, amount}] }]
   type IngItem = { name: string; amount: string }
@@ -301,6 +302,13 @@ export const RecipeCollectionEditPage = () => {
 
   const collection = data?.data
 
+  // Рецепты по поисковому запросу, по алфавиту
+  const filteredRecipes = [...(collection?.recipes || [])]
+    .filter((r: any) =>
+      (r.title || '').toLowerCase().includes(recipeSearch.trim().toLowerCase()),
+    )
+    .sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', 'ru'))
+
   return (
     <div className="p-8">
       <button
@@ -347,15 +355,39 @@ export const RecipeCollectionEditPage = () => {
           </button>
         </div>
 
+        {/* Поиск по названию — быстро проверить, добавлен ли рецепт */}
+        {(collection.recipes?.length || 0) > 0 && (
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={recipeSearch}
+              onChange={(e) => setRecipeSearch(e.target.value)}
+              placeholder="Поиск рецепта по названию..."
+              className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+            />
+            {recipeSearch && (
+              <button
+                onClick={() => setRecipeSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+
         {collection.recipes?.length === 0 ? (
           <p className="text-center text-gray-500 py-8">
             Рецептов пока нет. Добавьте первый рецепт!
           </p>
+        ) : filteredRecipes.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">
+            По запросу «{recipeSearch}» ничего не найдено — такого рецепта ещё нет
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[...(collection.recipes || [])]
-              .sort((a: any, b: any) => (a.title || '').localeCompare(b.title || '', 'ru'))
-              .map((recipe: any) => (
+            {filteredRecipes.map((recipe: any) => (
               <div key={recipe.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex gap-4">
                   {recipe.coverImage && (
