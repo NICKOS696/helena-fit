@@ -9,16 +9,51 @@ export const NewsPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingNews, setEditingNews] = useState<any>(null)
   const [showBroadcastModal, setShowBroadcastModal] = useState(false)
-  const [broadcastForm, setBroadcastForm] = useState({ message: '', imageUrl: '' })
+  const [broadcastForm, setBroadcastForm] = useState({
+    message: '',
+    imageUrl: '',
+    buttonText: '',
+    buttonTarget: '', // '', 'recipes', 'workouts', 'recipe:<id>', 'workout:<id>'
+  })
   const [broadcastResult, setBroadcastResult] = useState<any>(null)
 
+  // Ссылка кнопки из выбранной цели
+  const buildButtonUrl = (target: string): string | undefined => {
+    const base = 'https://helena-fit.ru'
+    if (target === 'recipes') return `${base}/recipes`
+    if (target === 'workouts') return `${base}/workouts`
+    if (target.startsWith('recipe:')) return `${base}/recipes/${target.slice(7)}`
+    if (target.startsWith('workout:')) return `${base}/workouts/${target.slice(8)}`
+    return undefined
+  }
+
   const broadcastMutation = useMutation({
-    mutationFn: (data: { message: string; imageUrl?: string }) =>
-      adminBroadcastApi.send(data),
+    mutationFn: (data: {
+      message: string
+      imageUrl?: string
+      buttonText?: string
+      buttonUrl?: string
+      test?: boolean
+    }) => adminBroadcastApi.send(data),
     onSuccess: (res) => {
       setBroadcastResult(res.data)
     },
+    onError: () => {
+      alert('Не удалось выполнить рассылку. Проверьте соединение и попробуйте ещё раз.')
+    },
   })
+
+  const sendBroadcast = (test: boolean) => {
+    if (!broadcastForm.message.trim()) return
+    const hasButton = broadcastForm.buttonText.trim() && broadcastForm.buttonTarget
+    broadcastMutation.mutate({
+      message: broadcastForm.message,
+      imageUrl: broadcastForm.imageUrl || undefined,
+      buttonText: hasButton ? broadcastForm.buttonText.trim() : undefined,
+      buttonUrl: hasButton ? buildButtonUrl(broadcastForm.buttonTarget) : undefined,
+      test,
+    })
+  }
   const [newsForm, setNewsForm] = useState({
     title: '',
     excerpt: '',
@@ -147,7 +182,7 @@ export const NewsPage = () => {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              setBroadcastForm({ message: '', imageUrl: '' })
+              setBroadcastForm({ message: '', imageUrl: '', buttonText: '', buttonTarget: '' })
               setBroadcastResult(null)
               setShowBroadcastModal(true)
             }}
@@ -467,16 +502,40 @@ export const NewsPage = () => {
             {broadcastResult ? (
               <div className="space-y-4">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="font-bold text-green-900 mb-2">✅ Рассылка завершена</h3>
-                  <p className="text-sm text-green-800">
-                    Всего пользователей: <b>{broadcastResult.total}</b>
-                  </p>
-                  <p className="text-sm text-green-800">
-                    Доставлено: <b>{broadcastResult.sent}</b>
-                  </p>
-                  <p className="text-sm text-red-700">
-                    Ошибок: <b>{broadcastResult.failed}</b>
-                  </p>
+                  <h3 className="font-bold text-green-900 mb-3">
+                    {broadcastResult.test
+                      ? '🧪 Тест отправлен вам в бот'
+                      : '✅ Рассылка завершена'}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="bg-white rounded-lg p-3 text-center border border-green-100">
+                      <p className="text-xs text-gray-500">Получателей</p>
+                      <p className="text-xl font-bold">{broadcastResult.total}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-green-100">
+                      <p className="text-xs text-gray-500">✅ Доставлено</p>
+                      <p className="text-xl font-bold text-green-700">
+                        {broadcastResult.sent}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-green-100">
+                      <p className="text-xs text-gray-500">🚫 Заблокировали бота</p>
+                      <p className="text-xl font-bold text-red-600">
+                        {broadcastResult.blocked ?? 0}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center border border-green-100">
+                      <p className="text-xs text-gray-500">👻 Удалили аккаунт</p>
+                      <p className="text-xl font-bold text-gray-600">
+                        {broadcastResult.deleted ?? 0}
+                      </p>
+                    </div>
+                  </div>
+                  {(broadcastResult.other ?? 0) > 0 && (
+                    <p className="text-sm text-amber-700 mt-2">
+                      ⏳ Прочие ошибки (таймауты): <b>{broadcastResult.other}</b>
+                    </p>
+                  )}
                   {broadcastResult.errors && broadcastResult.errors.length > 0 && (
                     <details className="mt-2">
                       <summary className="text-xs text-gray-600 cursor-pointer">
@@ -490,12 +549,25 @@ export const NewsPage = () => {
                     </details>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowBroadcastModal(false)}
-                  className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
-                >
-                  Закрыть
-                </button>
+                <div className="flex gap-2">
+                  {broadcastResult.test && (
+                    <button
+                      onClick={() => setBroadcastResult(null)}
+                      className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:opacity-90"
+                    >
+                      ← Назад к форме
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowBroadcastModal(false)
+                      setBroadcastResult(null)
+                    }}
+                    className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
+                  >
+                    Закрыть
+                  </button>
+                </div>
               </div>
             ) : (
               <form
@@ -508,10 +580,7 @@ export const NewsPage = () => {
                     )
                   )
                     return
-                  broadcastMutation.mutate({
-                    message: broadcastForm.message,
-                    imageUrl: broadcastForm.imageUrl || undefined,
-                  })
+                  sendBroadcast(false)
                 }}
                 className="space-y-4"
               >
@@ -552,7 +621,71 @@ export const NewsPage = () => {
                   }
                 />
 
-                <div className="flex gap-2 pt-4">
+                {/* Кнопка под сообщением */}
+                <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-gray-700">
+                    Кнопка под сообщением (необязательно)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Текст кнопки
+                      </label>
+                      <input
+                        type="text"
+                        value={broadcastForm.buttonText}
+                        onChange={(e) =>
+                          setBroadcastForm({ ...broadcastForm, buttonText: e.target.value })
+                        }
+                        placeholder="🍽 Смотреть новинки"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Куда ведёт
+                      </label>
+                      <select
+                        value={broadcastForm.buttonTarget}
+                        onChange={(e) =>
+                          setBroadcastForm({ ...broadcastForm, buttonTarget: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="">— без кнопки —</option>
+                        <option value="recipes">🍽 Раздел «Рецепты»</option>
+                        <option value="workouts">🏋️ Раздел «Тренировки»</option>
+                        {(recipeCollections?.data || []).map((c: any) => (
+                          <option key={c.id} value={`recipe:${c.id}`}>
+                            🍽 {c.title}
+                          </option>
+                        ))}
+                        {(workoutCollections?.data || []).map((c: any) => (
+                          <option key={c.id} value={`workout:${c.id}`}>
+                            🏋️ {c.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  {broadcastForm.buttonText.trim() && !broadcastForm.buttonTarget && (
+                    <p className="text-xs text-amber-600">
+                      Выберите, куда ведёт кнопка — иначе она не будет добавлена
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => sendBroadcast(true)}
+                    disabled={
+                      broadcastMutation.isPending || !broadcastForm.message.trim()
+                    }
+                    className="flex-1 flex items-center justify-center gap-2 border-2 border-blue-500 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    🧪 {broadcastMutation.isPending ? 'Отправка...' : 'Тест себе'}
+                  </button>
                   <button
                     type="submit"
                     disabled={
@@ -568,7 +701,7 @@ export const NewsPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowBroadcastModal(false)}
-                    className="px-6 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                   >
                     Отмена
                   </button>

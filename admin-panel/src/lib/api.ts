@@ -97,8 +97,13 @@ export const adminNewsApi = {
 }
 
 export const adminBroadcastApi = {
-  send: (data: { message: string; imageUrl?: string }) =>
-    api.post('/admin/broadcast', data),
+  send: (data: {
+    message: string
+    imageUrl?: string
+    buttonText?: string
+    buttonUrl?: string
+    test?: boolean
+  }) => api.post('/admin/broadcast', data),
 }
 
 export const adminIngredientsApi = {

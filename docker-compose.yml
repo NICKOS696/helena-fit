@@ -54,6 +54,11 @@ services:
       PAYME_CALLBACK_URL: ${PAYME_CALLBACK_URL}
       # Аварийный рубильник проверки подписи Telegram (по умолчанию выключен = проверка включена)
       DISABLE_TELEGRAM_SIGNATURE_CHECK: ${DISABLE_TELEGRAM_SIGNATURE_CHECK:-false}
+      # Прямой IPv4-маршрут к Telegram с этого хостинга мёртв; контейнер ходит
+      # через socat-туннель на хосте (telegram-relay.service: 172.17.0.1:8443 → IPv6:443)
+      TELEGRAM_API_BASE: https://api.telegram.org:8443
+    extra_hosts:
+      - "api.telegram.org:172.17.0.1"
     volumes:
       - ./backend/uploads:/app/uploads
     ports:

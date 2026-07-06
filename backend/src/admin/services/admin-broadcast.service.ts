@@ -4,7 +4,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 export interface BroadcastDto {
   message: string;
   imageUrl?: string;
+  /** Текст кнопки под сообщением (вместе с buttonUrl) */
+  buttonText?: string;
+  /** Куда ведёт кнопка — https-ссылка на Mini App (открывается как web_app) */
+  buttonUrl?: string;
+  /** Тестовая отправка — только владельцу, не всей базе */
+  test?: boolean;
 }
+
+// Прямой IPv4-маршрут к Telegram с хостинга мёртв — контейнер ходит через
+// socat-туннель на хосте (см. docker-compose: extra_hosts + TELEGRAM_API_BASE).
+const API_BASE = process.env.TELEGRAM_API_BASE || 'https://api.telegram.org';
+const OWNER_TELEGRAM_ID = process.env.OWNER_TELEGRAM_ID || '89761488';
 
 @Injectable()
 export class AdminBroadcastService {
@@ -18,22 +29,36 @@ export class AdminBroadcastService {
       throw new Error('TELEGRAM_BOT_TOKEN is not set');
     }
 
-    const users = await this.prisma.user.findMany({
-      where: { telegramId: { not: '' } },
-      select: { telegramId: true },
-    });
+    const recipients = data.test
+      ? [{ telegramId: OWNER_TELEGRAM_ID }]
+      : await this.prisma.user.findMany({
+          where: { telegramId: { not: '' } },
+          select: { telegramId: true },
+        });
+
+    const url = data.imageUrl
+      ? `${API_BASE}/bot${token}/sendPhoto`
+      : `${API_BASE}/bot${token}/sendMessage`;
+
+    // Кнопка под сообщением (открывает Mini App)
+    const replyMarkup =
+      data.buttonText && data.buttonUrl
+        ? {
+            inline_keyboard: [
+              [{ text: data.buttonText, web_app: { url: data.buttonUrl } }],
+            ],
+          }
+        : undefined;
 
     let sent = 0;
-    let failed = 0;
+    let blocked = 0; // 403 — заблокировали бота
+    let deleted = 0; // 400 chat not found / deactivated — удалили аккаунт или не запускали
+    let other = 0; // прочие ошибки (таймауты и т.п.)
     const errors: string[] = [];
 
-    for (const user of users) {
+    for (const user of recipients) {
       try {
-        const url = data.imageUrl
-          ? `https://api.telegram.org/bot${token}/sendPhoto`
-          : `https://api.telegram.org/bot${token}/sendMessage`;
-
-        const body = data.imageUrl
+        const body: any = data.imageUrl
           ? {
               chat_id: user.telegramId,
               photo: data.imageUrl,
@@ -45,35 +70,72 @@ export class AdminBroadcastService {
               text: data.message,
               parse_mode: 'HTML',
             };
+        if (replyMarkup) body.reply_markup = replyMarkup;
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
+        // Таймаут, чтобы одно зависшее соединение не остановило всю рассылку
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 20000);
+        let result: any;
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+          result = await response.json();
+        } finally {
+          clearTimeout(timer);
+        }
 
-        const result = await response.json();
         if (result.ok) {
           sent++;
+        } else if (result.error_code === 429) {
+          // Лимит Telegram: ждём сколько попросили и повторяем один раз
+          const wait = (result.parameters?.retry_after || 3) * 1000;
+          await new Promise((r) => setTimeout(r, wait));
+          const retry = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }).then((r) => r.json());
+          if (retry.ok) sent++;
+          else {
+            other++;
+            errors.push(`${user.telegramId}: ${retry.description || 'retry failed'}`);
+          }
+        } else if (result.error_code === 403) {
+          blocked++;
+        } else if (
+          result.error_code === 400 &&
+          /chat not found|deactivated/i.test(result.description || '')
+        ) {
+          deleted++;
         } else {
-          failed++;
+          other++;
           errors.push(`${user.telegramId}: ${result.description || 'unknown'}`);
         }
 
-        // Telegram rate limit: ~30 msg/sec, ставим небольшую задержку
+        // Telegram rate limit: ~30 msg/сек
         await new Promise((r) => setTimeout(r, 50));
       } catch (e: any) {
-        failed++;
+        other++;
         errors.push(`${user.telegramId}: ${e.message}`);
       }
     }
 
-    this.logger.log(`Broadcast: sent=${sent}, failed=${failed}`);
+    this.logger.log(
+      `Broadcast${data.test ? ' (test)' : ''}: sent=${sent}, blocked=${blocked}, deleted=${deleted}, other=${other}`,
+    );
 
     return {
-      total: users.length,
+      test: !!data.test,
+      total: recipients.length,
       sent,
-      failed,
+      blocked,
+      deleted,
+      other,
+      failed: blocked + deleted + other,
       errors: errors.slice(0, 10),
     };
   }
