@@ -524,7 +524,7 @@ export const RecipeCollectionPage = () => {
                 !recipe.locked && navigate(`/recipes/${id}/recipe/${recipe.id}`)
               }
               className={clsx(
-                'bg-white rounded-xl overflow-hidden shadow-card',
+                'bg-white rounded-xl overflow-hidden shadow-card flex flex-col',
                 !recipe.locked && 'cursor-pointer active:scale-95 transition-transform'
               )}
             >
@@ -585,14 +585,15 @@ export const RecipeCollectionPage = () => {
                 )}
               </div>
 
-              {/* Content */}
-              <div className="p-3">
-                <h3 className="text-[15px] font-medium leading-snug text-text-primary mb-2 line-clamp-3 min-h-[2.5rem]">
+              {/* Content: тянется на высоту ряда, статы прижаты к низу —
+                  соседние карточки с разной длиной названия выровнены */}
+              <div className="p-3 flex flex-col flex-1">
+                <h3 className="text-[15px] font-medium leading-snug text-text-primary mb-2 line-clamp-3">
                   {recipe.title}
                 </h3>
 
                 {/* Stats */}
-                <div className="flex items-center justify-between text-xs text-text-secondary">
+                <div className="flex items-center justify-between text-xs text-text-secondary mt-auto">
                   {recipe.caloriesPerServing && (
                     <div className="flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
