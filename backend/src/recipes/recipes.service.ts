@@ -128,6 +128,7 @@ export class RecipesService {
             coverImagePosition: r.coverImagePosition,
             category: r.category,
             cookingTime: r.cookingTime,
+            createdAt: r.createdAt,
             locked: true,
             isFavorite: false,
           })),

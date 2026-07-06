@@ -120,7 +120,7 @@ export const RecipesPage = () => {
             {!collection.isInDevelopment && (
               <div className="flex items-center gap-4 text-sm text-text-secondary">
                 <span>🍽️ {collection.recipeCount} рецептов</span>
-                {!collection.hasAccess && collection.discount > 0 && (
+                {!collection.hasAccess && collection.finalPrice < collection.price && (
                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
                     -{collection.discount}{collection.discountType === 'PERCENTAGE' ? '%' : ' сум'}
                   </span>
@@ -143,7 +143,7 @@ export const RecipesPage = () => {
               <div className="space-y-3">
                 {/* Цена крупно */}
                 <div className="flex items-baseline gap-2">
-                  {collection.discount > 0 && (
+                  {collection.finalPrice < collection.price && (
                     <span className="text-lg text-gray-400 line-through">
                       {collection.price.toLocaleString()} сум
                     </span>

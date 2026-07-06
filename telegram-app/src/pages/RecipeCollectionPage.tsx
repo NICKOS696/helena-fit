@@ -512,6 +512,11 @@ export const RecipeCollectionPage = () => {
             )
           }
 
+          // Рецепт «новый» первые 7 дней после добавления
+          const isNewRecipe = (r: any) =>
+            r.createdAt &&
+            Date.now() - new Date(r.createdAt).getTime() < 7 * 24 * 3600 * 1000
+
           const renderCard = (recipe: any) => (
             <div
               key={recipe.id}
@@ -571,6 +576,12 @@ export const RecipeCollectionPage = () => {
                       <ShoppingBag className="w-4 h-4" />
                     )}
                   </button>
+                )}
+                {/* Бейдж NEW — первые 7 дней после добавления рецепта */}
+                {isNewRecipe(recipe) && (
+                  <span className="absolute bottom-2 right-2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
+                    New
+                  </span>
                 )}
               </div>
 

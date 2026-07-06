@@ -13,21 +13,24 @@ export const PriceDisplay = ({
   finalPrice,
   discountEndDate,
 }: PriceDisplayProps) => {
-  // Вычисляем finalPrice если он не передан
+  // Скидка с датой окончания после этой даты не действует
+  const end = discountEndDate ? new Date(discountEndDate) : null
+  const now = new Date()
+  const expired = !!end && end.getTime() <= now.getTime()
+
+  // Вычисляем finalPrice если он не передан (с учётом истечения скидки)
   const calculatedFinalPrice =
     finalPrice ??
-    (discount && discount > 0
+    (discount && discount > 0 && !expired
       ? discountType === 'PERCENTAGE'
         ? Math.round(price * (1 - discount / 100))
         : Math.max(0, price - discount)
       : price)
 
-  const hasDiscount = discount && discount > 0
+  const hasDiscount = !!discount && discount > 0 && !expired && calculatedFinalPrice < price
   const savings = price - calculatedFinalPrice
 
   // Срок акции: показываем, если задан и ещё не прошёл
-  const end = discountEndDate ? new Date(discountEndDate) : null
-  const now = new Date()
   const showDeadline = hasDiscount && end && end.getTime() > now.getTime()
   let deadlineText = ''
   if (showDeadline && end) {
