@@ -1,7 +1,96 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminUsersApi, adminWorkoutsApi, adminRecipesApi } from '@/lib/api'
-import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
+import { adminUsersApi, adminWorkoutsApi, adminRecipesApi, analyticsApi } from '@/lib/api'
+import { Plus, Search, Edit, Trash2, X, History } from 'lucide-react'
+
+const typeLabel: Record<string, string> = {
+  WORKOUT_COLLECTION: '🏋️ Сборник тренировок',
+  RECIPE_COLLECTION: '🍽️ Сборник рецептов',
+  RECIPE: '🍽️ Рецепт',
+  WORKOUT: '🏋️ Тренировка',
+  NEWS: '📰 Новость',
+}
+
+const formatDate = (d?: string) => {
+  if (!d) return ''
+  return new Date(d).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Модалка «Журнал просмотров»: что открывал пользователь, сколько раз и когда
+const UserLogModal = ({ user, onClose }: { user: any; onClose: () => void }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['user-views', user.id],
+    queryFn: () => analyticsApi.getUserViews(user.id),
+  })
+  const views: any[] = data?.data || []
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex justify-between items-start gap-3 mb-4">
+          <div>
+            <h2 className="text-lg md:text-2xl font-bold flex items-center gap-2">
+              <History className="w-6 h-6 text-primary" />
+              Журнал: {user.firstName} {user.lastName}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              ID {user.telegramId}
+              {user.username ? ` · @${user.username}` : ''}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <p className="text-center text-gray-500 py-8">Загрузка…</p>
+        ) : views.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">
+            Пользователь ещё ничего не открывал
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {views.map((v: any) => (
+              <div
+                key={`${v.itemType}-${v.itemId}`}
+                className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100"
+              >
+                {v.coverImage ? (
+                  <img
+                    src={v.coverImage}
+                    alt={v.title}
+                    className="w-10 h-10 object-cover rounded flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{v.title}</p>
+                  <p className="text-xs text-gray-500">
+                    {typeLabel[v.itemType] || v.itemType}
+                    {' · '}
+                    открыто {formatDate(v.lastViewedAt)}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-primary">{v.views}</p>
+                  <p className="text-xs text-gray-500">раз</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export const UsersPage = () => {
   const [search, setSearch] = useState('')
@@ -15,6 +104,8 @@ export const UsersPage = () => {
   // Для какого пользователя доступы уже загружены в галочки — предохранитель от
   // сохранения пустого набора (иначе бэкенд удалит все покупки пользователя).
   const [accessLoadedFor, setAccessLoadedFor] = useState<string | null>(null)
+  // Пользователь, чей журнал просмотров открыт
+  const [logUser, setLogUser] = useState<any>(null)
 
   const queryClient = useQueryClient()
 
@@ -215,6 +306,13 @@ export const UsersPage = () => {
                         <Edit className="w-5 h-5" />
                       </button>
                       <button
+                        onClick={() => setLogUser(user)}
+                        className="text-gray-500 hover:text-primary"
+                        title="Журнал просмотров"
+                      >
+                        <History className="w-5 h-5" />
+                      </button>
+                      <button
                         onClick={() => {
                           if (confirm('Удалить пользователя?')) {
                             deleteMutation.mutate(user.id)
@@ -271,6 +369,13 @@ export const UsersPage = () => {
                     Доступ
                   </button>
                   <button
+                    onClick={() => setLogUser(user)}
+                    className="flex items-center gap-1 text-gray-500 font-medium text-sm"
+                  >
+                    <History className="w-4 h-4" />
+                    Журнал
+                  </button>
+                  <button
                     onClick={() => {
                       if (confirm('Удалить пользователя?')) {
                         deleteMutation.mutate(user.id)
@@ -287,6 +392,8 @@ export const UsersPage = () => {
         </div>
         </>
       )}
+
+      {logUser && <UserLogModal user={logUser} onClose={() => setLogUser(null)} />}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
