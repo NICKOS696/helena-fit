@@ -587,7 +587,7 @@ export const RecipeCollectionPage = () => {
 
               {/* Content */}
               <div className="p-3">
-                <h3 className="text-[15px] font-medium leading-snug text-text-primary mb-2 line-clamp-2 min-h-[2.5rem]">
+                <h3 className="text-[15px] font-medium leading-snug text-text-primary mb-2 line-clamp-3 min-h-[2.5rem]">
                   {recipe.title}
                 </h3>
 

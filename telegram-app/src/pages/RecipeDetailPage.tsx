@@ -229,7 +229,7 @@ export const RecipeDetailPage = () => {
 
         {/* Recipe Title */}
         <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">{recipe.title}</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{recipe.title}</h2>
           {recipe.cookingTime && (
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
@@ -241,7 +241,7 @@ export const RecipeDetailPage = () => {
 
         {/* Ингредиенты — аккуратными строками, с разделами */}
         <Card>
-          <h3 className="text-base font-bold text-gray-800 mb-3">Ингредиенты</h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-3">Ингредиенты</h3>
           <div className="space-y-4">
             {ingredientGroups.map((group: any, gi: number) => (
               <div key={gi}>
@@ -272,7 +272,7 @@ export const RecipeDetailPage = () => {
             (например, у напитков/смузи способа приготовления нет). */}
         {steps.length > 0 && (
           <Card>
-            <h3 className="text-base font-bold text-gray-800 mb-4">Способ приготовления</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-4">Способ приготовления</h3>
             <ol className="space-y-3">
               {steps.map((step: string, i: number) => (
                 <li key={i} className="flex gap-3">
@@ -289,7 +289,7 @@ export const RecipeDetailPage = () => {
         {/* Польза — для смузи и напитков вместо способа приготовления */}
         {recipe.benefits && recipe.benefits.trim() && (
           <Card>
-            <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <h3 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
               Польза
               <span aria-hidden>🌱</span>
             </h3>
