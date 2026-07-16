@@ -6,9 +6,9 @@ import { AuthImage } from '@/components/AuthImage'
 import { ArrowLeft, Plus, Trash2, Users, Save, Camera, X } from 'lucide-react'
 
 const ANGLES: { key: string; label: string }[] = [
-  { key: 'FRONT', label: 'Перед' },
-  { key: 'SIDE', label: 'Бок' },
-  { key: 'BACK', label: 'Зад' },
+  { key: 'FRONT', label: 'Вид спереди' },
+  { key: 'SIDE', label: 'Вид сбоку' },
+  { key: 'BACK', label: 'Вид сзади' },
 ]
 
 // Поля замера: ключ, подпись, единица

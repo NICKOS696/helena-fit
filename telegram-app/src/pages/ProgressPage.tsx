@@ -31,9 +31,9 @@ const FIELDS: { key: string; label: string; unit: string }[] = [
 ]
 
 const ANGLES: { key: 'FRONT' | 'SIDE' | 'BACK'; label: string }[] = [
-  { key: 'FRONT', label: 'Перед' },
-  { key: 'SIDE', label: 'Бок' },
-  { key: 'BACK', label: 'Зад' },
+  { key: 'FRONT', label: 'Вид спереди' },
+  { key: 'SIDE', label: 'Вид сбоку' },
+  { key: 'BACK', label: 'Вид сзади' },
 ]
 
 const emptyForm = () => ({
@@ -83,6 +83,101 @@ const Fold = ({
       </button>
       {open && <div className="px-4 pb-4">{children}</div>}
     </Card>
+  )
+}
+
+// Фото с щипком-зумом: pinch (масштаб), перетаскивание при увеличении,
+// двойной тап — приблизить/сбросить.
+const ZoomableImage = ({ src, caption }: { src: string; caption?: string }) => {
+  const [t, setT] = useState({ s: 1, x: 0, y: 0 })
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const start = useRef<{
+    dist: number
+    s: number
+    x: number
+    y: number
+    mx: number
+    my: number
+  } | null>(null)
+  const lastTap = useRef(0)
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const pts = [...pointers.current.values()]
+    if (pts.length === 2) {
+      start.current = {
+        dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+        s: t.s,
+        x: t.x,
+        y: t.y,
+        mx: (pts[0].x + pts[1].x) / 2,
+        my: (pts[0].y + pts[1].y) / 2,
+      }
+    } else if (pts.length === 1) {
+      start.current = { dist: 0, s: t.s, x: t.x, y: t.y, mx: e.clientX, my: e.clientY }
+      const now = Date.now()
+      if (now - lastTap.current < 300) {
+        setT(t.s > 1 ? { s: 1, x: 0, y: 0 } : { s: 2.5, x: 0, y: 0 })
+        start.current = null
+      }
+      lastTap.current = now
+    }
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const st = start.current
+    if (!st) return
+    const pts = [...pointers.current.values()]
+    if (pts.length === 2 && st.dist > 0) {
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const s = Math.min(5, Math.max(1, (st.s * dist) / st.dist))
+      const mx = (pts[0].x + pts[1].x) / 2
+      const my = (pts[0].y + pts[1].y) / 2
+      setT({ s, x: st.x + (mx - st.mx), y: st.y + (my - st.my) })
+    } else if (pts.length === 1 && t.s > 1) {
+      setT((cur) => ({ s: cur.s, x: st.x + (e.clientX - st.mx), y: st.y + (e.clientY - st.my) }))
+    }
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId)
+    const pts = [...pointers.current.values()]
+    if (pts.length === 1) {
+      start.current = { dist: 0, s: t.s, x: t.x, y: t.y, mx: pts[0].x, my: pts[0].y }
+    } else {
+      start.current = null
+    }
+    setT((cur) => (cur.s <= 1.02 ? { s: 1, x: 0, y: 0 } : cur))
+  }
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div
+        className="flex-1 min-h-0 overflow-hidden"
+        style={{ touchAction: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <div
+          className="w-full h-full"
+          style={{
+            transform: `translate(${t.x}px, ${t.y}px) scale(${t.s})`,
+            transition: start.current ? 'none' : 'transform 0.15s ease-out',
+          }}
+        >
+          <AuthImage
+            src={src}
+            className="w-full h-full object-contain pointer-events-none select-none"
+          />
+        </div>
+      </div>
+      {caption && <p className="text-center text-white/80 text-xs py-1.5">{caption}</p>}
+    </div>
   )
 }
 
@@ -663,18 +758,23 @@ export const ProgressPage = () => {
         </Card>
       )}
 
-      {/* Полноэкранный просмотр фото / пары «было-стало» */}
+      {/* Полноэкранный просмотр фото / пары «было-стало» (щипок — зум) */}
       {fullscreen && (
-        <div
-          className="fixed inset-0 z-[80] bg-black flex flex-col"
-          onClick={() => setFullscreen(null)}
-        >
+        <div className="fixed inset-0 z-[80] bg-black flex flex-col">
           <div
             className="flex items-center justify-between px-4 pb-2"
             style={{ paddingTop: 'calc(0.75rem + var(--app-safe-top, 0px))' }}
           >
-            <span className="text-white text-sm font-medium">{fullscreen.label}</span>
-            <button className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center">
+            <div>
+              <span className="text-white text-sm font-medium">{fullscreen.label}</span>
+              <p className="text-white/50 text-[11px]">
+                щипок — приблизить · двойной тап — увеличить
+              </p>
+            </div>
+            <button
+              onClick={() => setFullscreen(null)}
+              className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center shrink-0"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -685,30 +785,16 @@ export const ProgressPage = () => {
             style={{ paddingBottom: 'calc(0.5rem + var(--app-safe-bottom, 0px))' }}
           >
             {fullscreen.a && (
-              <div className="relative h-full min-h-0 flex flex-col">
-                <AuthImage
-                  src={clientsApi.photoFileUrl(fullscreen.a.id)}
-                  className="flex-1 min-h-0 w-full object-contain"
-                />
-                {fullscreen.a.caption && (
-                  <p className="text-center text-white/80 text-xs py-1.5">
-                    {fullscreen.a.caption}
-                  </p>
-                )}
-              </div>
+              <ZoomableImage
+                src={clientsApi.photoFileUrl(fullscreen.a.id)}
+                caption={fullscreen.a.caption}
+              />
             )}
             {fullscreen.b && (
-              <div className="relative h-full min-h-0 flex flex-col">
-                <AuthImage
-                  src={clientsApi.photoFileUrl(fullscreen.b.id)}
-                  className="flex-1 min-h-0 w-full object-contain"
-                />
-                {fullscreen.b.caption && (
-                  <p className="text-center text-white/80 text-xs py-1.5">
-                    {fullscreen.b.caption}
-                  </p>
-                )}
-              </div>
+              <ZoomableImage
+                src={clientsApi.photoFileUrl(fullscreen.b.id)}
+                caption={fullscreen.b.caption}
+              />
             )}
           </div>
         </div>
