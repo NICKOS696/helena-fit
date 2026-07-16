@@ -195,9 +195,10 @@ export const ProgressPage = () => {
   const [photoCmpB, setPhotoCmpB] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingAngle = useRef<'FRONT' | 'SIDE' | 'BACK'>('FRONT')
-  const [uploadingAngle, setUploadingAngle] = useState<string | null>(null)
-  // Ракурсы, снятые в текущей сессии формы (для галочки «Готово»)
-  const [doneAngles, setDoneAngles] = useState<string[]>([])
+  // Выбранные (ещё не загруженные) фото по ракурсам — грузим по кнопке «Сохранить»
+  const [pendingPhotos, setPendingPhotos] = useState<
+    Partial<Record<'FRONT' | 'SIDE' | 'BACK', { file: File; url: string }>>
+  >({})
   // Полноэкранный просмотр: пара фото (сравнение) или одно фото (история)
   const [fullscreen, setFullscreen] = useState<{
     label: string
@@ -261,18 +262,28 @@ export const ProgressPage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-measurements'] }),
   })
 
-  const photoUploadMut = useMutation({
-    mutationFn: ({ file, angle }: { file: File; angle: 'FRONT' | 'SIDE' | 'BACK' }) =>
-      clientsApi.addPhoto(file, angle),
-    onSuccess: (_res, vars) => {
+  const clearPending = () => {
+    Object.values(pendingPhotos).forEach((p) => p && URL.revokeObjectURL(p.url))
+    setPendingPhotos({})
+  }
+
+  // Загрузка всех выбранных фото по кнопке «Сохранить»
+  const photoSaveMut = useMutation({
+    mutationFn: async () => {
+      for (const a of ANGLES) {
+        const p = pendingPhotos[a.key]
+        if (p) await clientsApi.addPhoto(p.file, a.key)
+      }
+    },
+    onSuccess: () => {
       haptic.notify('success')
       qc.invalidateQueries({ queryKey: ['client-photos'] })
-      setUploadingAngle(null)
-      setDoneAngles((prev) => [...prev, vars.angle])
+      clearPending()
+      setShowPhotoForm(false)
     },
     onError: () => {
-      setUploadingAngle(null)
-      alert('Не удалось загрузить фото. Попробуйте ещё раз.')
+      qc.invalidateQueries({ queryKey: ['client-photos'] })
+      alert('Не удалось загрузить фото. Проверьте соединение и попробуйте ещё раз.')
     },
   })
 
@@ -290,8 +301,12 @@ export const ProgressPage = () => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    setUploadingAngle(pendingAngle.current)
-    photoUploadMut.mutate({ file, angle: pendingAngle.current })
+    const angle = pendingAngle.current
+    setPendingPhotos((prev) => {
+      const old = prev[angle]
+      if (old) URL.revokeObjectURL(old.url)
+      return { ...prev, [angle]: { file, url: URL.createObjectURL(file) } }
+    })
   }
 
   if (meLoading) {
@@ -373,7 +388,7 @@ export const ProgressPage = () => {
           <button
             onClick={() => {
               haptic.selection()
-              setDoneAngles([])
+              clearPending()
               setShowPhotoForm(true)
             }}
             className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
@@ -431,43 +446,32 @@ export const ProgressPage = () => {
       {/* Форма фото отчёта */}
       {showPhotoForm && (
         <Card>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-text-primary">
-              Фото отчёт — {new Date().toLocaleDateString('ru-RU')}
-            </p>
-            <button
-              onClick={() => setShowPhotoForm(false)}
-              className="text-text-secondary"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <p className="text-xs text-text-secondary mb-3">
-            Сделай фото в трёх ракурсах. Они сохранятся приватно — увидите только ты и
-            тренер. Новое фото за сегодня заменит прежнее.
+          <p className="text-text-primary mb-2">
+            Фото отчёт — {new Date().toLocaleDateString('ru-RU')}
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <p className="text-xs text-text-secondary mb-3">
+            Сделай фото в трёх ракурсах и нажми «Сохранить». Фото приватные — увидите
+            только ты и тренер. Новые фото за сегодня заменят прежние.
+          </p>
+          <div className="grid grid-cols-3 gap-2 mb-3">
             {ANGLES.map((a) => {
-              const done = doneAngles.includes(a.key)
+              const pending = pendingPhotos[a.key]
               return (
                 <button
                   key={a.key}
                   onClick={() => pickPhoto(a.key)}
                   className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border ${
-                    done
-                      ? 'bg-primary/10 border-primary/40'
+                    pending
+                      ? 'border-primary/40'
                       : 'bg-gray-100 border-dashed border-gray-300'
                   }`}
                 >
-                  {uploadingAngle === a.key ? (
-                    <span className="text-xs text-text-secondary animate-pulse">
-                      Загрузка…
-                    </span>
-                  ) : done ? (
-                    <>
-                      <span className="text-2xl">✅</span>
-                      <span className="text-xs text-primary font-medium">Готово</span>
-                    </>
+                  {pending ? (
+                    <img
+                      src={pending.url}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      alt={a.label}
+                    />
                   ) : (
                     <>
                       <Camera className="w-6 h-6 text-gray-400" />
@@ -480,6 +484,26 @@ export const ProgressPage = () => {
                 </button>
               )
             })}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => photoSaveMut.mutate()}
+              disabled={
+                photoSaveMut.isPending || Object.keys(pendingPhotos).length === 0
+              }
+              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+            >
+              {photoSaveMut.isPending ? 'Сохраняю…' : 'Сохранить'}
+            </button>
+            <button
+              onClick={() => {
+                clearPending()
+                setShowPhotoForm(false)
+              }}
+              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
+            >
+              Отмена
+            </button>
           </div>
         </Card>
       )}
