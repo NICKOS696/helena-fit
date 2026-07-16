@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Plus, Trash2, Ruler, Scale, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Ruler, ArrowLeftRight, ChevronDown } from 'lucide-react'
 
 // Поля замера: ключ, подпись, единица
 const FIELDS: { key: string; label: string; unit: string }[] = [
@@ -130,81 +130,6 @@ export const ProgressPage = () => {
 
       <h1 className="text-2xl font-bold text-text-primary">Мой прогресс</h1>
 
-      {/* Сравнение любых двух дат — свёрнуто, раскрывается по тапу */}
-      {measurements.length >= 2 && (
-        <Card className="!p-0 overflow-hidden">
-          <button
-            onClick={() => setCompareOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3.5"
-          >
-            <span className="flex items-center gap-2 font-bold text-text-primary text-sm">
-              <Scale className="w-5 h-5 text-primary" />
-              Сравнить периоды
-            </span>
-            <ChevronDown
-              className={`w-5 h-5 text-text-secondary transition-transform ${
-                compareOpen ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-          {compareOpen && (
-          <div className="px-4 pb-4">
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-xs text-text-secondary mb-1">Было</label>
-              <select
-                value={mA?.id || ''}
-                onChange={(e) => setCompareA(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
-              >
-                {[...measurements].reverse().map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {fmtDate(m.date)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-text-secondary mb-1">Стало</label>
-              <select
-                value={mB?.id || ''}
-                onChange={(e) => setCompareB(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
-              >
-                {[...measurements].reverse().map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {fmtDate(m.date)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {compareRows.length === 0 ? (
-            <p className="text-xs text-text-secondary">
-              В выбранных датах нет совпадающих измерений
-            </p>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {compareRows.map((r) => (
-                <div key={r.key} className="flex items-center justify-between py-2 text-sm">
-                  <span className="text-text-secondary">{r.label}</span>
-                  <span className="text-text-primary">
-                    {r.a} → <b>{r.b}</b> {r.unit}
-                    {r.d !== 0 && (
-                      <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {r.d > 0 ? `+${r.d}` : r.d}
-                      </b>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          </div>
-          )}
-        </Card>
-      )}
-
       {/* Новый замер */}
       {showForm ? (
         <Card>
@@ -258,6 +183,81 @@ export const ProgressPage = () => {
         </button>
       )}
 
+      {/* Сравнение любых двух дат — свёрнуто, раскрывается по тапу */}
+      {measurements.length >= 2 && (
+        <Card className="!p-0 overflow-hidden">
+          <button
+            onClick={() => setCompareOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3.5"
+          >
+            <span className="flex items-center gap-2 font-bold text-text-primary text-sm">
+              <ArrowLeftRight className="w-5 h-5 text-primary" />
+              Сравнить периоды
+            </span>
+            <ChevronDown
+              className={`w-5 h-5 text-text-secondary transition-transform ${
+                compareOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {compareOpen && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1">Было</label>
+                  <select
+                    value={mA?.id || ''}
+                    onChange={(e) => setCompareA(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    {[...measurements].reverse().map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {fmtDate(m.date)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-text-secondary mb-1">Стало</label>
+                  <select
+                    value={mB?.id || ''}
+                    onChange={(e) => setCompareB(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    {[...measurements].reverse().map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {fmtDate(m.date)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {compareRows.length === 0 ? (
+                <p className="text-xs text-text-secondary">
+                  В выбранных датах нет совпадающих измерений
+                </p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {compareRows.map((r) => (
+                    <div key={r.key} className="flex items-center justify-between py-2 text-sm">
+                      <span className="text-text-secondary">{r.label}</span>
+                      <span className="text-text-primary">
+                        {r.a} → <b>{r.b}</b> {r.unit}
+                        {r.d !== 0 && (
+                          <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {r.d > 0 ? `+${r.d}` : r.d}
+                          </b>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* История */}
       {isLoading ? (
         <div className="animate-pulse bg-white rounded-card h-24" />
@@ -280,14 +280,13 @@ export const ProgressPage = () => {
                       {fmtDate(m.date)}
                       {m.byTrainer && ' · тренер'}
                     </p>
-                    <p className="text-sm text-text-primary leading-relaxed">
-                      {filled.map((f, idx) => {
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-primary">
+                      {filled.map((f) => {
                         const v = m[f.key]
                         const pv = prev?.[f.key]
                         const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
                         return (
                           <span key={f.key} className="whitespace-nowrap">
-                            {idx > 0 && <span className="text-gray-300"> · </span>}
                             <span className="text-text-secondary">{f.label}</span>{' '}
                             <b>{v}</b>
                             {d !== null && d !== 0 && (
@@ -301,7 +300,7 @@ export const ProgressPage = () => {
                           </span>
                         )
                       })}
-                    </p>
+                    </div>
                     {m.note && <p className="text-xs text-text-secondary mt-1">{m.note}</p>}
                   </div>
                   <button
