@@ -9,6 +9,7 @@ import { RecipeCollectionPage } from '@/pages/RecipeCollectionPage'
 import { RecipeDetailPage } from '@/pages/RecipeDetailPage'
 import { NewsDetailPage } from '@/pages/NewsDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
+import { ProgressPage } from '@/pages/ProgressPage'
 import { ExerciseGuidePage } from '@/pages/ExerciseGuidePage'
 import { ExerciseGroupPage } from '@/pages/ExerciseGroupPage'
 import { ExerciseDetailPage } from '@/pages/ExerciseDetailPage'
@@ -26,6 +27,7 @@ export const AppRoutes = () => {
         <Route path="recipes/:id" element={<RecipeCollectionPage />} />
         <Route path="recipes/:collectionId/recipe/:recipeId" element={<RecipeDetailPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="progress" element={<ProgressPage />} />
         <Route path="guide" element={<ExerciseGuidePage />} />
         <Route path="guide/:groupId" element={<ExerciseGroupPage />} />
         <Route path="guide/:groupId/:exerciseId" element={<ExerciseDetailPage />} />

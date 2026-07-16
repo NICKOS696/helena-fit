@@ -111,6 +111,14 @@ export const paymeApi = {
   }) => api.post('/payme/create-payment', data),
 }
 
+// Клиентская зона (для клиентов тренера)
+export const clientsApi = {
+  getMe: () => api.get('/clients/me'),
+  getMeasurements: () => api.get('/clients/me/measurements'),
+  addMeasurement: (data: any) => api.post('/clients/me/measurements', data),
+  deleteMeasurement: (id: string) => api.delete(`/clients/me/measurements/${id}`),
+}
+
 export const analyticsApi = {
   trackView: (data: {
     itemType: 'WORKOUT_COLLECTION' | 'RECIPE_COLLECTION' | 'WORKOUT' | 'RECIPE' | 'NEWS';

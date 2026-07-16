@@ -25,6 +25,7 @@ model User {
   contentViews  ContentView[]
   favoriteRecipes FavoriteRecipe[]
   workoutProgress WorkoutProgress[]
+  clientProfile ClientProfile?
 
   @@map("users")
 }
@@ -370,6 +371,53 @@ enum ContentType {
   WORKOUT
   RECIPE
   NEWS
+}
+
+// ===== Клиентская зона тренера =====
+
+// Отметка «мой клиент»: наличие записи открывает пользователю раздел «Мой прогресс».
+// Ставится/снимается вручную тренером в админке.
+model ClientProfile {
+  id            String       @id @default(uuid())
+  userId        String       @unique
+  status        ClientStatus @default(ACTIVE)
+  notes         String? // заметки тренера, клиенту не видны
+  questionnaire Json? // ответы первичной анкеты (вопросы добавим позже)
+  startedAt     DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measurements ClientMeasurement[]
+
+  @@map("client_profiles")
+}
+
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// Замеры тела клиента (см и кг). Вносит клиент из бота или тренер из админки.
+model ClientMeasurement {
+  id        String   @id @default(uuid())
+  clientId  String
+  date      DateTime @default(now())
+  weight    Float? // кг
+  chest     Float? // грудь, см
+  waist     Float? // талия, см
+  belly     Float? // живот, см
+  hips      Float? // бёдра, см
+  thigh     Float? // бедро (нога), см
+  arm       Float? // рука, см
+  note      String?
+  byTrainer Boolean  @default(false) // кто внёс запись
+  createdAt DateTime @default(now())
+
+  client ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
+  @@map("client_measurements")
 }
 
 // Ручной учёт оплат «мимо Payme» (рублёвая карта МИР).

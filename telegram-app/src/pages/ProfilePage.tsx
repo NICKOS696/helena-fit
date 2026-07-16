@@ -1,14 +1,23 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { useTelegram } from '@/providers/TelegramProvider'
-import { usersApi } from '@/lib/api'
+import { usersApi, clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { CalorieCalculator } from '@/components/CalorieCalculator'
-import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle, ChevronDown } from 'lucide-react'
+import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle, ChevronDown, Ruler, ChevronRight } from 'lucide-react'
 
 export const ProfilePage = () => {
   const { user } = useTelegram()
+  const navigate = useNavigate()
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Клиент ли я у тренера — открывает блок «Мой прогресс»
+  const { data: clientMe } = useQuery({
+    queryKey: ['client-me'],
+    queryFn: () => clientsApi.getMe(),
+  })
+  const isClient = clientMe?.data?.isClient
 
   const { data: profileData } = useQuery({
     queryKey: ['profile'],
@@ -57,6 +66,28 @@ export const ProfilePage = () => {
           </div>
         </div>
       </Card>
+
+      {/* Мой прогресс — только для клиентов тренера */}
+      {isClient && (
+        <button
+          onClick={() => navigate('/progress')}
+          className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(110deg, #8A9A6E, #5F6A49)' }}
+        >
+          <div className="flex items-center gap-3 px-5 py-4">
+            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Ruler className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white font-bold">Мой прогресс</div>
+              <div className="text-white/80 text-xs mt-0.5">
+                Замеры тела и динамика результатов
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
+          </div>
+        </button>
+      )}
 
       <CalorieCalculator />
 

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
-import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X, Carrot } from 'lucide-react'
+import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X, Carrot, HeartHandshake } from 'lucide-react'
 import clsx from 'clsx'
 
 const navItems = [
   { path: '/users', icon: Users, label: 'Пользователи' },
+  { path: '/clients', icon: HeartHandshake, label: 'Клиенты' },
   { path: '/workouts', icon: Dumbbell, label: 'Тренировки' },
   { path: '/recipes', icon: UtensilsCrossed, label: 'Рецепты' },
   { path: '/news', icon: Newspaper, label: 'Новости' },

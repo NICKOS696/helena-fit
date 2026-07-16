@@ -116,6 +116,19 @@ export const adminIngredientsApi = {
   unassign: (aliases: string[]) => api.post('/admin/ingredients/unassign', { aliases }),
 }
 
+export const adminClientsApi = {
+  list: () => api.get('/admin/clients'),
+  mark: (userId: string) => api.post('/admin/clients', { userId }),
+  card: (id: string) => api.get(`/admin/clients/${id}`),
+  archive: (id: string) => api.patch(`/admin/clients/${id}/archive`),
+  updateNotes: (id: string, notes: string) =>
+    api.patch(`/admin/clients/${id}/notes`, { notes }),
+  addMeasurement: (id: string, data: any) =>
+    api.post(`/admin/clients/${id}/measurements`, data),
+  deleteMeasurement: (id: string, measurementId: string) =>
+    api.delete(`/admin/clients/${id}/measurements/${measurementId}`),
+}
+
 export const uploadApi = {
   uploadImage: (file: File) => {
     const formData = new FormData()

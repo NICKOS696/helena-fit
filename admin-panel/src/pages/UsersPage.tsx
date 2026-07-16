@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { adminUsersApi, adminWorkoutsApi, adminRecipesApi, analyticsApi } from '@/lib/api'
-import { Plus, Search, Edit, Trash2, X, History } from 'lucide-react'
+import { adminUsersApi, adminWorkoutsApi, adminRecipesApi, analyticsApi, adminClientsApi } from '@/lib/api'
+import { Plus, Search, Edit, Trash2, X, History, HeartHandshake } from 'lucide-react'
 
 const typeLabel: Record<string, string> = {
   WORKOUT_COLLECTION: '🏋️ Сборник тренировок',
@@ -163,6 +163,16 @@ export const UsersPage = () => {
     },
   })
 
+  const markClientMutation = useMutation({
+    mutationFn: (userId: string) => adminClientsApi.mark(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-clients'] })
+      alert('Готово! Пользователь отмечен как клиент — у него в боте открылся раздел «Мой прогресс». Карточка — в разделе «Клиенты».')
+    },
+    onError: (e: any) =>
+      alert(e?.response?.data?.message || 'Не удалось отметить клиентом'),
+  })
+
   const handleOpenAccessModal = (user: any) => {
     // Сбрасываем прошлый выбор и флаг «загружено» — галочки заполнятся заново,
     // когда придут доступы именно этого пользователя.
@@ -314,6 +324,16 @@ export const UsersPage = () => {
                       </button>
                       <button
                         onClick={() => {
+                          if (confirm(`Сделать ${user.firstName || 'пользователя'} клиентом? У него в боте откроется раздел «Мой прогресс».`))
+                            markClientMutation.mutate(user.id)
+                        }}
+                        className="text-gray-500 hover:text-primary"
+                        title="Сделать клиентом"
+                      >
+                        <HeartHandshake className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
                           if (confirm('Удалить пользователя?')) {
                             deleteMutation.mutate(user.id)
                           }
@@ -374,6 +394,16 @@ export const UsersPage = () => {
                   >
                     <History className="w-4 h-4" />
                     Журнал
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Сделать ${user.firstName || 'пользователя'} клиентом?`))
+                        markClientMutation.mutate(user.id)
+                    }}
+                    className="flex items-center gap-1 text-gray-500 font-medium text-sm"
+                  >
+                    <HeartHandshake className="w-4 h-4" />
+                    Клиент
                   </button>
                   <button
                     onClick={() => {
