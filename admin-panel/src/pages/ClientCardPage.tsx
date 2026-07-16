@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminClientsApi } from '@/lib/api'
 import { AuthImage } from '@/components/AuthImage'
-import { ArrowLeft, Plus, Trash2, Users, Save, Camera, X, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Users, Save, X, ChevronDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 const ANGLES: { key: string; label: string }[] = [
@@ -96,6 +96,12 @@ export const ClientCardPage = () => {
   // Сравнение фото по датам
   const [photoCmpA, setPhotoCmpA] = useState('')
   const [photoCmpB, setPhotoCmpB] = useState('')
+  // Полноэкранный просмотр пары «было/стало»
+  const [fullscreen, setFullscreen] = useState<{
+    label: string
+    a?: { id: string; caption: string } | null
+    b?: { id: string; caption: string } | null
+  } | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-client', id],
@@ -423,12 +429,7 @@ export const ClientCardPage = () => {
 
       {/* ===== 2. Фото прогресса (свернуто) ===== */}
       <Fold
-        title={
-          <>
-            <Camera className="w-5 h-5 text-primary" />
-            Фото прогресса
-          </>
-        }
+        title="Фото прогресса"
         count={photos.length}
         open={photosOpen}
         onToggle={() => setPhotosOpen((v) => !v)}
@@ -622,12 +623,27 @@ export const ClientCardPage = () => {
                 const pa = cmpDayA?.byAngle[a.key]
                 const pb = cmpDayB?.byAngle[a.key]
                 if (!pa && !pb) return null
+                const openPair = () =>
+                  setFullscreen({
+                    label: a.label,
+                    a: pa
+                      ? { id: pa.id, caption: `Было · ${fmtDate(cmpDayA.date)}` }
+                      : null,
+                    b: pb
+                      ? { id: pb.id, caption: `Стало · ${fmtDate(cmpDayB.date)}` }
+                      : null,
+                  })
                 return (
                   <div key={a.key}>
-                    <p className="text-sm font-medium text-gray-700 mb-2">{a.label}</p>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {a.label}{' '}
+                      <span className="text-gray-300 font-normal text-xs">
+                        · клик — на весь экран
+                      </span>
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       {pa ? (
-                        <div>
+                        <div className="cursor-pointer" onClick={openPair}>
                           <AuthImage
                             src={adminClientsApi.photoFileUrl(id!, pa.id)}
                             className="aspect-[3/4] w-full object-cover rounded-lg"
@@ -642,7 +658,7 @@ export const ClientCardPage = () => {
                         </div>
                       )}
                       {pb ? (
-                        <div>
+                        <div className="cursor-pointer" onClick={openPair}>
                           <AuthImage
                             src={adminClientsApi.photoFileUrl(id!, pb.id)}
                             className="aspect-[3/4] w-full object-cover rounded-lg"
@@ -664,6 +680,49 @@ export const ClientCardPage = () => {
           </>
         )}
       </Fold>
+
+      {/* Полноэкранное сравнение пары фото */}
+      {fullscreen && (
+        <div
+          className="fixed inset-0 z-50 bg-black flex flex-col"
+          onClick={() => setFullscreen(null)}
+        >
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-white text-sm font-medium">{fullscreen.label}</span>
+            <button className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div
+            className={`flex-1 min-h-0 grid gap-1 p-1 ${
+              fullscreen.b && fullscreen.a ? 'grid-cols-2' : 'grid-cols-1'
+            }`}
+          >
+            {fullscreen.a && (
+              <div className="h-full min-h-0 flex flex-col">
+                <AuthImage
+                  src={adminClientsApi.photoFileUrl(id!, fullscreen.a.id)}
+                  className="flex-1 min-h-0 w-full object-contain"
+                />
+                <p className="text-center text-white/80 text-xs py-1.5">
+                  {fullscreen.a.caption}
+                </p>
+              </div>
+            )}
+            {fullscreen.b && (
+              <div className="h-full min-h-0 flex flex-col">
+                <AuthImage
+                  src={adminClientsApi.photoFileUrl(id!, fullscreen.b.id)}
+                  className="flex-1 min-h-0 w-full object-contain"
+                />
+                <p className="text-center text-white/80 text-xs py-1.5">
+                  {fullscreen.b.caption}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
