@@ -6,8 +6,13 @@ import {
   Param,
   Body,
   Request,
+  Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { ClientsService } from './clients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateMeasurementDto } from './dto/measurement.dto';
@@ -38,5 +43,39 @@ export class ClientsController {
   @Delete('me/measurements/:id')
   async deleteMyMeasurement(@Request() req, @Param('id') id: string) {
     return this.clientsService.deleteMyMeasurement(req.user.id, id);
+  }
+
+  // ===== Фото прогресса =====
+
+  @Get('me/photos')
+  async getMyPhotos(@Request() req) {
+    return this.clientsService.getMyPhotos(req.user.id);
+  }
+
+  @Post('me/photos')
+  @UseInterceptors(FileInterceptor('file'))
+  async addMyPhoto(
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('angle') angle: string,
+    @Body('date') date?: string,
+  ) {
+    return this.clientsService.addMyPhoto(req.user.id, file, angle, date);
+  }
+
+  @Delete('me/photos/:id')
+  async deleteMyPhoto(@Request() req, @Param('id') id: string) {
+    return this.clientsService.deleteMyPhoto(req.user.id, id);
+  }
+
+  /** Сам файл фото — стримим только владельцу (в <img> ходим через blob с токеном) */
+  @Get('me/photos/:id/file')
+  async getMyPhotoFile(
+    @Request() req,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const path = await this.clientsService.getMyPhotoPath(req.user.id, id);
+    res.sendFile(path);
   }
 }

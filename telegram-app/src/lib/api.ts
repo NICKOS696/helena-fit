@@ -117,6 +117,18 @@ export const clientsApi = {
   getMeasurements: () => api.get('/clients/me/measurements'),
   addMeasurement: (data: any) => api.post('/clients/me/measurements', data),
   deleteMeasurement: (id: string) => api.delete(`/clients/me/measurements/${id}`),
+  getPhotos: () => api.get('/clients/me/photos'),
+  addPhoto: (file: File, angle: 'FRONT' | 'SIDE' | 'BACK') => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('angle', angle)
+    return api.post('/clients/me/photos', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  deletePhoto: (id: string) => api.delete(`/clients/me/photos/${id}`),
+  // Файл фото приватный — грузим blob'ом с токеном (см. AuthImage)
+  photoFileUrl: (id: string) => `/clients/me/photos/${id}/file`,
 }
 
 export const analyticsApi = {

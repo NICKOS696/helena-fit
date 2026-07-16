@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
+import { AuthImage } from '@/components/AuthImage'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Plus, Trash2, Ruler, ArrowLeftRight, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Ruler, ArrowLeftRight, ChevronDown, Camera, X } from 'lucide-react'
+
+const ANGLES: { key: 'FRONT' | 'SIDE' | 'BACK'; label: string }[] = [
+  { key: 'FRONT', label: 'Перед' },
+  { key: 'SIDE', label: 'Бок' },
+  { key: 'BACK', label: 'Зад' },
+]
 
 // Поля замера: ключ, подпись, единица
 const FIELDS: { key: string; label: string; unit: string }[] = [
@@ -39,6 +46,13 @@ export const ProgressPage = () => {
   const [compareA, setCompareA] = useState<string>('')
   const [compareB, setCompareB] = useState<string>('')
   const [compareOpen, setCompareOpen] = useState(false)
+  // Фото прогресса
+  const [photosOpen, setPhotosOpen] = useState(false)
+  const [uploadingAngle, setUploadingAngle] = useState<string | null>(null)
+  const [photoCmpA, setPhotoCmpA] = useState('')
+  const [photoCmpB, setPhotoCmpB] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingAngle = useRef<'FRONT' | 'SIDE' | 'BACK'>('FRONT')
 
   // Гейт: страница только для клиентов тренера
   const { data: meData, isLoading: meLoading } = useQuery({
@@ -76,6 +90,62 @@ export const ProgressPage = () => {
     mutationFn: (id: string) => clientsApi.deleteMeasurement(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-measurements'] }),
   })
+
+  // ===== Фото =====
+  const { data: photosData } = useQuery({
+    queryKey: ['client-photos'],
+    queryFn: () => clientsApi.getPhotos(),
+    enabled: !!isClient && photosOpen,
+  })
+  const photos: any[] = photosData?.data || []
+
+  // Группировка фото по дню
+  const photoDays = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const p of photos) {
+      const day = new Date(p.date).toISOString().slice(0, 10)
+      const g = map.get(day) || { day, date: p.date, byAngle: {} as Record<string, any> }
+      // первое по сортировке (свежее) фото ракурса за день
+      if (!g.byAngle[p.angle]) g.byAngle[p.angle] = p
+      map.set(day, g)
+    }
+    return [...map.values()].sort((a, b) => b.day.localeCompare(a.day))
+  }, [photos])
+
+  const photoUploadMut = useMutation({
+    mutationFn: ({ file, angle }: { file: File; angle: 'FRONT' | 'SIDE' | 'BACK' }) =>
+      clientsApi.addPhoto(file, angle),
+    onSuccess: () => {
+      haptic.notify('success')
+      qc.invalidateQueries({ queryKey: ['client-photos'] })
+      setUploadingAngle(null)
+    },
+    onError: () => {
+      setUploadingAngle(null)
+      alert('Не удалось загрузить фото. Попробуйте ещё раз.')
+    },
+  })
+
+  const photoDelMut = useMutation({
+    mutationFn: (id: string) => clientsApi.deletePhoto(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['client-photos'] }),
+  })
+
+  const pickPhoto = (angle: 'FRONT' | 'SIDE' | 'BACK') => {
+    pendingAngle.current = angle
+    fileInputRef.current?.click()
+  }
+
+  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingAngle(pendingAngle.current)
+    photoUploadMut.mutate({ file, angle: pendingAngle.current })
+  }
+
+  const cmpDayA = photoDays.find((d) => d.day === photoCmpA) || photoDays[photoDays.length - 1]
+  const cmpDayB = photoDays.find((d) => d.day === photoCmpB) || photoDays[0]
 
   if (meLoading) {
     return (
@@ -258,6 +328,180 @@ export const ProgressPage = () => {
         </Card>
       )}
 
+      {/* Фото прогресса — свёрнуто */}
+      <Card className="!p-0 overflow-hidden">
+        <button
+          onClick={() => setPhotosOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <span className="flex items-center gap-2 text-text-primary text-base">
+            <Camera className="w-5 h-5 text-primary" />
+            Фото прогресса
+          </span>
+          <ChevronDown
+            className={`w-5 h-5 text-text-secondary transition-transform ${
+              photosOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        {photosOpen && (
+          <div className="px-4 pb-4 space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFilePicked}
+            />
+            {/* Загрузка за сегодня: три ракурса */}
+            <div>
+              <p className="text-xs text-text-secondary mb-2">
+                Сделай фото в трёх ракурсах — они сохранятся приватно, увидите только ты и тренер.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {ANGLES.map((a) => {
+                  const today = new Date().toISOString().slice(0, 10)
+                  const todayPhoto = photoDays.find((d) => d.day === today)?.byAngle[a.key]
+                  return (
+                    <button
+                      key={a.key}
+                      onClick={() => pickPhoto(a.key)}
+                      className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border border-dashed border-gray-300 flex flex-col items-center justify-center"
+                    >
+                      {todayPhoto ? (
+                        <AuthImage
+                          src={clientsApi.photoFileUrl(todayPhoto.id)}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      ) : uploadingAngle === a.key ? (
+                        <span className="text-xs text-text-secondary animate-pulse">
+                          Загрузка…
+                        </span>
+                      ) : (
+                        <>
+                          <Camera className="w-6 h-6 text-gray-400 mb-1" />
+                          <span className="text-xs text-text-secondary">{a.label}</span>
+                        </>
+                      )}
+                      <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5">
+                        {a.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Сравнение фото по датам */}
+            {photoDays.length >= 2 && (
+              <div>
+                <p className="text-xs text-text-secondary mb-2">Сравнить фото</p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <select
+                    value={cmpDayA?.day || ''}
+                    onChange={(e) => setPhotoCmpA(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    {[...photoDays].reverse().map((d) => (
+                      <option key={d.day} value={d.day}>
+                        {fmtDate(d.date)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={cmpDayB?.day || ''}
+                    onChange={(e) => setPhotoCmpB(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white"
+                  >
+                    {[...photoDays].reverse().map((d) => (
+                      <option key={d.day} value={d.day}>
+                        {fmtDate(d.date)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  {ANGLES.map((a) => {
+                    const pa = cmpDayA?.byAngle[a.key]
+                    const pb = cmpDayB?.byAngle[a.key]
+                    if (!pa && !pb) return null
+                    return (
+                      <div key={a.key}>
+                        <p className="text-[11px] text-text-secondary mb-1">{a.label}</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {pa ? (
+                            <AuthImage
+                              src={clientsApi.photoFileUrl(pa.id)}
+                              className="aspect-[3/4] w-full object-cover rounded-xl"
+                            />
+                          ) : (
+                            <div className="aspect-[3/4] rounded-xl bg-gray-100 flex items-center justify-center text-xs text-gray-300">
+                              нет фото
+                            </div>
+                          )}
+                          {pb ? (
+                            <AuthImage
+                              src={clientsApi.photoFileUrl(pb.id)}
+                              className="aspect-[3/4] w-full object-cover rounded-xl"
+                            />
+                          ) : (
+                            <div className="aspect-[3/4] rounded-xl bg-gray-100 flex items-center justify-center text-xs text-gray-300">
+                              нет фото
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* История фото по датам */}
+            {photoDays.length > 0 && (
+              <div>
+                <p className="text-xs text-text-secondary mb-2">История</p>
+                <div className="space-y-3">
+                  {photoDays.map((d) => (
+                    <div key={d.day}>
+                      <p className="text-xs text-text-primary mb-1">{fmtDate(d.date)}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {ANGLES.map((a) => {
+                          const p = d.byAngle[a.key]
+                          if (!p)
+                            return (
+                              <div
+                                key={a.key}
+                                className="aspect-[3/4] rounded-xl bg-gray-50"
+                              />
+                            )
+                          return (
+                            <div key={a.key} className="relative">
+                              <AuthImage
+                                src={clientsApi.photoFileUrl(p.id)}
+                                className="aspect-[3/4] w-full object-cover rounded-xl"
+                              />
+                              <button
+                                onClick={() => {
+                                  if (confirm('Удалить это фото?')) photoDelMut.mutate(p.id)
+                                }}
+                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
       {/* История */}
       {isLoading ? (
         <div className="animate-pulse bg-white rounded-card h-24" />
@@ -276,9 +520,9 @@ export const ProgressPage = () => {
               <Card key={m.id} className="!p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-text-secondary mb-1">
+                    <p className="text-xs text-text-primary mb-1">
                       {fmtDate(m.date)}
-                      {m.byTrainer && ' · тренер'}
+                      {m.byTrainer && <span className="text-text-secondary"> · тренер</span>}
                     </p>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-primary">
                       {filled.map((f) => {
@@ -289,6 +533,7 @@ export const ProgressPage = () => {
                           <span key={f.key} className="whitespace-nowrap">
                             <span className="text-text-secondary">{f.label}</span>{' '}
                             {v}
+                            <span className="text-text-secondary text-xs"> {f.unit}</span>
                             {d !== null && d !== 0 && (
                               <span
                                 className={`text-xs ${d < 0 ? 'text-green-600' : 'text-red-500'}`}

@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminClientsApi } from '@/lib/api'
-import { ArrowLeft, Plus, Trash2, Users, Save } from 'lucide-react'
+import { AuthImage } from '@/components/AuthImage'
+import { ArrowLeft, Plus, Trash2, Users, Save, Camera, X } from 'lucide-react'
+
+const ANGLES: { key: string; label: string }[] = [
+  { key: 'FRONT', label: 'Перед' },
+  { key: 'SIDE', label: 'Бок' },
+  { key: 'BACK', label: 'Зад' },
+]
 
 // Поля замера: ключ, подпись, единица
 const FIELDS: { key: string; label: string; unit: string }[] = [
@@ -39,6 +46,11 @@ export const ClientCardPage = () => {
   const [notesDraft, setNotesDraft] = useState<string | null>(null)
   const [compareA, setCompareA] = useState('')
   const [compareB, setCompareB] = useState('')
+  // Фото
+  const [photoAngle, setPhotoAngle] = useState('FRONT')
+  const [photoDate, setPhotoDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-client', id],
@@ -84,6 +96,43 @@ export const ClientCardPage = () => {
       setNotesDraft(null)
     },
     onError: () => alert('Не удалось сохранить заметку'),
+  })
+
+  // ===== Фото =====
+  const { data: photosData } = useQuery({
+    queryKey: ['admin-client-photos', id],
+    queryFn: () => adminClientsApi.photos(id!),
+    enabled: !!id,
+  })
+  const photos: any[] = photosData?.data || []
+  const photoDays = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const p of photos) {
+      const day = new Date(p.date).toISOString().slice(0, 10)
+      const g = map.get(day) || { day, date: p.date, byAngle: {} as Record<string, any> }
+      if (!g.byAngle[p.angle]) g.byAngle[p.angle] = p
+      map.set(day, g)
+    }
+    return [...map.values()].sort((a, b) => b.day.localeCompare(a.day))
+  }, [photos])
+
+  const photoUploadMut = useMutation({
+    mutationFn: (file: File) =>
+      adminClientsApi.addPhoto(id!, file, photoAngle, photoDate),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-client-photos', id] })
+      setPhotoUploading(false)
+    },
+    onError: () => {
+      setPhotoUploading(false)
+      alert('Не удалось загрузить фото')
+    },
+  })
+
+  const photoDelMut = useMutation({
+    mutationFn: (photoId: string) => adminClientsApi.deletePhoto(id!, photoId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-client-photos', id] }),
+    onError: () => alert('Не удалось удалить фото'),
   })
 
   const archiveMut = useMutation({
@@ -227,6 +276,115 @@ export const ClientCardPage = () => {
           )}
         </div>
       )}
+
+      {/* Фото прогресса */}
+      <div className="bg-white rounded-lg shadow p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            <Camera className="w-5 h-5 text-primary" />
+            Фото прогресса
+            {photos.length > 0 && (
+              <span className="text-gray-400 font-normal text-sm">({photos.length})</span>
+            )}
+          </h2>
+        </div>
+
+        {/* Загрузка от тренера */}
+        <div className="flex flex-wrap items-end gap-3 mb-5 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ракурс</label>
+            <select
+              value={photoAngle}
+              onChange={(e) => setPhotoAngle(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              {ANGLES.map((a) => (
+                <option key={a.key} value={a.key}>{a.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Дата</label>
+            <input
+              type="date"
+              value={photoDate}
+              onChange={(e) => setPhotoDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (!f) return
+              setPhotoUploading(true)
+              photoUploadMut.mutate(f)
+            }}
+          />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoUploading}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+            {photoUploading ? 'Загрузка…' : 'Загрузить фото'}
+          </button>
+          <p className="text-xs text-gray-400 w-full">
+            Фото хранятся приватно — видите только вы и клиент.
+          </p>
+        </div>
+
+        {photoDays.length === 0 ? (
+          <p className="text-center text-gray-500 py-6">
+            Фото пока нет — клиент может загрузить их в боте, или добавьте сами
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {photoDays.map((d: any) => (
+              <div key={d.day}>
+                <p className="text-sm font-medium text-gray-700 mb-2">{fmtDate(d.date)}</p>
+                <div className="grid grid-cols-3 gap-3 max-w-lg">
+                  {ANGLES.map((a) => {
+                    const p = d.byAngle[a.key]
+                    if (!p)
+                      return (
+                        <div
+                          key={a.key}
+                          className="aspect-[3/4] rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-300"
+                        >
+                          {a.label}
+                        </div>
+                      )
+                    return (
+                      <div key={a.key} className="relative group">
+                        <AuthImage
+                          src={adminClientsApi.photoFileUrl(id!, p.id)}
+                          className="aspect-[3/4] w-full object-cover rounded-lg"
+                        />
+                        <span className="absolute bottom-1 left-1 text-[10px] text-white bg-black/40 px-1.5 py-0.5 rounded">
+                          {a.label}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (confirm('Удалить фото?')) photoDelMut.mutate(p.id)
+                          }}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/40 text-white hidden group-hover:flex items-center justify-center"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Замеры */}
       <div className="bg-white rounded-lg shadow p-5">

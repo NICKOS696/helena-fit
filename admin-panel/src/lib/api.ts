@@ -127,6 +127,20 @@ export const adminClientsApi = {
     api.post(`/admin/clients/${id}/measurements`, data),
   deleteMeasurement: (id: string, measurementId: string) =>
     api.delete(`/admin/clients/${id}/measurements/${measurementId}`),
+  photos: (id: string) => api.get(`/admin/clients/${id}/photos`),
+  addPhoto: (id: string, file: File, angle: string, date?: string) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('angle', angle)
+    if (date) fd.append('date', date)
+    return api.post(`/admin/clients/${id}/photos`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  deletePhoto: (id: string, photoId: string) =>
+    api.delete(`/admin/clients/${id}/photos/${photoId}`),
+  photoFileUrl: (id: string, photoId: string) =>
+    `/admin/clients/${id}/photos/${photoId}/file`,
 }
 
 export const uploadApi = {

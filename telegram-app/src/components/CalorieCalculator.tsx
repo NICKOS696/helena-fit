@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/Card'
-import { Calculator } from 'lucide-react'
+import { Calculator, ChevronDown } from 'lucide-react'
 
 type Gender = 'male' | 'female'
 type Activity = 1.2 | 1.375 | 1.55 | 1.725 | 1.9
@@ -111,22 +111,29 @@ export const CalorieCalculator = () => {
   }
 
   return (
-    <Card>
+    <Card className="!p-0 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between"
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
       >
-        <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
           <Calculator className="w-5 h-5 text-primary" />
-          Калькулятор КБЖУ
-        </h3>
-        <span className="text-sm text-text-secondary">
-          {open ? '▲' : '▼'}
-        </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-text-primary text-base">Калькулятор КБЖУ</p>
+          <p className="text-xs text-text-secondary mt-0.5">
+            Рассчитай свою дневную норму калорий и воды
+          </p>
+        </div>
+        <ChevronDown
+          className={`w-5 h-5 text-text-secondary transition-transform shrink-0 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
       </button>
 
       {open && (
-        <form onSubmit={calculate} className="mt-4 space-y-3">
+        <form onSubmit={calculate} className="px-4 pb-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-text-secondary mb-1">

@@ -6,8 +6,13 @@ import {
   Delete,
   Param,
   Body,
+  Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { ClientsService } from './clients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
@@ -69,5 +74,41 @@ export class AdminClientsController {
     @Param('measurementId') measurementId: string,
   ) {
     return this.clientsService.deleteMeasurementByTrainer(id, measurementId);
+  }
+
+  // ===== Фото прогресса =====
+
+  @Get(':id/photos')
+  async photos(@Param('id') id: string) {
+    return this.clientsService.getClientPhotos(id);
+  }
+
+  @Post(':id/photos')
+  @UseInterceptors(FileInterceptor('file'))
+  async addPhoto(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('angle') angle: string,
+    @Body('date') date?: string,
+  ) {
+    return this.clientsService.addPhotoByTrainer(id, file, angle, date);
+  }
+
+  @Delete(':id/photos/:photoId')
+  async deletePhoto(
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+  ) {
+    return this.clientsService.deletePhotoByTrainer(id, photoId);
+  }
+
+  @Get(':id/photos/:photoId/file')
+  async photoFile(
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @Res() res: Response,
+  ) {
+    const path = await this.clientsService.getPhotoPathByTrainer(id, photoId);
+    res.sendFile(path);
   }
 }

@@ -389,6 +389,7 @@ model ClientProfile {
 
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   measurements ClientMeasurement[]
+  photos       ClientPhoto[]
 
   @@map("client_profiles")
 }
@@ -418,6 +419,29 @@ model ClientMeasurement {
 
   @@index([clientId, date])
   @@map("client_measurements")
+}
+
+// Фото прогресса клиента (перед/бок/зад). Файлы лежат в ПРИВАТНОМ хранилище
+// (private-uploads, nginx его не раздаёт) — доступ только через API с проверкой прав.
+model ClientPhoto {
+  id        String     @id @default(uuid())
+  clientId  String
+  date      DateTime   @default(now())
+  angle     PhotoAngle
+  filePath  String // имя файла в приватном хранилище
+  byTrainer Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  client ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
+  @@map("client_photos")
+}
+
+enum PhotoAngle {
+  FRONT
+  SIDE
+  BACK
 }
 
 // Ручной учёт оплат «мимо Payme» (рублёвая карта МИР).

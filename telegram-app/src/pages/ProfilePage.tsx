@@ -6,11 +6,55 @@ import { usersApi, clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { CalorieCalculator } from '@/components/CalorieCalculator'
 import { User, Dumbbell, UtensilsCrossed, Receipt, MessageCircle, ChevronDown, Ruler, ChevronRight } from 'lucide-react'
+import type { ReactNode } from 'react'
+
+// Единая сворачиваемая секция профиля: иконка в круге, заголовок, подпись
+const Section = ({
+  icon,
+  title,
+  subtitle,
+  count,
+  children,
+}: {
+  icon: ReactNode
+  title: string
+  subtitle: string
+  count?: number
+  children: ReactNode
+}) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <Card className="!p-0 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-text-primary text-base">
+            {title}
+            {typeof count === 'number' && count > 0 && (
+              <span className="text-text-secondary text-sm"> ({count})</span>
+            )}
+          </p>
+          <p className="text-xs text-text-secondary mt-0.5">{subtitle}</p>
+        </div>
+        <ChevronDown
+          className={`w-5 h-5 text-text-secondary transition-transform shrink-0 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </Card>
+  )
+}
 
 export const ProfilePage = () => {
   const { user } = useTelegram()
   const navigate = useNavigate()
-  const [historyOpen, setHistoryOpen] = useState(false)
 
   // Клиент ли я у тренера — открывает блок «Мой прогресс»
   const { data: clientMe } = useQuery({
@@ -91,11 +135,12 @@ export const ProfilePage = () => {
 
       <CalorieCalculator />
 
-      <Card>
-        <h3 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
-          <Dumbbell className="w-5 h-5 text-primary" />
-          Мои тренировки
-        </h3>
+      <Section
+        icon={<Dumbbell className="w-5 h-5 text-primary" />}
+        title="Мои тренировки"
+        subtitle="Твои купленные сборники тренировок"
+        count={access?.workouts?.length}
+      >
         {access?.workouts?.length > 0 ? (
           <div className="space-y-2">
             {access.workouts.map((workout: any) => (
@@ -112,15 +157,16 @@ export const ProfilePage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-text-secondary">У вас пока нет купленных тренировок</p>
+          <p className="text-text-secondary text-sm">У вас пока нет купленных тренировок</p>
         )}
-      </Card>
+      </Section>
 
-      <Card>
-        <h3 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
-          <UtensilsCrossed className="w-5 h-5 text-primary" />
-          Мои рецепты
-        </h3>
+      <Section
+        icon={<UtensilsCrossed className="w-5 h-5 text-primary" />}
+        title="Мои рецепты"
+        subtitle="Твои купленные сборники рецептов"
+        count={access?.recipes?.length}
+      >
         {access?.recipes?.length > 0 ? (
           <div className="space-y-2">
             {access.recipes.map((recipe: any) => (
@@ -137,33 +183,18 @@ export const ProfilePage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-text-secondary">У вас пока нет купленных рецептов</p>
+          <p className="text-text-secondary text-sm">У вас пока нет купленных рецептов</p>
         )}
-      </Card>
+      </Section>
 
-      <Card>
-        <button
-          onClick={() => setHistoryOpen((v) => !v)}
-          className="w-full flex items-center justify-between"
-        >
-          <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-primary" />
-            История покупок
-            {transactions.length > 0 && (
-              <span className="text-sm font-normal text-text-secondary">
-                ({transactions.length})
-              </span>
-            )}
-          </h3>
-          <ChevronDown
-            className={`w-5 h-5 text-text-secondary transition-transform ${
-              historyOpen ? 'rotate-180' : ''
-            }`}
-          />
-        </button>
-        {historyOpen &&
-          (transactions.length > 0 ? (
-          <div className="space-y-3 mt-3">
+      <Section
+        icon={<Receipt className="w-5 h-5 text-primary" />}
+        title="История покупок"
+        subtitle="Твои платежи и их статусы"
+        count={transactions.length}
+      >
+        {transactions.length > 0 ? (
+          <div className="space-y-3">
             {transactions.map((transaction: any) => (
               <div key={transaction.id} className="border-b border-gray-100 pb-3 last:border-0">
                 <div className="flex justify-between items-start mb-1">
@@ -194,9 +225,9 @@ export const ProfilePage = () => {
             ))}
           </div>
         ) : (
-          <p className="text-text-secondary mt-3">История покупок пуста</p>
-        ))}
-      </Card>
+          <p className="text-text-secondary text-sm">История покупок пуста</p>
+        )}
+      </Section>
 
       <div className="pt-4 pb-2 flex justify-center">
         <button

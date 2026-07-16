@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMeasurementDto } from './dto/measurement.dto';
+import { join } from 'path';
+import { unlink } from 'fs/promises';
+
+// Приватное хранилище фото (nginx его не раздаёт, доступ только через API)
+export const PRIVATE_UPLOAD_DIR =
+  process.env.PRIVATE_UPLOAD_DIR || './private-uploads';
 
 const MEASUREMENT_FIELDS = [
   'weight',
@@ -171,6 +177,114 @@ export class ClientsService {
     if (!m) throw new NotFoundException('Замер не найден');
     await this.prisma.clientMeasurement.delete({ where: { id: m.id } });
     return { success: true };
+  }
+
+  // ===== Фото прогресса =====
+
+  /** Мои фото (клиент) */
+  async getMyPhotos(userId: string) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.listPhotos(profile.id);
+  }
+
+  async addMyPhoto(
+    userId: string,
+    file: Express.Multer.File,
+    angle: string,
+    date?: string,
+  ) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.createPhoto(profile.id, file, angle, date, false);
+  }
+
+  async deleteMyPhoto(userId: string, photoId: string) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.removePhoto(profile.id, photoId);
+  }
+
+  /** Абсолютный путь к файлу фото — только если фото принадлежит этому клиенту */
+  async getMyPhotoPath(userId: string, photoId: string) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.photoPath(profile.id, photoId);
+  }
+
+  /** Фото клиента (тренер) */
+  async getClientPhotos(profileId: string) {
+    await this.getClientOr404(profileId);
+    return this.listPhotos(profileId);
+  }
+
+  async addPhotoByTrainer(
+    profileId: string,
+    file: Express.Multer.File,
+    angle: string,
+    date?: string,
+  ) {
+    await this.getClientOr404(profileId);
+    return this.createPhoto(profileId, file, angle, date, true);
+  }
+
+  async deletePhotoByTrainer(profileId: string, photoId: string) {
+    return this.removePhoto(profileId, photoId);
+  }
+
+  async getPhotoPathByTrainer(profileId: string, photoId: string) {
+    return this.photoPath(profileId, photoId);
+  }
+
+  private listPhotos(clientId: string) {
+    return this.prisma.clientPhoto.findMany({
+      where: { clientId },
+      orderBy: { date: 'desc' },
+      take: 500,
+      select: { id: true, date: true, angle: true, byTrainer: true },
+    });
+  }
+
+  private async createPhoto(
+    clientId: string,
+    file: Express.Multer.File,
+    angle: string,
+    date: string | undefined,
+    byTrainer: boolean,
+  ) {
+    if (!file) throw new ConflictException('Файл не получен');
+    if (!['FRONT', 'SIDE', 'BACK'].includes(angle)) {
+      throw new ConflictException('Неверный ракурс');
+    }
+    return this.prisma.clientPhoto.create({
+      data: {
+        clientId,
+        angle: angle as any,
+        filePath: file.filename,
+        date: date ? new Date(date) : new Date(),
+        byTrainer,
+      },
+      select: { id: true, date: true, angle: true, byTrainer: true },
+    });
+  }
+
+  private async removePhoto(clientId: string, photoId: string) {
+    const photo = await this.prisma.clientPhoto.findFirst({
+      where: { id: photoId, clientId },
+    });
+    if (!photo) throw new NotFoundException('Фото не найдено');
+    await this.prisma.clientPhoto.delete({ where: { id: photo.id } });
+    // Файл убираем тоже; если его уже нет — не падаем
+    try {
+      await unlink(join(PRIVATE_UPLOAD_DIR, photo.filePath));
+    } catch {
+      /* файл мог быть удалён раньше */
+    }
+    return { success: true };
+  }
+
+  private async photoPath(clientId: string, photoId: string) {
+    const photo = await this.prisma.clientPhoto.findFirst({
+      where: { id: photoId, clientId },
+    });
+    if (!photo) throw new NotFoundException('Фото не найдено');
+    return join(process.cwd(), PRIVATE_UPLOAD_DIR, photo.filePath);
   }
 
   // ===== Общее =====
