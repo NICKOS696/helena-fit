@@ -252,10 +252,12 @@ export class ClientsService {
     if (!['FRONT', 'SIDE', 'BACK'].includes(angle)) {
       throw new ConflictException('Неверный ракурс');
     }
-    // Новое фото ракурса заменяет прежнее за тот же день (и его файл)
+    // Новое фото ракурса заменяет прежнее за тот же день (и его файл).
+    // Границы дня — по Ташкенту (UTC+5), как их видит пользователь.
+    const TZ_MS = 5 * 3600 * 1000;
     const target = date ? new Date(date) : new Date();
     const dayStart = new Date(
-      Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()),
+      Math.floor((target.getTime() + TZ_MS) / 86400000) * 86400000 - TZ_MS,
     );
     const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
     const olds = await this.prisma.clientPhoto.findMany({

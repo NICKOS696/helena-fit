@@ -108,7 +108,7 @@ export const ClientCardPage = () => {
   const photoDays = useMemo(() => {
     const map = new Map<string, any>()
     for (const p of photos) {
-      const day = new Date(p.date).toISOString().slice(0, 10)
+      const day = new Date(new Date(p.date).getTime() + 5 * 3600 * 1000).toISOString().slice(0, 10)
       const g = map.get(day) || { day, date: p.date, byAngle: {} as Record<string, any> }
       if (!g.byAngle[p.angle]) g.byAngle[p.angle] = p
       map.set(day, g)

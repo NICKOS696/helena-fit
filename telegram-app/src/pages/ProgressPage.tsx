@@ -103,6 +103,12 @@ export const ProgressPage = () => {
   const [uploadingAngle, setUploadingAngle] = useState<string | null>(null)
   // Ракурсы, снятые в текущей сессии формы (для галочки «Готово»)
   const [doneAngles, setDoneAngles] = useState<string[]>([])
+  // Полноэкранный просмотр: пара фото (сравнение) или одно фото (история)
+  const [fullscreen, setFullscreen] = useState<{
+    label: string
+    a?: { id: string; caption: string } | null
+    b?: { id: string; caption: string } | null
+  } | null>(null)
 
   // Гейт: страница только для клиентов тренера
   const { data: meData, isLoading: meLoading } = useQuery({
@@ -128,7 +134,7 @@ export const ProgressPage = () => {
   const photoDays = useMemo(() => {
     const map = new Map<string, any>()
     for (const p of photos) {
-      const day = new Date(p.date).toISOString().slice(0, 10)
+      const day = new Date(new Date(p.date).getTime() + 5 * 3600 * 1000).toISOString().slice(0, 10)
       const g = map.get(day) || { day, date: p.date, byAngle: {} as Record<string, any> }
       if (!g.byAngle[p.angle]) g.byAngle[p.angle] = p
       map.set(day, g)
@@ -484,14 +490,28 @@ export const ProgressPage = () => {
               const pa = cmpDayA?.byAngle[a.key]
               const pb = cmpDayB?.byAngle[a.key]
               if (!pa && !pb) return null
+              const openPair = () =>
+                setFullscreen({
+                  label: a.label,
+                  a: pa
+                    ? { id: pa.id, caption: `Было · ${fmtDate(cmpDayA.date)}` }
+                    : null,
+                  b: pb
+                    ? { id: pb.id, caption: `Стало · ${fmtDate(cmpDayB.date)}` }
+                    : null,
+                })
               return (
                 <div key={a.key}>
-                  <p className="text-[11px] text-text-secondary mb-1">{a.label}</p>
+                  <p className="text-[11px] text-text-secondary mb-1">
+                    {a.label}{' '}
+                    <span className="text-gray-300">· нажми, чтобы развернуть</span>
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {pa ? (
                       <AuthImage
                         src={clientsApi.photoFileUrl(pa.id)}
                         className="aspect-[3/4] w-full object-cover rounded-xl"
+                        onClick={openPair}
                       />
                     ) : (
                       <div className="aspect-[3/4] rounded-xl bg-gray-100 flex items-center justify-center text-xs text-gray-300">
@@ -502,6 +522,7 @@ export const ProgressPage = () => {
                       <AuthImage
                         src={clientsApi.photoFileUrl(pb.id)}
                         className="aspect-[3/4] w-full object-cover rounded-xl"
+                        onClick={openPair}
                       />
                     ) : (
                       <div className="aspect-[3/4] rounded-xl bg-gray-100 flex items-center justify-center text-xs text-gray-300">
@@ -606,6 +627,13 @@ export const ProgressPage = () => {
                         <AuthImage
                           src={clientsApi.photoFileUrl(p.id)}
                           className="aspect-[3/4] w-full object-cover rounded-xl"
+                          onClick={() =>
+                            setFullscreen({
+                              label: `${a.label} · ${fmtDate(d.date)}`,
+                              a: { id: p.id, caption: '' },
+                              b: null,
+                            })
+                          }
                         />
                         <button
                           onClick={() => {
@@ -633,6 +661,57 @@ export const ProgressPage = () => {
             история 💪
           </p>
         </Card>
+      )}
+
+      {/* Полноэкранный просмотр фото / пары «было-стало» */}
+      {fullscreen && (
+        <div
+          className="fixed inset-0 z-[80] bg-black flex flex-col"
+          onClick={() => setFullscreen(null)}
+        >
+          <div
+            className="flex items-center justify-between px-4 pb-2"
+            style={{ paddingTop: 'calc(0.75rem + var(--app-safe-top, 0px))' }}
+          >
+            <span className="text-white text-sm font-medium">{fullscreen.label}</span>
+            <button className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div
+            className={`flex-1 min-h-0 grid gap-1 p-1 ${
+              fullscreen.b ? 'grid-cols-2' : 'grid-cols-1'
+            }`}
+            style={{ paddingBottom: 'calc(0.5rem + var(--app-safe-bottom, 0px))' }}
+          >
+            {fullscreen.a && (
+              <div className="relative h-full min-h-0 flex flex-col">
+                <AuthImage
+                  src={clientsApi.photoFileUrl(fullscreen.a.id)}
+                  className="flex-1 min-h-0 w-full object-contain"
+                />
+                {fullscreen.a.caption && (
+                  <p className="text-center text-white/80 text-xs py-1.5">
+                    {fullscreen.a.caption}
+                  </p>
+                )}
+              </div>
+            )}
+            {fullscreen.b && (
+              <div className="relative h-full min-h-0 flex flex-col">
+                <AuthImage
+                  src={clientsApi.photoFileUrl(fullscreen.b.id)}
+                  className="flex-1 min-h-0 w-full object-contain"
+                />
+                {fullscreen.b.caption && (
+                  <p className="text-center text-white/80 text-xs py-1.5">
+                    {fullscreen.b.caption}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
