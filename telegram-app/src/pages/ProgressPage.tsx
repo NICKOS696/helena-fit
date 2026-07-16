@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Plus, TrendingDown, Trash2, Ruler, Scale } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Ruler, Scale, ChevronDown } from 'lucide-react'
 
 // Поля замера: ключ, подпись, единица
 const FIELDS: { key: string; label: string; unit: string }[] = [
@@ -38,6 +38,7 @@ export const ProgressPage = () => {
   // Сравнение произвольных дат: id выбранных замеров («было» / «стало»)
   const [compareA, setCompareA] = useState<string>('')
   const [compareB, setCompareB] = useState<string>('')
+  const [compareOpen, setCompareOpen] = useState(false)
 
   // Гейт: страница только для клиентов тренера
   const { data: meData, isLoading: meLoading } = useQuery({
@@ -129,42 +130,25 @@ export const ProgressPage = () => {
 
       <h1 className="text-2xl font-bold text-text-primary">Мой прогресс</h1>
 
-      {/* Итог с первого замера */}
+      {/* Сравнение любых двух дат — свёрнуто, раскрывается по тапу */}
       {measurements.length >= 2 && (
-        <Card className="bg-gradient-to-r from-primary-light/15 to-primary/10">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingDown className="w-5 h-5 text-primary" />
-            <p className="font-bold text-text-primary text-sm">
-              С первого замера ({fmtDate(first.date)})
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {FIELDS.map((f) => {
-              const a = first?.[f.key]
-              const b = last?.[f.key]
-              if (a == null || b == null) return null
-              const d = Math.round((b - a) * 10) / 10
-              if (d === 0) return null
-              return (
-                <span key={f.key} className="text-text-primary">
-                  {f.label}:{' '}
-                  <b className={d < 0 ? 'text-green-600' : 'text-red-500'}>
-                    {d > 0 ? `+${d}` : d} {f.unit}
-                  </b>
-                </span>
-              )
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* Сравнение любых двух дат */}
-      {measurements.length >= 2 && (
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <Scale className="w-5 h-5 text-primary" />
-            <p className="font-bold text-text-primary text-sm">Сравнить периоды</p>
-          </div>
+        <Card className="!p-0 overflow-hidden">
+          <button
+            onClick={() => setCompareOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3.5"
+          >
+            <span className="flex items-center gap-2 font-bold text-text-primary text-sm">
+              <Scale className="w-5 h-5 text-primary" />
+              Сравнить периоды
+            </span>
+            <ChevronDown
+              className={`w-5 h-5 text-text-secondary transition-transform ${
+                compareOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {compareOpen && (
+          <div className="px-4 pb-4">
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="block text-xs text-text-secondary mb-1">Было</label>
@@ -215,6 +199,8 @@ export const ProgressPage = () => {
                 </div>
               ))}
             </div>
+          )}
+          </div>
           )}
         </Card>
       )}
@@ -285,50 +271,48 @@ export const ProgressPage = () => {
         <div className="space-y-3">
           {measurements.map((m, i) => {
             const prev = measurements[i + 1]
+            const filled = FIELDS.filter((f) => m[f.key] != null)
             return (
               <Card key={m.id} className="!p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-text-primary text-sm">
-                    {fmtDate(m.date)}
-                    {m.byTrainer && (
-                      <span className="ml-2 text-[10px] font-medium text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-full">
-                        тренер
-                      </span>
-                    )}
-                  </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-text-secondary mb-1">
+                      {fmtDate(m.date)}
+                      {m.byTrainer && ' · тренер'}
+                    </p>
+                    <p className="text-sm text-text-primary leading-relaxed">
+                      {filled.map((f, idx) => {
+                        const v = m[f.key]
+                        const pv = prev?.[f.key]
+                        const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
+                        return (
+                          <span key={f.key} className="whitespace-nowrap">
+                            {idx > 0 && <span className="text-gray-300"> · </span>}
+                            <span className="text-text-secondary">{f.label}</span>{' '}
+                            <b>{v}</b>
+                            {d !== null && d !== 0 && (
+                              <span
+                                className={`text-xs ${d < 0 ? 'text-green-600' : 'text-red-500'}`}
+                              >
+                                {' '}
+                                {d > 0 ? `+${d}` : d}
+                              </span>
+                            )}
+                          </span>
+                        )
+                      })}
+                    </p>
+                    {m.note && <p className="text-xs text-text-secondary mt-1">{m.note}</p>}
+                  </div>
                   <button
                     onClick={() => {
                       if (confirm('Удалить этот замер?')) delMut.mutate(m.id)
                     }}
-                    className="text-gray-300"
+                    className="text-gray-300 shrink-0 mt-0.5"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-x-3 gap-y-1.5">
-                  {FIELDS.map((f) => {
-                    const v = m[f.key]
-                    if (v == null) return null
-                    const pv = prev?.[f.key]
-                    const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
-                    return (
-                      <div key={f.key} className="text-sm">
-                        <span className="text-text-secondary text-xs">{f.label}</span>
-                        <p className="text-text-primary font-medium">
-                          {v}
-                          {d !== null && d !== 0 && (
-                            <span
-                              className={`ml-1 text-xs ${d < 0 ? 'text-green-600' : 'text-red-500'}`}
-                            >
-                              {d > 0 ? `+${d}` : d}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-                {m.note && <p className="text-xs text-text-secondary mt-2">{m.note}</p>}
               </Card>
             )
           })}
