@@ -190,7 +190,7 @@ export const ProgressPage = () => {
             onClick={() => setCompareOpen((v) => !v)}
             className="w-full flex items-center justify-between px-4 py-3.5"
           >
-            <span className="flex items-center gap-2 font-bold text-text-primary text-sm">
+            <span className="flex items-center gap-2 text-text-primary text-base">
               <ArrowLeftRight className="w-5 h-5 text-primary" />
               Сравнить периоды
             </span>
@@ -242,11 +242,11 @@ export const ProgressPage = () => {
                     <div key={r.key} className="flex items-center justify-between py-2 text-sm">
                       <span className="text-text-secondary">{r.label}</span>
                       <span className="text-text-primary">
-                        {r.a} → <b>{r.b}</b> {r.unit}
+                        {r.a} → {r.b} {r.unit}
                         {r.d !== 0 && (
-                          <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {r.d > 0 ? `+${r.d}` : r.d}
-                          </b>
+                          </span>
                         )}
                       </span>
                     </div>
@@ -276,7 +276,7 @@ export const ProgressPage = () => {
               <Card key={m.id} className="!p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-text-secondary mb-1">
+                    <p className="text-xs text-text-secondary mb-1">
                       {fmtDate(m.date)}
                       {m.byTrainer && ' · тренер'}
                     </p>
@@ -288,7 +288,7 @@ export const ProgressPage = () => {
                         return (
                           <span key={f.key} className="whitespace-nowrap">
                             <span className="text-text-secondary">{f.label}</span>{' '}
-                            <b>{v}</b>
+                            {v}
                             {d !== null && d !== 0 && (
                               <span
                                 className={`text-xs ${d < 0 ? 'text-green-600' : 'text-red-500'}`}
