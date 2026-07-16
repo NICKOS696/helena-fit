@@ -256,8 +256,35 @@ export const ProgressPage = () => {
         onChange={onFilePicked}
       />
 
-      {/* ===== 1. Добавить замер ===== */}
-      {showForm ? (
+      {/* ===== 1–2. Кнопки добавления в одну строку ===== */}
+      {!showForm && !showPhotoForm && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              haptic.selection()
+              setShowForm(true)
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            Добавить замеры
+          </button>
+          <button
+            onClick={() => {
+              haptic.selection()
+              setDoneAngles([])
+              setShowPhotoForm(true)
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+          >
+            <Camera className="w-4 h-4 shrink-0" />
+            Фото отчёт
+          </button>
+        </div>
+      )}
+
+      {/* Форма замера */}
+      {showForm && (
         <Card>
           <p className="text-text-primary mb-3">
             Новый замер — {new Date().toLocaleDateString('ru-RU')}
@@ -298,22 +325,10 @@ export const ProgressPage = () => {
             </button>
           </div>
         </Card>
-      ) : (
-        <button
-          onClick={() => {
-            haptic.selection()
-            setShowForm(true)
-            setShowPhotoForm(false)
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium active:scale-[0.98] transition-transform"
-        >
-          <Plus className="w-5 h-5" />
-          Добавить замеры
-        </button>
       )}
 
-      {/* ===== 2. Добавить фото отчёт ===== */}
-      {showPhotoForm ? (
+      {/* Форма фото отчёта */}
+      {showPhotoForm && (
         <Card>
           <div className="flex items-center justify-between mb-2">
             <p className="text-text-primary">
@@ -366,19 +381,6 @@ export const ProgressPage = () => {
             })}
           </div>
         </Card>
-      ) : (
-        <button
-          onClick={() => {
-            haptic.selection()
-            setDoneAngles([])
-            setShowPhotoForm(true)
-            setShowForm(false)
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium active:scale-[0.98] transition-transform"
-        >
-          <Camera className="w-5 h-5" />
-          Добавить фото отчёт
-        </button>
       )}
 
       {/* ===== 3. Сравнить замеры ===== */}
