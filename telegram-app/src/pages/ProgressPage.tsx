@@ -10,7 +10,7 @@ import {
   Plus,
   Trash2,
   Ruler,
-  ArrowLeftRight,
+  TrendingDown,
   ChevronDown,
   Camera,
   Image,
@@ -511,7 +511,7 @@ export const ProgressPage = () => {
       {/* ===== 3. Сравнить замеры ===== */}
       {measurements.length >= 2 && (
         <Fold
-          icon={<ArrowLeftRight className="w-5 h-5 text-primary" />}
+          icon={<TrendingDown className="w-5 h-5 text-primary" />}
           title="Сравнить замеры"
         >
           <div className="grid grid-cols-2 gap-3 mb-3">
