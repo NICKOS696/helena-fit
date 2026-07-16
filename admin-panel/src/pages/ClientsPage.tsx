@@ -39,8 +39,13 @@ export const ClientsPage = () => {
         <p className="text-sm text-gray-500 truncate">
           {c.user?.username ? `@${c.user.username} · ` : ''}ID {c.user?.telegramId}
         </p>
+        {/* На мобильных даты под именем */}
+        <p className="text-xs text-gray-400 sm:hidden mt-0.5">
+          с {fmtDate(c.startedAt)} ·{' '}
+          {c.lastMeasurement ? `замер ${fmtDate(c.lastMeasurement.date)}` : 'замеров нет'}
+        </p>
       </div>
-      <div className="text-right text-sm text-gray-500 flex-shrink-0">
+      <div className="text-right text-sm text-gray-500 flex-shrink-0 hidden sm:block">
         <p>клиент с {fmtDate(c.startedAt)}</p>
         <p>
           {c.lastMeasurement

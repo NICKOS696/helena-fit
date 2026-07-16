@@ -14,10 +14,19 @@ const navItems = [
   { path: '/analytics', icon: BarChart3, label: 'Статистика' },
 ]
 
+// Тренеру (MODERATOR) доступны только эти разделы
+export const TRAINER_PATHS = ['/users', '/clients', '/analytics']
+
 export const DashboardLayout = () => {
-  const { logout } = useAuth()
+  const { logout, role } = useAuth()
   // Состояние выезжающего меню на мобильных. На десктопе (lg+) меню всегда видно.
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Тренер видит только свои разделы
+  const visibleItems =
+    role === 'MODERATOR'
+      ? navItems.filter((i) => TRAINER_PATHS.includes(i.path))
+      : navItems
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -52,7 +61,7 @@ export const DashboardLayout = () => {
         </div>
 
         <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-          {navItems.map(({ path, icon: Icon, label }) => (
+          {visibleItems.map(({ path, icon: Icon, label }) => (
             <NavLink
               key={path}
               to={path}

@@ -27,6 +27,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+// Разделы, закрытые для тренера (MODERATOR) — редиректим на Пользователей
+const FullAccessRoute = ({ children }: { children: React.ReactNode }) => {
+  const { role } = useAuth()
+  if (role === 'MODERATOR') {
+    return <Navigate to="/users" replace />
+  }
+  return <>{children}</>
+}
+
 export const AppRoutes = () => {
   return (
     <Routes>
@@ -43,12 +52,12 @@ export const AppRoutes = () => {
         <Route path="users" element={<UsersPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="clients/:id" element={<ClientCardPage />} />
-        <Route path="workouts" element={<WorkoutsPage />} />
-        <Route path="workouts/:id" element={<WorkoutCollectionEditPage />} />
-        <Route path="recipes" element={<RecipesPage />} />
-        <Route path="recipes/:id" element={<RecipeCollectionEditPage />} />
-        <Route path="news" element={<NewsPage />} />
-        <Route path="ingredients" element={<IngredientsPage />} />
+        <Route path="workouts" element={<FullAccessRoute><WorkoutsPage /></FullAccessRoute>} />
+        <Route path="workouts/:id" element={<FullAccessRoute><WorkoutCollectionEditPage /></FullAccessRoute>} />
+        <Route path="recipes" element={<FullAccessRoute><RecipesPage /></FullAccessRoute>} />
+        <Route path="recipes/:id" element={<FullAccessRoute><RecipeCollectionEditPage /></FullAccessRoute>} />
+        <Route path="news" element={<FullAccessRoute><NewsPage /></FullAccessRoute>} />
+        <Route path="ingredients" element={<FullAccessRoute><IngredientsPage /></FullAccessRoute>} />
         <Route path="analytics" element={<AnalyticsPage />} />
       </Route>
     </Routes>
