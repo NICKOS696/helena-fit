@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMeasurementDto } from './dto/measurement.dto';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { unlink } from 'fs/promises';
 
 // Приватное хранилище фото (nginx его не раздаёт, доступ только через API)
@@ -284,7 +284,9 @@ export class ClientsService {
       where: { id: photoId, clientId },
     });
     if (!photo) throw new NotFoundException('Фото не найдено');
-    return join(process.cwd(), PRIVATE_UPLOAD_DIR, photo.filePath);
+    // resolve корректно работает и с абсолютным PRIVATE_UPLOAD_DIR (в контейнере),
+    // и с относительным (в dev): join ломал абсолютный путь, склеивая его с cwd.
+    return resolve(PRIVATE_UPLOAD_DIR, photo.filePath);
   }
 
   // ===== Общее =====
