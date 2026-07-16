@@ -139,8 +139,11 @@ const EngagementSection = () => {
             )}
             <div
               className="w-full bg-primary/60 hover:bg-primary rounded-t"
-              style={{ height: `${Math.max(3, (d.users / maxUsers) * 82)}%` }}
+              style={{ height: `${Math.max(3, (d.users / maxUsers) * 78)}%` }}
             />
+            <span className="text-[7px] sm:text-[9px] text-gray-400 leading-none mt-0.5">
+              {d.date.slice(8, 10)}
+            </span>
           </div>
         ))}
       </div>
@@ -148,7 +151,10 @@ const EngagementSection = () => {
         <span>
           {byDay[0]?.date.slice(8, 10)}.{byDay[0]?.date.slice(5, 7)}
         </span>
-        <span>сегодня</span>
+        <span>
+          сегодня ({byDay[byDay.length - 1]?.date.slice(8, 10)}.
+          {byDay[byDay.length - 1]?.date.slice(5, 7)})
+        </span>
       </div>
     </div>
   )
