@@ -129,6 +129,17 @@ export class AnalyticsService {
           select: { title: true, bannerImage: true },
         });
         return n ? { title: n.title, coverImage: n.bannerImage } : null;
+      } else if (itemType === 'BROADCAST') {
+        const b = await this.prisma.broadcast.findUnique({
+          where: { id: itemId },
+          select: { message: true },
+        });
+        return b
+          ? {
+              title: `Переход по рассылке: «${b.message.slice(0, 60)}${b.message.length > 60 ? '…' : ''}»`,
+              coverImage: null,
+            }
+          : null;
       }
     } catch (error) {
       console.error('Error fetching content details:', error);

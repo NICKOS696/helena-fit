@@ -9,6 +9,7 @@ const typeLabel: Record<string, string> = {
   RECIPE: '🍽️ Рецепт',
   WORKOUT: '🏋️ Тренировка',
   NEWS: '📰 Новость',
+  BROADCAST: '📨 Рассылка',
 }
 
 const formatDate = (d?: string) => {
