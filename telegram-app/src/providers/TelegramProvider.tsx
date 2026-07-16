@@ -1,6 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { initTelegram, getTelegramInitData } from '@/lib/telegram'
-import { authApi } from '@/lib/api'
+import { authApi, analyticsApi } from '@/lib/api'
+
+// Если приложение открыто по кнопке рассылки (?bc=<id>) — фиксируем переход
+const trackBroadcastClick = () => {
+  try {
+    const bc = new URLSearchParams(window.location.search).get('bc')
+    if (bc) {
+      analyticsApi
+        .trackView({ itemType: 'BROADCAST' as any, itemId: bc })
+        .catch(() => {})
+    }
+  } catch {
+    /* не мешаем запуску */
+  }
+}
 
 interface TelegramContextType {
   user: any
@@ -34,6 +48,7 @@ export const TelegramProvider = ({ children }: { children: React.ReactNode }) =>
           localStorage.setItem('token', response.data.access_token)
           setUser(response.data.user)
           setIsAuthenticated(true)
+          trackBroadcastClick()
         } catch (error) {
           // ВАЖНО: при сбое НЕ считаем пользователя авторизованным —
           // иначе он работал бы без токена (все запросы без доступа).

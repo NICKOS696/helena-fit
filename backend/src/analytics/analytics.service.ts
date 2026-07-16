@@ -483,6 +483,106 @@ export class AnalyticsService {
   }
 
   /**
+   * Посещаемость: уникальные пользователи по дням (30 дней, дни по Ташкенту),
+   * тренд последних 7 дней к предыдущим 7, активные без единого доступа.
+   */
+  async getEngagement() {
+    const TZ_MS = 5 * 3600 * 1000;
+    const now = Date.now();
+    const since30 = new Date(now - 30 * 24 * 3600 * 1000);
+
+    const views = await this.prisma.contentView.findMany({
+      where: { createdAt: { gte: since30 } },
+      select: { userId: true, createdAt: true },
+    });
+
+    // Уникальные посетители по дням
+    const byDayMap = new Map<string, Set<string>>();
+    for (const v of views) {
+      const day = new Date(v.createdAt.getTime() + TZ_MS).toISOString().slice(0, 10);
+      if (!byDayMap.has(day)) byDayMap.set(day, new Set());
+      byDayMap.get(day)!.add(v.userId);
+    }
+    // Полные 30 дней, включая пустые
+    const byDay: { date: string; users: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const day = new Date(now + TZ_MS - i * 24 * 3600 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      byDay.push({ date: day, users: byDayMap.get(day)?.size || 0 });
+    }
+
+    // Тренд: уникальные за последние 7 дней vs предыдущие 7
+    const uniq = (from: number, to: number) => {
+      const s = new Set<string>();
+      for (const v of views) {
+        const t = v.createdAt.getTime();
+        if (t >= from && t < to) s.add(v.userId);
+      }
+      return s;
+    };
+    const last7Set = uniq(now - 7 * 24 * 3600 * 1000, now);
+    const prev7Set = uniq(now - 14 * 24 * 3600 * 1000, now - 7 * 24 * 3600 * 1000);
+    const last7 = last7Set.size;
+    const prev7 = prev7Set.size;
+    const trendPct = prev7 > 0 ? Math.round(((last7 - prev7) / prev7) * 100) : null;
+
+    // Активные за 7 дней без единого доступа (тёплая аудитория без покупок)
+    const activeIds = [...last7Set];
+    let activeNoAccess = 0;
+    if (activeIds.length > 0) {
+      const [wAcc, rAcc] = await Promise.all([
+        this.prisma.workoutCollectionAccess.findMany({
+          where: { userId: { in: activeIds } },
+          select: { userId: true },
+        }),
+        this.prisma.recipeCollectionAccess.findMany({
+          where: { userId: { in: activeIds } },
+          select: { userId: true },
+        }),
+      ]);
+      const withAccess = new Set([
+        ...wAcc.map((a) => a.userId),
+        ...rAcc.map((a) => a.userId),
+      ]);
+      activeNoAccess = activeIds.filter((id) => !withAccess.has(id)).length;
+    }
+
+    return { byDay, last7, prev7, trendPct, activeNoAccess };
+  }
+
+  /**
+   * Журнал рассылок с переходами по кнопке (клики считаются по метке ?bc=).
+   */
+  async getBroadcasts() {
+    const broadcasts = await this.prisma.broadcast.findMany({
+      orderBy: { sentAt: 'desc' },
+      take: 20,
+    });
+    const result = [];
+    for (const b of broadcasts) {
+      // Уникальные пользователи, открывшие приложение по кнопке этой рассылки
+      const clicks = await this.prisma.contentView.groupBy({
+        by: ['userId'],
+        where: { itemType: 'BROADCAST' as any, itemId: b.id },
+      });
+      result.push({
+        id: b.id,
+        message: b.message,
+        buttonText: b.buttonText,
+        sentAt: b.sentAt,
+        total: b.total,
+        sent: b.sent,
+        blocked: b.blocked,
+        clicks: clicks.length,
+        ctr: b.sent > 0 ? Math.round((clicks.length / b.sent) * 1000) / 10 : null,
+        hasButton: !!b.buttonUrl,
+      });
+    }
+    return result;
+  }
+
+  /**
    * Продажи с фильтрами для аналитики: период (даты по Ташкенту, UTC+5) и сборник.
    * Объединяет Payme-покупки и ручные (рублёвые) оплаты; отдаёт список,
    * итоги, разбивку по сборникам и по дням.

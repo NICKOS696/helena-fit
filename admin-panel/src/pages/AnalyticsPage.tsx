@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { analyticsApi, adminRecipesApi, adminWorkoutsApi } from '@/lib/api'
 import {
   BarChart3,
-  Eye,
-  Users,
-  TrendingUp,
   ChevronDown,
   ShoppingBag,
   Banknote,
   Trash2,
+  Activity,
+  Send,
+  TrendingUp,
+  TrendingDown,
+  UserX,
 } from 'lucide-react'
 
 const formatMoney = (n: number) => (n || 0).toLocaleString('ru-RU') + ' сум'
@@ -63,6 +65,165 @@ const formatDate = (d?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+// Секция «Посещаемость»: уникальные посетители по дням, тренд, активные без покупок
+const EngagementSection = () => {
+  const { data } = useQuery({
+    queryKey: ['analytics-engagement'],
+    queryFn: () => analyticsApi.getEngagement(),
+  })
+  const eng = data?.data
+  const byDay: { date: string; users: number }[] = eng?.byDay || []
+  const maxUsers = Math.max(1, ...byDay.map((d) => d.users))
+  const trend: number | null = eng?.trendPct ?? null
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-8 p-6">
+      <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+        <Activity className="w-6 h-6 text-primary" />
+        Посещаемость
+      </h2>
+
+      {/* Плитки: за неделю, тренд, без покупок */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1">Уникальных за 7 дней</p>
+          <p className="text-xl font-bold">{eng?.last7 ?? '—'}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1">К прошлой неделе</p>
+          {trend === null ? (
+            <p className="text-xl font-bold text-gray-400">—</p>
+          ) : (
+            <p
+              className={`text-xl font-bold flex items-center justify-center gap-1 ${
+                trend >= 0 ? 'text-green-600' : 'text-red-500'
+              }`}
+            >
+              {trend >= 0 ? (
+                <TrendingUp className="w-5 h-5" />
+              ) : (
+                <TrendingDown className="w-5 h-5" />
+              )}
+              {trend > 0 ? `+${trend}` : trend}%
+            </p>
+          )}
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            было {eng?.prev7 ?? '—'} → стало {eng?.last7 ?? '—'}
+          </p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+            <UserX className="w-3.5 h-3.5" />
+            Активны, но без покупок
+          </p>
+          <p className="text-xl font-bold text-amber-600">{eng?.activeNoAccess ?? '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">заходили за 7 дней</p>
+        </div>
+      </div>
+
+      {/* Заходы по дням (уникальные), 30 дней */}
+      <p className="text-xs text-gray-500 mb-2">Посетителей в день · последние 30 дней</p>
+      <div className="flex items-end gap-[2px] h-24">
+        {byDay.map((d) => (
+          <div
+            key={d.date}
+            title={`${d.date.slice(8, 10)}.${d.date.slice(5, 7)} — ${d.users} чел.`}
+            className="flex-1 bg-primary/60 hover:bg-primary rounded-t"
+            style={{ height: `${Math.max(3, (d.users / maxUsers) * 100)}%` }}
+          />
+        ))}
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+        <span>
+          {byDay[0]?.date.slice(8, 10)}.{byDay[0]?.date.slice(5, 7)}
+        </span>
+        <span>сегодня</span>
+      </div>
+    </div>
+  )
+}
+
+// Секция «Рассылки»: доставка и переходы по кнопке
+const BroadcastsSection = () => {
+  const [open, setOpen] = useState(false)
+  const { data } = useQuery({
+    queryKey: ['analytics-broadcasts'],
+    queryFn: () => analyticsApi.getBroadcasts(),
+    enabled: open,
+  })
+  const items: any[] = data?.data || []
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+          open ? 'border-b' : ''
+        }`}
+      >
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Send className="w-6 h-6 text-primary" />
+          Рассылки
+          {items.length > 0 && (
+            <span className="text-sm font-normal text-gray-400">({items.length})</span>
+          )}
+        </h2>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="p-6">
+          {items.length === 0 ? (
+            <p className="text-center text-gray-500 py-6">
+              Пока нет рассылок с учётом переходов. Переходы считаются у рассылок,
+              отправленных через форму после этого обновления.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {items.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 border border-gray-100 rounded-lg p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{b.message}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(b.sentAt)}
+                      {b.buttonText ? ` · кнопка «${b.buttonText}»` : ' · без кнопки'}
+                    </p>
+                  </div>
+                  <div className="flex gap-4 text-center flex-shrink-0">
+                    <div>
+                      <p className="text-sm font-bold">{b.sent}</p>
+                      <p className="text-[11px] text-gray-500">доставлено</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-primary">
+                        {b.hasButton ? b.clicks : '—'}
+                      </p>
+                      <p className="text-[11px] text-gray-500">перешли</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">
+                        {b.hasButton && b.ctr !== null ? `${b.ctr}%` : '—'}
+                      </p>
+                      <p className="text-[11px] text-gray-500">CTR</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-gray-400 mt-3">
+            «Перешли» — уникальные пользователи, открывшие приложение по кнопке рассылки.
+          </p>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Дата YYYY-MM-DD «сегодня» по Ташкенту (UTC+5)
@@ -544,11 +705,6 @@ const ManualPaymentsSection = () => {
 }
 
 export const AnalyticsPage = () => {
-  const { data: overallData } = useQuery({
-    queryKey: ['analytics-overall'],
-    queryFn: () => analyticsApi.getOverallStats(),
-  })
-
   const { data: collectionsData } = useQuery({
     queryKey: ['analytics-collections'],
     queryFn: () => analyticsApi.getCollectionStats(),
@@ -559,7 +715,6 @@ export const AnalyticsPage = () => {
     queryFn: () => analyticsApi.getRecipeStats(),
   })
 
-  const overall = overallData?.data
   const collections = collectionsData?.data || []
   const recipes = recipesData?.data || []
 
@@ -567,54 +722,17 @@ export const AnalyticsPage = () => {
     <div className="p-4 md:p-8">
       <h1 className="text-2xl md:text-3xl font-bold mb-8">📊 Статистика</h1>
 
-      {/* Общая статистика */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <Eye className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Всего просмотров</p>
-              <p className="text-2xl font-bold">{overall?.totalViews || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Уникальных пользователей</p>
-              <p className="text-2xl font-bold">{overall?.uniqueUsers || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Средний просмотр</p>
-              <p className="text-2xl font-bold">
-                {overall?.uniqueUsers
-                  ? Math.round((overall.totalViews / overall.uniqueUsers) * 10) / 10
-                  : 0}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Посещаемость: динамика, тренд, активные без покупок */}
+      <EngagementSection />
 
       {/* Продажи: фильтры, итоги, разбивки */}
       <SalesSection />
 
       {/* Рублёвые оплаты (ручной учёт) */}
       <ManualPaymentsSection />
+
+      {/* Рассылки: доставка и переходы */}
+      <BroadcastsSection />
 
       {/* Популярный контент (коллекции) */}
       <CollapsibleSection

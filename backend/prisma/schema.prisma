@@ -371,6 +371,24 @@ enum ContentType {
   WORKOUT
   RECIPE
   NEWS
+  BROADCAST // переход по кнопке рассылки (itemId = Broadcast.id)
+}
+
+// Журнал рассылок: для аналитики «сколько перешло по кнопке».
+// Кнопке автоматически добавляется ?bc=<id>, бот фиксирует переход как ContentView.
+model Broadcast {
+  id         String   @id @default(uuid())
+  message    String
+  buttonText String?
+  buttonUrl  String?
+  imageUrl   String?
+  total      Int      @default(0)
+  sent       Int      @default(0)
+  blocked    Int      @default(0)
+  deleted    Int      @default(0)
+  sentAt     DateTime @default(now())
+
+  @@map("broadcasts")
 }
 
 // ===== Клиентская зона тренера =====

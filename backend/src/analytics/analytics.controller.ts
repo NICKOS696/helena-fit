@@ -93,6 +93,24 @@ export class AnalyticsController {
   }
 
   /**
+   * Посещаемость: уникальные по дням, тренд, активные без доступа (для админов)
+   */
+  @Get('engagement')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getEngagement() {
+    return this.analyticsService.getEngagement();
+  }
+
+  /**
+   * Журнал рассылок с переходами (для админов)
+   */
+  @Get('broadcasts')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getBroadcasts() {
+    return this.analyticsService.getBroadcasts();
+  }
+
+  /**
    * Продажи с фильтрами: период (from/to, даты YYYY-MM-DD по Ташкенту) и сборник
    */
   @Get('sales')

@@ -40,12 +40,32 @@ export class AdminBroadcastService {
       ? `${API_BASE}/bot${token}/sendPhoto`
       : `${API_BASE}/bot${token}/sendMessage`;
 
+    // Для боевой рассылки пишем запись в журнал и метим кнопку ?bc=<id> —
+    // по метке бот фиксирует переход (аналитика «Рассылки»)
+    let broadcastId: string | null = null;
+    let buttonUrl = data.buttonUrl;
+    if (!data.test) {
+      const rec = await this.prisma.broadcast.create({
+        data: {
+          message: data.message.slice(0, 500),
+          buttonText: data.buttonText || null,
+          buttonUrl: data.buttonUrl || null,
+          imageUrl: data.imageUrl || null,
+          total: recipients.length,
+        },
+      });
+      broadcastId = rec.id;
+      if (buttonUrl) {
+        buttonUrl += (buttonUrl.includes('?') ? '&' : '?') + `bc=${rec.id}`;
+      }
+    }
+
     // Кнопка под сообщением (открывает Mini App)
     const replyMarkup =
-      data.buttonText && data.buttonUrl
+      data.buttonText && buttonUrl
         ? {
             inline_keyboard: [
-              [{ text: data.buttonText, web_app: { url: data.buttonUrl } }],
+              [{ text: data.buttonText, web_app: { url: buttonUrl } }],
             ],
           }
         : undefined;
@@ -127,6 +147,16 @@ export class AdminBroadcastService {
     this.logger.log(
       `Broadcast${data.test ? ' (test)' : ''}: sent=${sent}, blocked=${blocked}, deleted=${deleted}, other=${other}`,
     );
+
+    // Финальные цифры — в журнал рассылок
+    if (broadcastId) {
+      await this.prisma.broadcast
+        .update({
+          where: { id: broadcastId },
+          data: { sent, blocked, deleted },
+        })
+        .catch(() => undefined);
+    }
 
     return {
       test: !!data.test,

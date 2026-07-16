@@ -6,6 +6,7 @@ export enum ContentType {
   WORKOUT = 'WORKOUT',
   RECIPE = 'RECIPE',
   NEWS = 'NEWS',
+  BROADCAST = 'BROADCAST',
 }
 
 export class TrackViewDto {

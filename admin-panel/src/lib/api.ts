@@ -172,6 +172,8 @@ export const analyticsApi = {
     api.get('/analytics/purchases'),
   getSales: (params: { from?: string; to?: string; collectionId?: string }) =>
     api.get('/analytics/sales', { params }),
+  getEngagement: () => api.get('/analytics/engagement'),
+  getBroadcasts: () => api.get('/analytics/broadcasts'),
   getManualPayments: () =>
     api.get('/analytics/manual-payments'),
   createManualPayment: (data: {
