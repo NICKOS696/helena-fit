@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminClientsApi } from '@/lib/api'
 import { AuthImage } from '@/components/AuthImage'
-import { ArrowLeft, Plus, Trash2, Users, Save, Camera, X } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Users, Save, Camera, X, ChevronDown } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 const ANGLES: { key: string; label: string }[] = [
   { key: 'FRONT', label: 'Вид спереди' },
@@ -37,6 +38,42 @@ const emptyForm = () => ({
   note: '',
 })
 
+// Сворачиваемая секция карточки клиента (управляется родителем —
+// содержимое и запросы грузятся только после раскрытия)
+const Fold = ({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: ReactNode
+  count?: number
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) => (
+  <div className="bg-white rounded-lg shadow mb-6">
+    <button
+      onClick={onToggle}
+      className={`w-full p-5 flex items-center justify-between hover:bg-gray-50 ${
+        open ? 'border-b' : ''
+      }`}
+    >
+      <h2 className="font-bold text-lg flex items-center gap-2">
+        {title}
+        {typeof count === 'number' && count > 0 && (
+          <span className="text-gray-400 font-normal text-sm">({count})</span>
+        )}
+      </h2>
+      <ChevronDown
+        className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+      />
+    </button>
+    {open && <div className="p-5 pt-4">{children}</div>}
+  </div>
+)
+
 export const ClientCardPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -51,6 +88,14 @@ export const ClientCardPage = () => {
   const [photoDate, setPhotoDate] = useState(() => new Date().toISOString().slice(0, 10))
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  // Свёртки секций: фото и сравнения грузятся только после раскрытия
+  const [measOpen, setMeasOpen] = useState(false)
+  const [photosOpen, setPhotosOpen] = useState(false)
+  const [cmpMeasOpen, setCmpMeasOpen] = useState(false)
+  const [cmpPhotoOpen, setCmpPhotoOpen] = useState(false)
+  // Сравнение фото по датам
+  const [photoCmpA, setPhotoCmpA] = useState('')
+  const [photoCmpB, setPhotoCmpB] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-client', id],
@@ -102,7 +147,8 @@ export const ClientCardPage = () => {
   const { data: photosData } = useQuery({
     queryKey: ['admin-client-photos', id],
     queryFn: () => adminClientsApi.photos(id!),
-    enabled: !!id,
+    // грузим фото только когда раскрыта фото-секция или сравнение фото
+    enabled: !!id && (photosOpen || cmpPhotoOpen),
   })
   const photos: any[] = photosData?.data || []
   const photoDays = useMemo(() => {
@@ -161,6 +207,10 @@ export const ClientCardPage = () => {
     if (a == null || b == null) return null
     return { ...f, a, b, d: Math.round((b - a) * 10) / 10 }
   }).filter(Boolean) as any[]
+
+  // Сравнение фото: по умолчанию самая старая ↔ самая свежая дата
+  const cmpDayA = photoDays.find((d) => d.day === photoCmpA) || photoDays[photoDays.length - 1]
+  const cmpDayB = photoDays.find((d) => d.day === photoCmpB) || photoDays[0]
 
   return (
     <div className="p-4 md:p-8">
@@ -230,168 +280,14 @@ export const ClientCardPage = () => {
         />
       </div>
 
-      {/* Сравнение периодов */}
-      {measurements.length >= 2 && (
-        <div className="bg-white rounded-lg shadow p-5 mb-6">
-          <h2 className="font-bold mb-3">Сравнить периоды</h2>
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <select
-              value={mA?.id || ''}
-              onChange={(e) => setCompareA(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              {[...measurements].reverse().map((m) => (
-                <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
-              ))}
-            </select>
-            <span className="text-gray-400">→</span>
-            <select
-              value={mB?.id || ''}
-              onChange={(e) => setCompareB(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              {[...measurements].reverse().map((m) => (
-                <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
-              ))}
-            </select>
-          </div>
-          {compareRows.length === 0 ? (
-            <p className="text-sm text-gray-500">В выбранных датах нет совпадающих измерений</p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {compareRows.map((r: any) => (
-                <div key={r.key} className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">{r.label}, {r.unit}</p>
-                  <p className="text-sm mt-1">
-                    {r.a} → <b>{r.b}</b>
-                    {r.d !== 0 && (
-                      <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {r.d > 0 ? `+${r.d}` : r.d}
-                      </b>
-                    )}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Фото прогресса */}
-      <div className="bg-white rounded-lg shadow p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg flex items-center gap-2">
-            <Camera className="w-5 h-5 text-primary" />
-            Фото прогресса
-            {photos.length > 0 && (
-              <span className="text-gray-400 font-normal text-sm">({photos.length})</span>
-            )}
-          </h2>
-        </div>
-
-        {/* Загрузка от тренера */}
-        <div className="flex flex-wrap items-end gap-3 mb-5 bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Ракурс</label>
-            <select
-              value={photoAngle}
-              onChange={(e) => setPhotoAngle(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              {ANGLES.map((a) => (
-                <option key={a.key} value={a.key}>{a.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Дата</label>
-            <input
-              type="date"
-              value={photoDate}
-              onChange={(e) => setPhotoDate(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              e.target.value = ''
-              if (!f) return
-              setPhotoUploading(true)
-              photoUploadMut.mutate(f)
-            }}
-          />
-          <button
-            onClick={() => photoInputRef.current?.click()}
-            disabled={photoUploading}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" />
-            {photoUploading ? 'Загрузка…' : 'Загрузить фото'}
-          </button>
-          <p className="text-xs text-gray-400 w-full">
-            Фото хранятся приватно — видите только вы и клиент.
-          </p>
-        </div>
-
-        {photoDays.length === 0 ? (
-          <p className="text-center text-gray-500 py-6">
-            Фото пока нет — клиент может загрузить их в боте, или добавьте сами
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {photoDays.map((d: any) => (
-              <div key={d.day}>
-                <p className="text-sm font-medium text-gray-700 mb-2">{fmtDate(d.date)}</p>
-                <div className="grid grid-cols-3 gap-3 max-w-lg">
-                  {ANGLES.map((a) => {
-                    const p = d.byAngle[a.key]
-                    if (!p)
-                      return (
-                        <div
-                          key={a.key}
-                          className="aspect-[3/4] rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-300"
-                        >
-                          {a.label}
-                        </div>
-                      )
-                    return (
-                      <div key={a.key} className="relative group">
-                        <AuthImage
-                          src={adminClientsApi.photoFileUrl(id!, p.id)}
-                          className="aspect-[3/4] w-full object-cover rounded-lg"
-                        />
-                        <span className="absolute bottom-1 left-1 text-[10px] text-white bg-black/40 px-1.5 py-0.5 rounded">
-                          {a.label}
-                        </span>
-                        <button
-                          onClick={() => {
-                            if (confirm('Удалить фото?')) photoDelMut.mutate(p.id)
-                          }}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/40 text-white hidden group-hover:flex items-center justify-center"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Замеры */}
-      <div className="bg-white rounded-lg shadow p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">
-            Замеры <span className="text-gray-400 font-normal">({measurements.length})</span>
-          </h2>
+      {/* ===== 1. Замеры (свернуто) ===== */}
+      <Fold
+        title="Замеры"
+        count={measurements.length}
+        open={measOpen}
+        onToggle={() => setMeasOpen((v) => !v)}
+      >
+        <div className="flex justify-end mb-4">
           <button
             onClick={() => setShowForm((v) => !v)}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
@@ -523,7 +419,251 @@ export const ClientCardPage = () => {
             </p>
           </div>
         )}
-      </div>
+      </Fold>
+
+      {/* ===== 2. Фото прогресса (свернуто) ===== */}
+      <Fold
+        title={
+          <>
+            <Camera className="w-5 h-5 text-primary" />
+            Фото прогресса
+          </>
+        }
+        count={photos.length}
+        open={photosOpen}
+        onToggle={() => setPhotosOpen((v) => !v)}
+      >
+        {/* Загрузка от тренера */}
+        <div className="flex flex-wrap items-end gap-3 mb-5 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ракурс</label>
+            <select
+              value={photoAngle}
+              onChange={(e) => setPhotoAngle(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              {ANGLES.map((a) => (
+                <option key={a.key} value={a.key}>{a.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Дата</label>
+            <input
+              type="date"
+              value={photoDate}
+              onChange={(e) => setPhotoDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (!f) return
+              setPhotoUploading(true)
+              photoUploadMut.mutate(f)
+            }}
+          />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoUploading}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
+            {photoUploading ? 'Загрузка…' : 'Загрузить фото'}
+          </button>
+          <p className="text-xs text-gray-400 w-full">
+            Фото хранятся приватно — видите только вы и клиент.
+          </p>
+        </div>
+
+        {photoDays.length === 0 ? (
+          <p className="text-center text-gray-500 py-6">
+            Фото пока нет — клиент может загрузить их в боте, или добавьте сами
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {photoDays.map((d: any) => (
+              <div key={d.day}>
+                <p className="text-sm font-medium text-gray-700 mb-2">{fmtDate(d.date)}</p>
+                <div className="grid grid-cols-3 gap-3 max-w-lg">
+                  {ANGLES.map((a) => {
+                    const p = d.byAngle[a.key]
+                    if (!p)
+                      return (
+                        <div
+                          key={a.key}
+                          className="aspect-[3/4] rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-300"
+                        >
+                          {a.label}
+                        </div>
+                      )
+                    return (
+                      <div key={a.key} className="relative group">
+                        <AuthImage
+                          src={adminClientsApi.photoFileUrl(id!, p.id)}
+                          className="aspect-[3/4] w-full object-cover rounded-lg"
+                        />
+                        <span className="absolute bottom-1 left-1 text-[10px] text-white bg-black/40 px-1.5 py-0.5 rounded">
+                          {a.label}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (confirm('Удалить фото?')) photoDelMut.mutate(p.id)
+                          }}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/40 text-white hidden group-hover:flex items-center justify-center"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Fold>
+
+      {/* ===== 3. Сравнить замеры (свернуто) ===== */}
+      <Fold
+        title="Сравнить замеры"
+        open={cmpMeasOpen}
+        onToggle={() => setCmpMeasOpen((v) => !v)}
+      >
+        {measurements.length < 2 ? (
+          <p className="text-sm text-gray-500">Нужно минимум два замера</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <select
+                value={mA?.id || ''}
+                onChange={(e) => setCompareA(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                {[...measurements].reverse().map((m) => (
+                  <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
+                ))}
+              </select>
+              <span className="text-gray-400">→</span>
+              <select
+                value={mB?.id || ''}
+                onChange={(e) => setCompareB(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                {[...measurements].reverse().map((m) => (
+                  <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
+                ))}
+              </select>
+            </div>
+            {compareRows.length === 0 ? (
+              <p className="text-sm text-gray-500">В выбранных датах нет совпадающих измерений</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {compareRows.map((r: any) => (
+                  <div key={r.key} className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">{r.label}, {r.unit}</p>
+                    <p className="text-sm mt-1">
+                      {r.a} → <b>{r.b}</b>
+                      {r.d !== 0 && (
+                        <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {r.d > 0 ? `+${r.d}` : r.d}
+                        </b>
+                      )}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </Fold>
+
+      {/* ===== 4. Сравнить фото (свернуто) ===== */}
+      <Fold
+        title="Сравнить фото"
+        open={cmpPhotoOpen}
+        onToggle={() => setCmpPhotoOpen((v) => !v)}
+      >
+        {photoDays.length < 2 ? (
+          <p className="text-sm text-gray-500">
+            Нужны фото минимум за две разные даты
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <select
+                value={cmpDayA?.day || ''}
+                onChange={(e) => setPhotoCmpA(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                {[...photoDays].reverse().map((d: any) => (
+                  <option key={d.day} value={d.day}>{fmtDate(d.date)}</option>
+                ))}
+              </select>
+              <span className="text-gray-400">→</span>
+              <select
+                value={cmpDayB?.day || ''}
+                onChange={(e) => setPhotoCmpB(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                {[...photoDays].reverse().map((d: any) => (
+                  <option key={d.day} value={d.day}>{fmtDate(d.date)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {ANGLES.map((a) => {
+                const pa = cmpDayA?.byAngle[a.key]
+                const pb = cmpDayB?.byAngle[a.key]
+                if (!pa && !pb) return null
+                return (
+                  <div key={a.key}>
+                    <p className="text-sm font-medium text-gray-700 mb-2">{a.label}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {pa ? (
+                        <div>
+                          <AuthImage
+                            src={adminClientsApi.photoFileUrl(id!, pa.id)}
+                            className="aspect-[3/4] w-full object-cover rounded-lg"
+                          />
+                          <p className="text-center text-xs text-gray-500 mt-1">
+                            {fmtDate(cmpDayA.date)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="aspect-[3/4] rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-300">
+                          нет фото
+                        </div>
+                      )}
+                      {pb ? (
+                        <div>
+                          <AuthImage
+                            src={adminClientsApi.photoFileUrl(id!, pb.id)}
+                            className="aspect-[3/4] w-full object-cover rounded-lg"
+                          />
+                          <p className="text-center text-xs text-gray-500 mt-1">
+                            {fmtDate(cmpDayB.date)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="aspect-[3/4] rounded-lg bg-gray-50 flex items-center justify-center text-xs text-gray-300">
+                          нет фото
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </Fold>
     </div>
   )
 }
