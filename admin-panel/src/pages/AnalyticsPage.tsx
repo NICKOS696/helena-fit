@@ -125,14 +125,23 @@ const EngagementSection = () => {
 
       {/* Заходы по дням (уникальные), 30 дней */}
       <p className="text-xs text-gray-500 mb-2">Посетителей в день · последние 30 дней</p>
-      <div className="flex items-end gap-[2px] h-24">
+      <div className="flex items-end gap-[2px] h-28">
         {byDay.map((d) => (
           <div
             key={d.date}
             title={`${d.date.slice(8, 10)}.${d.date.slice(5, 7)} — ${d.users} чел.`}
-            className="flex-1 bg-primary/60 hover:bg-primary rounded-t"
-            style={{ height: `${Math.max(3, (d.users / maxUsers) * 100)}%` }}
-          />
+            className="flex-1 h-full flex flex-col items-center justify-end min-w-0"
+          >
+            {d.users > 0 && (
+              <span className="text-[8px] sm:text-[10px] text-gray-500 leading-none mb-0.5">
+                {d.users}
+              </span>
+            )}
+            <div
+              className="w-full bg-primary/60 hover:bg-primary rounded-t"
+              style={{ height: `${Math.max(3, (d.users / maxUsers) * 82)}%` }}
+            />
+          </div>
         ))}
       </div>
       <div className="flex justify-between text-[10px] text-gray-400 mt-1">
