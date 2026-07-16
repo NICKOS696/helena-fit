@@ -37,6 +37,8 @@ export const ClientCardPage = () => {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm())
   const [notesDraft, setNotesDraft] = useState<string | null>(null)
+  const [compareA, setCompareA] = useState('')
+  const [compareB, setCompareB] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-client', id],
@@ -98,6 +100,18 @@ export const ClientCardPage = () => {
   }
 
   const hasAnyValue = FIELDS.some((f) => (form as any)[f.key] !== '')
+
+  // Сравнение произвольных дат: по умолчанию первый ↔ последний замер
+  const oldest = measurements[measurements.length - 1]
+  const newest = measurements[0]
+  const mA = measurements.find((m) => m.id === compareA) || oldest
+  const mB = measurements.find((m) => m.id === compareB) || newest
+  const compareRows = FIELDS.map((f) => {
+    const a = mA?.[f.key]
+    const b = mB?.[f.key]
+    if (a == null || b == null) return null
+    return { ...f, a, b, d: Math.round((b - a) * 10) / 10 }
+  }).filter(Boolean) as any[]
 
   return (
     <div className="p-4 md:p-8">
@@ -166,6 +180,53 @@ export const ClientCardPage = () => {
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
         />
       </div>
+
+      {/* Сравнение периодов */}
+      {measurements.length >= 2 && (
+        <div className="bg-white rounded-lg shadow p-5 mb-6">
+          <h2 className="font-bold mb-3">Сравнить периоды</h2>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <select
+              value={mA?.id || ''}
+              onChange={(e) => setCompareA(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              {[...measurements].reverse().map((m) => (
+                <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
+              ))}
+            </select>
+            <span className="text-gray-400">→</span>
+            <select
+              value={mB?.id || ''}
+              onChange={(e) => setCompareB(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              {[...measurements].reverse().map((m) => (
+                <option key={m.id} value={m.id}>{fmtDate(m.date)}</option>
+              ))}
+            </select>
+          </div>
+          {compareRows.length === 0 ? (
+            <p className="text-sm text-gray-500">В выбранных датах нет совпадающих измерений</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {compareRows.map((r: any) => (
+                <div key={r.key} className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">{r.label}, {r.unit}</p>
+                  <p className="text-sm mt-1">
+                    {r.a} → <b>{r.b}</b>
+                    {r.d !== 0 && (
+                      <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {r.d > 0 ? `+${r.d}` : r.d}
+                      </b>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Замеры */}
       <div className="bg-white rounded-lg shadow p-5">

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Plus, TrendingDown, Trash2, Ruler } from 'lucide-react'
+import { ArrowLeft, Plus, TrendingDown, Trash2, Ruler, Scale } from 'lucide-react'
 
 // Поля замера: ключ, подпись, единица
 const FIELDS: { key: string; label: string; unit: string }[] = [
@@ -35,6 +35,9 @@ export const ProgressPage = () => {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm())
+  // Сравнение произвольных дат: id выбранных замеров («было» / «стало»)
+  const [compareA, setCompareA] = useState<string>('')
+  const [compareB, setCompareB] = useState<string>('')
 
   // Гейт: страница только для клиентов тренера
   const { data: meData, isLoading: meLoading } = useQuery({
@@ -102,6 +105,18 @@ export const ProgressPage = () => {
   const first = measurements[measurements.length - 1]
   const last = measurements[0]
 
+  // Замеры для сравнения: по умолчанию первый и последний
+  const mA =
+    measurements.find((m) => m.id === compareA) || first
+  const mB =
+    measurements.find((m) => m.id === compareB) || last
+  const compareRows = FIELDS.map((f) => {
+    const a = mA?.[f.key]
+    const b = mB?.[f.key]
+    if (a == null || b == null) return null
+    return { ...f, a, b, d: Math.round((b - a) * 10) / 10 }
+  }).filter(Boolean) as { key: string; label: string; unit: string; a: number; b: number; d: number }[]
+
   return (
     <div className="p-4 space-y-4 pb-8">
       <button
@@ -140,6 +155,67 @@ export const ProgressPage = () => {
               )
             })}
           </div>
+        </Card>
+      )}
+
+      {/* Сравнение любых двух дат */}
+      {measurements.length >= 2 && (
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <Scale className="w-5 h-5 text-primary" />
+            <p className="font-bold text-text-primary text-sm">Сравнить периоды</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs text-text-secondary mb-1">Было</label>
+              <select
+                value={mA?.id || ''}
+                onChange={(e) => setCompareA(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
+              >
+                {[...measurements].reverse().map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {fmtDate(m.date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-text-secondary mb-1">Стало</label>
+              <select
+                value={mB?.id || ''}
+                onChange={(e) => setCompareB(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white"
+              >
+                {[...measurements].reverse().map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {fmtDate(m.date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {compareRows.length === 0 ? (
+            <p className="text-xs text-text-secondary">
+              В выбранных датах нет совпадающих измерений
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {compareRows.map((r) => (
+                <div key={r.key} className="flex items-center justify-between py-2 text-sm">
+                  <span className="text-text-secondary">{r.label}</span>
+                  <span className="text-text-primary">
+                    {r.a} → <b>{r.b}</b> {r.unit}
+                    {r.d !== 0 && (
+                      <b className={`ml-2 ${r.d < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {r.d > 0 ? `+${r.d}` : r.d}
+                      </b>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 
