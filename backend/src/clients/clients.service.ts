@@ -252,6 +252,27 @@ export class ClientsService {
     if (!['FRONT', 'SIDE', 'BACK'].includes(angle)) {
       throw new ConflictException('Неверный ракурс');
     }
+    // Новое фото ракурса заменяет прежнее за тот же день (и его файл)
+    const target = date ? new Date(date) : new Date();
+    const dayStart = new Date(
+      Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()),
+    );
+    const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
+    const olds = await this.prisma.clientPhoto.findMany({
+      where: {
+        clientId,
+        angle: angle as any,
+        date: { gte: dayStart, lt: dayEnd },
+      },
+    });
+    for (const o of olds) {
+      await this.prisma.clientPhoto.delete({ where: { id: o.id } });
+      try {
+        await unlink(join(PRIVATE_UPLOAD_DIR, o.filePath));
+      } catch {
+        /* файла может уже не быть */
+      }
+    }
     return this.prisma.clientPhoto.create({
       data: {
         clientId,

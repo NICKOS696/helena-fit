@@ -101,6 +101,8 @@ export const ProgressPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingAngle = useRef<'FRONT' | 'SIDE' | 'BACK'>('FRONT')
   const [uploadingAngle, setUploadingAngle] = useState<string | null>(null)
+  // Ракурсы, снятые в текущей сессии формы (для галочки «Готово»)
+  const [doneAngles, setDoneAngles] = useState<string[]>([])
 
   // Гейт: страница только для клиентов тренера
   const { data: meData, isLoading: meLoading } = useQuery({
@@ -161,10 +163,11 @@ export const ProgressPage = () => {
   const photoUploadMut = useMutation({
     mutationFn: ({ file, angle }: { file: File; angle: 'FRONT' | 'SIDE' | 'BACK' }) =>
       clientsApi.addPhoto(file, angle),
-    onSuccess: () => {
+    onSuccess: (_res, vars) => {
       haptic.notify('success')
       qc.invalidateQueries({ queryKey: ['client-photos'] })
       setUploadingAngle(null)
+      setDoneAngles((prev) => [...prev, vars.angle])
     },
     onError: () => {
       setUploadingAngle(null)
@@ -232,8 +235,6 @@ export const ProgressPage = () => {
   // Сравнение фото: по умолчанию самая старая ↔ самая свежая дата
   const cmpDayA = photoDays.find((d) => d.day === photoCmpA) || photoDays[photoDays.length - 1]
   const cmpDayB = photoDays.find((d) => d.day === photoCmpB) || photoDays[0]
-  const today = new Date().toISOString().slice(0, 10)
-  const todayGroup = photoDays.find((d) => d.day === today)
 
   return (
     <div className="p-4 space-y-3 pb-8">
@@ -326,28 +327,36 @@ export const ProgressPage = () => {
             </button>
           </div>
           <p className="text-xs text-text-secondary mb-3">
-            Сделай фото в трёх ракурсах. Они сохранятся приватно — увидите только ты и тренер.
+            Сделай фото в трёх ракурсах. Они сохранятся приватно — увидите только ты и
+            тренер. Новое фото за сегодня заменит прежнее.
           </p>
           <div className="grid grid-cols-3 gap-2">
             {ANGLES.map((a) => {
-              const todayPhoto = todayGroup?.byAngle[a.key]
+              const done = doneAngles.includes(a.key)
               return (
                 <button
                   key={a.key}
                   onClick={() => pickPhoto(a.key)}
-                  className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border border-dashed border-gray-300 flex flex-col items-center justify-center"
+                  className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border ${
+                    done
+                      ? 'bg-primary/10 border-primary/40'
+                      : 'bg-gray-100 border-dashed border-gray-300'
+                  }`}
                 >
-                  {todayPhoto ? (
-                    <AuthImage
-                      src={clientsApi.photoFileUrl(todayPhoto.id)}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  ) : uploadingAngle === a.key ? (
+                  {uploadingAngle === a.key ? (
                     <span className="text-xs text-text-secondary animate-pulse">
                       Загрузка…
                     </span>
+                  ) : done ? (
+                    <>
+                      <span className="text-2xl">✅</span>
+                      <span className="text-xs text-primary font-medium">Готово</span>
+                    </>
                   ) : (
-                    <Camera className="w-6 h-6 text-gray-400" />
+                    <>
+                      <Camera className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-text-secondary">Сделать фото</span>
+                    </>
                   )}
                   <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5">
                     {a.label}
@@ -361,10 +370,11 @@ export const ProgressPage = () => {
         <button
           onClick={() => {
             haptic.selection()
+            setDoneAngles([])
             setShowPhotoForm(true)
             setShowForm(false)
           }}
-          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium active:scale-[0.98] transition-transform"
         >
           <Camera className="w-5 h-5" />
           Добавить фото отчёт
