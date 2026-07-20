@@ -411,9 +411,10 @@ export const ClientCardPage = () => {
             <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="text-xs text-gray-500 uppercase border-b">
-                  <th className="text-left py-2 pr-3">Дата</th>
+                  {/* Дата забирает свободное место — числовые колонки жмутся к содержимому */}
+                  <th className="text-left py-2 pr-3 w-full">Дата</th>
                   {FIELDS.map((f) => (
-                    <th key={f.key} className="text-right py-2 px-2">
+                    <th key={f.key} className="text-right py-2 px-3 whitespace-nowrap">
                       {f.label}
                     </th>
                   ))}
@@ -440,7 +441,7 @@ export const ClientCardPage = () => {
                         const delta =
                           v != null && pv != null ? Math.round((v - pv) * 10) / 10 : null
                         return (
-                          <td key={f.key} className="text-right py-2.5 px-2 whitespace-nowrap">
+                          <td key={f.key} className="text-right py-2.5 px-3 whitespace-nowrap">
                             {v != null ? (
                               <>
                                 <span className="font-medium">{v}</span>

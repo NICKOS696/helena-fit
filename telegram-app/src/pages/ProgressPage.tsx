@@ -275,8 +275,6 @@ export const ProgressPage = () => {
   // Сравнение фото
   const [photoCmpA, setPhotoCmpA] = useState('')
   const [photoCmpB, setPhotoCmpB] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const pendingAngle = useRef<Angle>('FRONT')
   // Выбранные (ещё не загруженные) фото по ракурсам — грузим по кнопке «Сохранить»
   const [pendingPhotos, setPendingPhotos] = useState<
     Partial<Record<Angle, { file: File; url: string }>>
@@ -401,16 +399,11 @@ export const ProgressPage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-feedback'] }),
   })
 
-  const pickPhoto = (angle: Angle) => {
-    pendingAngle.current = angle
-    fileInputRef.current?.click()
-  }
-
-  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Выбор файла для конкретного ракурса (у каждого слота свой input)
+  const onPickAngle = (angle: Angle, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const angle = pendingAngle.current
     setPendingPhotos((prev) => {
       const old = prev[angle]
       if (old) URL.revokeObjectURL(old.url)
@@ -477,14 +470,6 @@ export const ProgressPage = () => {
       </button>
 
       <h1 className="text-2xl font-bold text-text-primary mb-1">Мой прогресс</h1>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={onFilePicked}
-      />
 
       {/* ===== 1–2. Кнопки добавления в одну строку ===== */}
       {!showForm && !showPhotoForm && (
@@ -564,22 +549,29 @@ export const ProgressPage = () => {
             Фото отчёт — {new Date().toLocaleDateString('ru-RU')}
           </p>
           <p className="text-xs text-text-secondary mb-3">
-            Сделай фото в трёх ракурсах и нажми «Сохранить». Фото приватные — увидите
+            Сделай фото в четырёх ракурсах и нажми «Сохранить». Фото приватные — увидите
             только ты и тренер. Новые фото за сегодня заменят прежние.
           </p>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {ANGLES.map((a) => {
               const pending = pendingPhotos[a.key]
               return (
-                <button
+                // Свой input на каждый ракурс — исключает подстановку файла
+                // от соседнего слота (общий input путал левый/правый бок)
+                <label
                   key={a.key}
-                  onClick={() => pickPhoto(a.key)}
-                  className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border ${
+                  className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border cursor-pointer ${
                     pending
                       ? 'border-primary/40'
                       : 'bg-gray-100 border-dashed border-gray-300'
                   }`}
                 >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => onPickAngle(a.key, e)}
+                  />
                   {pending ? (
                     <img
                       src={pending.url}
@@ -592,10 +584,11 @@ export const ProgressPage = () => {
                       <span className="text-xs text-text-secondary">Сделать фото</span>
                     </>
                   )}
-                  <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5">
+                  <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5 truncate px-1">
                     {a.label}
+                    {pending?.file?.name ? ` · ${pending.file.name.slice(0, 12)}` : ''}
                   </span>
-                </button>
+                </label>
               )
             })}
           </div>
@@ -620,55 +613,6 @@ export const ProgressPage = () => {
             </button>
           </div>
         </Card>
-      )}
-
-      {/* ===== Впечатления от тренировок ===== */}
-      {showFbForm ? (
-        <Card>
-          <p className="text-text-primary mb-2">Впечатление от тренировок</p>
-          <p className="text-xs text-text-secondary mb-3">
-            Как прошли тренировки? Что было тяжело, что понравилось, как самочувствие —
-            это увидит тренер.
-          </p>
-          <textarea
-            value={fbText}
-            onChange={(e) => setFbText(e.target.value)}
-            rows={4}
-            placeholder="Например: спина хорошо зашла, но приседы тяжеловато — колено побаливает"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50 mb-3"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => fbAddMut.mutate()}
-              disabled={fbAddMut.isPending || !fbText.trim()}
-              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
-            >
-              {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
-            </button>
-            <button
-              onClick={() => {
-                setFbText('')
-                setShowFbForm(false)
-              }}
-              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
-            >
-              Отмена
-            </button>
-          </div>
-        </Card>
-      ) : (
-        <button
-          onClick={() => {
-            haptic.selection()
-            setShowFbForm(true)
-            setShowForm(false)
-            setShowPhotoForm(false)
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
-        >
-          <MessageSquare className="w-5 h-5" />
-          Впечатление от тренировок
-        </button>
       )}
 
       {/* ===== 3. Сравнить замеры ===== */}
@@ -888,35 +832,6 @@ export const ProgressPage = () => {
         )
       )}
 
-      {/* ===== История впечатлений ===== */}
-      {feedback.length > 0 && (
-        <Fold
-          icon={<MessageSquare className="w-5 h-5 text-primary" />}
-          title="Мои впечатления"
-          count={feedback.length}
-        >
-          <div className="space-y-2">
-            {feedback.map((f) => (
-              <div key={f.id} className="border border-gray-100 rounded-xl p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-text-primary mb-1">{fmtDate(f.createdAt)}</p>
-                    <p className="text-sm text-text-primary whitespace-pre-line">{f.text}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (confirm('Удалить это впечатление?')) fbDelMut.mutate(f.id)
-                    }}
-                    className="text-gray-300 shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Fold>
-      )}
 
       {/* ===== 6. История фото отчётов ===== */}
       {photoDays.length > 0 && (
@@ -958,6 +873,87 @@ export const ProgressPage = () => {
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Fold>
+      )}
+
+      {/* Отдельный блок: впечатления от тренировок */}
+      <div className="pt-2" />
+      {/* ===== Впечатления от тренировок ===== */}
+      {showFbForm ? (
+        <Card>
+          <p className="text-text-primary mb-2">Впечатление от тренировок</p>
+          <p className="text-xs text-text-secondary mb-3">
+            Как прошли тренировки? Что было тяжело, что понравилось, как самочувствие —
+            это увидит тренер.
+          </p>
+          <textarea
+            value={fbText}
+            onChange={(e) => setFbText(e.target.value)}
+            rows={4}
+            placeholder="Например: спина хорошо зашла, но приседы тяжеловато — колено побаливает"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50 mb-3"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => fbAddMut.mutate()}
+              disabled={fbAddMut.isPending || !fbText.trim()}
+              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+            >
+              {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
+            </button>
+            <button
+              onClick={() => {
+                setFbText('')
+                setShowFbForm(false)
+              }}
+              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
+            >
+              Отмена
+            </button>
+          </div>
+        </Card>
+      ) : (
+        <button
+          onClick={() => {
+            haptic.selection()
+            setShowFbForm(true)
+            setShowForm(false)
+            setShowPhotoForm(false)
+          }}
+          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
+        >
+          <MessageSquare className="w-5 h-5" />
+          Впечатление от тренировок
+        </button>
+      )}
+
+      {/* ===== История впечатлений ===== */}
+      {feedback.length > 0 && (
+        <Fold
+          icon={<MessageSquare className="w-5 h-5 text-primary" />}
+          title="Мои впечатления"
+          count={feedback.length}
+        >
+          <div className="space-y-2">
+            {feedback.map((f) => (
+              <div key={f.id} className="border border-gray-100 rounded-xl p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-text-primary mb-1">{fmtDate(f.createdAt)}</p>
+                    <p className="text-sm text-text-primary whitespace-pre-line">{f.text}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить это впечатление?')) fbDelMut.mutate(f.id)
+                    }}
+                    className="text-gray-300 shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
