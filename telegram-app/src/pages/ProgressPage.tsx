@@ -15,24 +15,27 @@ import {
   Camera,
   Image,
   History,
+  MessageSquare,
   X,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-// Поля замера: ключ, подпись, единица
-const FIELDS: { key: string; label: string; unit: string }[] = [
-  { key: 'weight', label: 'Вес', unit: 'кг' },
-  { key: 'chest', label: 'Грудь', unit: 'см' },
-  { key: 'waist', label: 'Талия', unit: 'см' },
-  { key: 'belly', label: 'Живот', unit: 'см' },
-  { key: 'hips', label: 'Бёдра', unit: 'см' },
-  { key: 'thigh', label: 'Бедро', unit: 'см' },
-  { key: 'arm', label: 'Рука', unit: 'см' },
+// Поля замера: ключ, короткая подпись (история/сравнение), подпись в форме, единица
+const FIELDS: { key: string; label: string; form: string; unit: string }[] = [
+  { key: 'weight', label: 'Вес', form: 'Вес', unit: 'кг' },
+  { key: 'chest', label: 'Грудь', form: 'Объём груди', unit: 'см' },
+  { key: 'waist', label: 'Талия', form: 'Объём талии', unit: 'см' },
+  { key: 'belly', label: 'Живот', form: 'Объём живота (по самой выпуклой части)', unit: 'см' },
+  { key: 'hips', label: 'Бёдра', form: 'Объём бёдер (по самой выпуклой части)', unit: 'см' },
+  { key: 'thigh', label: 'Под ягодицами', form: 'Объём ног под ягодицами', unit: 'см' },
 ]
 
-const ANGLES: { key: 'FRONT' | 'SIDE' | 'BACK'; label: string }[] = [
+type Angle = 'FRONT' | 'SIDE_LEFT' | 'SIDE_RIGHT' | 'BACK'
+
+const ANGLES: { key: Angle; label: string }[] = [
   { key: 'FRONT', label: 'Вид спереди' },
-  { key: 'SIDE', label: 'Вид сбоку' },
+  { key: 'SIDE_LEFT', label: 'Сбоку слева' },
+  { key: 'SIDE_RIGHT', label: 'Сбоку справа' },
   { key: 'BACK', label: 'Вид сзади' },
 ]
 
@@ -43,7 +46,6 @@ const emptyForm = () => ({
   belly: '',
   hips: '',
   thigh: '',
-  arm: '',
 })
 
 const fmtDate = (d: string) =>
@@ -181,6 +183,86 @@ const ZoomableImage = ({ src, caption }: { src: string; caption?: string }) => {
   )
 }
 
+// Первичная анкета — заполняется один раз перед доступом к прогрессу
+const QuestionnaireForm = ({ onDone }: { onDone: () => void }) => {
+  const navigate = useNavigate()
+  const [fullName, setFullName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [health, setHealth] = useState('')
+
+  const mut = useMutation({
+    mutationFn: () => clientsApi.submitQuestionnaire({ fullName, birthDate, health }),
+    onSuccess: () => {
+      haptic.notify('success')
+      onDone()
+    },
+    onError: () => alert('Не удалось сохранить анкету. Проверьте поля и попробуйте ещё раз.'),
+  })
+
+  const canSubmit = fullName.trim().length > 2 && birthDate && health.trim().length > 0
+
+  return (
+    <div className="p-4 space-y-3 pb-8">
+      <button
+        onClick={() => navigate('/profile')}
+        className="flex items-center gap-1 text-sm text-text-secondary"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Профиль
+      </button>
+      <h1 className="text-2xl font-bold text-text-primary">Анкета</h1>
+      <Card>
+        <p className="text-sm text-text-secondary mb-4">
+          Заполняется один раз — чтобы тренер знал, с чем работает. Данные видит только
+          тренер 💚
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">
+              Фамилия Имя Отчество
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Иванова Мария Сергеевна"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Дата рождения</label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">
+              Состояние здоровья
+            </label>
+            <textarea
+              value={health}
+              onChange={(e) => setHealth(e.target.value)}
+              rows={5}
+              placeholder="Хронические заболевания, травмы, ограничения по нагрузке, беременность, аллергии, принимаемые препараты — всё, что важно знать тренеру"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50"
+            />
+          </div>
+        </div>
+        <button
+          onClick={() => mut.mutate()}
+          disabled={!canSubmit || mut.isPending}
+          className="w-full mt-4 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+        >
+          {mut.isPending ? 'Сохраняю…' : 'Сохранить и продолжить'}
+        </button>
+      </Card>
+    </div>
+  )
+}
+
 export const ProgressPage = () => {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -194,11 +276,14 @@ export const ProgressPage = () => {
   const [photoCmpA, setPhotoCmpA] = useState('')
   const [photoCmpB, setPhotoCmpB] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pendingAngle = useRef<'FRONT' | 'SIDE' | 'BACK'>('FRONT')
+  const pendingAngle = useRef<Angle>('FRONT')
   // Выбранные (ещё не загруженные) фото по ракурсам — грузим по кнопке «Сохранить»
   const [pendingPhotos, setPendingPhotos] = useState<
-    Partial<Record<'FRONT' | 'SIDE' | 'BACK', { file: File; url: string }>>
+    Partial<Record<Angle, { file: File; url: string }>>
   >({})
+  // Впечатления от тренировок
+  const [showFbForm, setShowFbForm] = useState(false)
+  const [fbText, setFbText] = useState('')
   // Полноэкранный просмотр: пара фото (сравнение) или одно фото (история)
   const [fullscreen, setFullscreen] = useState<{
     label: string
@@ -292,7 +377,31 @@ export const ProgressPage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-photos'] }),
   })
 
-  const pickPhoto = (angle: 'FRONT' | 'SIDE' | 'BACK') => {
+  // ===== Впечатления от тренировок =====
+  const { data: fbData } = useQuery({
+    queryKey: ['client-feedback'],
+    queryFn: () => clientsApi.getFeedback(),
+    enabled: !!isClient,
+  })
+  const feedback: any[] = fbData?.data || []
+
+  const fbAddMut = useMutation({
+    mutationFn: () => clientsApi.addFeedback(fbText),
+    onSuccess: () => {
+      haptic.notify('success')
+      qc.invalidateQueries({ queryKey: ['client-feedback'] })
+      setFbText('')
+      setShowFbForm(false)
+    },
+    onError: () => alert('Не удалось отправить. Попробуйте ещё раз.'),
+  })
+
+  const fbDelMut = useMutation({
+    mutationFn: (id: string) => clientsApi.deleteFeedback(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['client-feedback'] }),
+  })
+
+  const pickPhoto = (angle: Angle) => {
     pendingAngle.current = angle
     fileInputRef.current?.click()
   }
@@ -332,6 +441,11 @@ export const ProgressPage = () => {
         </Card>
       </div>
     )
+  }
+
+  // Анкета не заполнена — показываем её первой (обязательный шаг)
+  if (!meData?.data?.hasQuestionnaire) {
+    return <QuestionnaireForm onDone={() => qc.invalidateQueries({ queryKey: ['client-me'] })} />
   }
 
   const hasAnyValue = FIELDS.some((f) => (form as any)[f.key] !== '')
@@ -405,11 +519,11 @@ export const ProgressPage = () => {
           <p className="text-text-primary mb-3">
             Новый замер — {new Date().toLocaleDateString('ru-RU')}
           </p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="space-y-3 mb-3">
             {FIELDS.map((f) => (
               <div key={f.key}>
                 <label className="block text-xs text-text-secondary mb-1">
-                  {f.label}, {f.unit}
+                  {f.form}, {f.unit}
                 </label>
                 <input
                   type="number"
@@ -453,7 +567,7 @@ export const ProgressPage = () => {
             Сделай фото в трёх ракурсах и нажми «Сохранить». Фото приватные — увидите
             только ты и тренер. Новые фото за сегодня заменят прежние.
           </p>
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="grid grid-cols-2 gap-2 mb-3">
             {ANGLES.map((a) => {
               const pending = pendingPhotos[a.key]
               return (
@@ -506,6 +620,55 @@ export const ProgressPage = () => {
             </button>
           </div>
         </Card>
+      )}
+
+      {/* ===== Впечатления от тренировок ===== */}
+      {showFbForm ? (
+        <Card>
+          <p className="text-text-primary mb-2">Впечатление от тренировок</p>
+          <p className="text-xs text-text-secondary mb-3">
+            Как прошли тренировки? Что было тяжело, что понравилось, как самочувствие —
+            это увидит тренер.
+          </p>
+          <textarea
+            value={fbText}
+            onChange={(e) => setFbText(e.target.value)}
+            rows={4}
+            placeholder="Например: спина хорошо зашла, но приседы тяжеловато — колено побаливает"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50 mb-3"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => fbAddMut.mutate()}
+              disabled={fbAddMut.isPending || !fbText.trim()}
+              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+            >
+              {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
+            </button>
+            <button
+              onClick={() => {
+                setFbText('')
+                setShowFbForm(false)
+              }}
+              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
+            >
+              Отмена
+            </button>
+          </div>
+        </Card>
+      ) : (
+        <button
+          onClick={() => {
+            haptic.selection()
+            setShowFbForm(true)
+            setShowForm(false)
+            setShowPhotoForm(false)
+          }}
+          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
+        >
+          <MessageSquare className="w-5 h-5" />
+          Впечатление от тренировок
+        </button>
       )}
 
       {/* ===== 3. Сравнить замеры ===== */}
@@ -725,6 +888,36 @@ export const ProgressPage = () => {
         )
       )}
 
+      {/* ===== История впечатлений ===== */}
+      {feedback.length > 0 && (
+        <Fold
+          icon={<MessageSquare className="w-5 h-5 text-primary" />}
+          title="Мои впечатления"
+          count={feedback.length}
+        >
+          <div className="space-y-2">
+            {feedback.map((f) => (
+              <div key={f.id} className="border border-gray-100 rounded-xl p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-text-primary mb-1">{fmtDate(f.createdAt)}</p>
+                    <p className="text-sm text-text-primary whitespace-pre-line">{f.text}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm('Удалить это впечатление?')) fbDelMut.mutate(f.id)
+                    }}
+                    className="text-gray-300 shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Fold>
+      )}
+
       {/* ===== 6. История фото отчётов ===== */}
       {photoDays.length > 0 && (
         <Fold
@@ -736,7 +929,7 @@ export const ProgressPage = () => {
             {photoDays.map((d) => (
               <div key={d.day}>
                 <p className="text-xs text-text-primary mb-1">{fmtDate(d.date)}</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {ANGLES.map((a) => {
                     const p = d.byAngle[a.key]
                     if (!p)

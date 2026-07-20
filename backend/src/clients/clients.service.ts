@@ -34,7 +34,56 @@ export class ClientsService {
       isClient: true,
       startedAt: profile.startedAt,
       hasQuestionnaire: !!profile.questionnaire,
+      questionnaire: profile.questionnaire,
     };
+  }
+
+  /** Первичная анкета: ФИО, дата рождения, состояние здоровья (один раз). */
+  async submitQuestionnaire(
+    userId: string,
+    dto: { fullName: string; birthDate: string; health: string },
+  ) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.prisma.clientProfile.update({
+      where: { id: profile.id },
+      data: {
+        questionnaire: {
+          fullName: dto.fullName.trim(),
+          birthDate: dto.birthDate,
+          health: dto.health.trim(),
+          filledAt: new Date().toISOString(),
+        },
+      },
+      select: { id: true },
+    });
+  }
+
+  // ===== Впечатления от тренировок =====
+
+  async getMyFeedback(userId: string) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.prisma.clientFeedback.findMany({
+      where: { clientId: profile.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async addMyFeedback(userId: string, text: string) {
+    const profile = await this.requireActiveProfile(userId);
+    return this.prisma.clientFeedback.create({
+      data: { clientId: profile.id, text: text.trim() },
+    });
+  }
+
+  async deleteMyFeedback(userId: string, feedbackId: string) {
+    const profile = await this.requireActiveProfile(userId);
+    const f = await this.prisma.clientFeedback.findFirst({
+      where: { id: feedbackId, clientId: profile.id },
+    });
+    if (!f) throw new NotFoundException('Комментарий не найден');
+    await this.prisma.clientFeedback.delete({ where: { id: f.id } });
+    return { success: true };
   }
 
   /** Активный профиль клиента или 404 — общая проверка для клиентских операций. */
@@ -159,6 +208,7 @@ export class ClientsService {
           },
         },
         measurements: { orderBy: { date: 'desc' }, take: 500 },
+        feedback: { orderBy: { createdAt: 'desc' }, take: 100 },
       },
     });
     if (!profile) throw new NotFoundException('Клиент не найден');
@@ -249,7 +299,7 @@ export class ClientsService {
     byTrainer: boolean,
   ) {
     if (!file) throw new ConflictException('Файл не получен');
-    if (!['FRONT', 'SIDE', 'BACK'].includes(angle)) {
+    if (!['FRONT', 'SIDE_LEFT', 'SIDE_RIGHT', 'BACK'].includes(angle)) {
       throw new ConflictException('Неверный ракурс');
     }
     // Новое фото ракурса заменяет прежнее за тот же день (и его файл).

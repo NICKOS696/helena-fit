@@ -8,7 +8,8 @@ import type { ReactNode } from 'react'
 
 const ANGLES: { key: string; label: string }[] = [
   { key: 'FRONT', label: 'Вид спереди' },
-  { key: 'SIDE', label: 'Вид сбоку' },
+  { key: 'SIDE_LEFT', label: 'Сбоку слева' },
+  { key: 'SIDE_RIGHT', label: 'Сбоку справа' },
   { key: 'BACK', label: 'Вид сзади' },
 ]
 
@@ -19,8 +20,7 @@ const FIELDS: { key: string; label: string; unit: string }[] = [
   { key: 'waist', label: 'Талия', unit: 'см' },
   { key: 'belly', label: 'Живот', unit: 'см' },
   { key: 'hips', label: 'Бёдра', unit: 'см' },
-  { key: 'thigh', label: 'Бедро', unit: 'см' },
-  { key: 'arm', label: 'Рука', unit: 'см' },
+  { key: 'thigh', label: 'Под ягодицами', unit: 'см' },
 ]
 
 const fmtDate = (d?: string) =>
@@ -34,7 +34,6 @@ const emptyForm = () => ({
   belly: '',
   hips: '',
   thigh: '',
-  arm: '',
   note: '',
 })
 
@@ -261,6 +260,62 @@ export const ClientCardPage = () => {
           </button>
         )}
       </div>
+
+      {/* Анкета клиента */}
+      <div className="bg-white rounded-lg shadow p-5 mb-6">
+        <h2 className="font-bold mb-3">Анкета</h2>
+        {!client.questionnaire ? (
+          <p className="text-sm text-gray-500">
+            Клиент ещё не заполнил анкету — она появится, когда он откроет «Мой прогресс» в боте.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-gray-500">ФИО</p>
+              <p className="font-medium">{client.questionnaire.fullName}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Дата рождения / возраст</p>
+              <p className="font-medium">
+                {fmtDate(client.questionnaire.birthDate)}
+                {(() => {
+                  const b = new Date(client.questionnaire.birthDate)
+                  if (isNaN(b.getTime())) return null
+                  const t = new Date()
+                  let age = t.getFullYear() - b.getFullYear()
+                  const m = t.getMonth() - b.getMonth()
+                  if (m < 0 || (m === 0 && t.getDate() < b.getDate())) age--
+                  return <span className="text-primary"> · {age} лет</span>
+                })()}
+              </p>
+            </div>
+            <div className="sm:col-span-3">
+              <p className="text-xs text-gray-500">Состояние здоровья</p>
+              <p className="whitespace-pre-line">{client.questionnaire.health}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Впечатления от тренировок */}
+      {(client.feedback?.length || 0) > 0 && (
+        <div className="bg-white rounded-lg shadow p-5 mb-6">
+          <h2 className="font-bold mb-3">
+            Впечатления от тренировок{' '}
+            <span className="text-gray-400 font-normal text-sm">
+              ({client.feedback.length})
+            </span>
+          </h2>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {client.feedback.map((f: any) => (
+              <div key={f.id} className="border border-gray-100 rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-1">{fmtDate(f.createdAt)}</p>
+                <p className="text-sm whitespace-pre-line">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Заметки тренера */}
       <div className="bg-white rounded-lg shadow p-5 mb-6">

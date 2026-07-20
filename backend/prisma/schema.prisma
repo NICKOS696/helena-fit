@@ -408,6 +408,7 @@ model ClientProfile {
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   measurements ClientMeasurement[]
   photos       ClientPhoto[]
+  feedback     ClientFeedback[]
 
   @@map("client_profiles")
 }
@@ -458,8 +459,23 @@ model ClientPhoto {
 
 enum PhotoAngle {
   FRONT
-  SIDE
+  SIDE // устаревший (ранние тесты); в UI больше не используется
+  SIDE_LEFT
+  SIDE_RIGHT
   BACK
+}
+
+// Впечатления клиента от тренировок — комментарии для тренера
+model ClientFeedback {
+  id        String   @id @default(uuid())
+  clientId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  client ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, createdAt])
+  @@map("client_feedback")
 }
 
 // Ручной учёт оплат «мимо Payme» (рублёвая карта МИР).

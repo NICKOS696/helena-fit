@@ -16,6 +16,7 @@ import { Response } from 'express';
 import { ClientsService } from './clients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateMeasurementDto } from './dto/measurement.dto';
+import { QuestionnaireDto, FeedbackDto } from './dto/questionnaire.dto';
 
 // Клиентская зона в Mini App: доступ только авторизованным,
 // сервис дополнительно проверяет активный клиентский профиль.
@@ -28,6 +29,29 @@ export class ClientsController {
   @Get('me')
   async getMe(@Request() req) {
     return this.clientsService.getMyProfile(req.user.id);
+  }
+
+  /** Первичная анкета (один раз) */
+  @Post('me/questionnaire')
+  async submitQuestionnaire(@Request() req, @Body() dto: QuestionnaireDto) {
+    return this.clientsService.submitQuestionnaire(req.user.id, dto);
+  }
+
+  // ===== Впечатления от тренировок =====
+
+  @Get('me/feedback')
+  async getMyFeedback(@Request() req) {
+    return this.clientsService.getMyFeedback(req.user.id);
+  }
+
+  @Post('me/feedback')
+  async addMyFeedback(@Request() req, @Body() dto: FeedbackDto) {
+    return this.clientsService.addMyFeedback(req.user.id, dto.text);
+  }
+
+  @Delete('me/feedback/:id')
+  async deleteMyFeedback(@Request() req, @Param('id') id: string) {
+    return this.clientsService.deleteMyFeedback(req.user.id, id);
   }
 
   @Get('me/measurements')

@@ -117,8 +117,13 @@ export const clientsApi = {
   getMeasurements: () => api.get('/clients/me/measurements'),
   addMeasurement: (data: any) => api.post('/clients/me/measurements', data),
   deleteMeasurement: (id: string) => api.delete(`/clients/me/measurements/${id}`),
+  submitQuestionnaire: (data: { fullName: string; birthDate: string; health: string }) =>
+    api.post('/clients/me/questionnaire', data),
+  getFeedback: () => api.get('/clients/me/feedback'),
+  addFeedback: (text: string) => api.post('/clients/me/feedback', { text }),
+  deleteFeedback: (id: string) => api.delete(`/clients/me/feedback/${id}`),
   getPhotos: () => api.get('/clients/me/photos'),
-  addPhoto: (file: File, angle: 'FRONT' | 'SIDE' | 'BACK') => {
+  addPhoto: (file: File, angle: string) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('angle', angle)
