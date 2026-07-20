@@ -471,31 +471,79 @@ export const ProgressPage = () => {
 
       <h1 className="text-2xl font-bold text-text-primary mb-1">Мой прогресс</h1>
 
-      {/* ===== 1–2. Кнопки добавления в одну строку ===== */}
-      {!showForm && !showPhotoForm && (
-        <div className="flex gap-2">
+      {/* ===== Кнопки добавления: замеры + фото в ряд, впечатление под ними ===== */}
+      {!showForm && !showPhotoForm && !showFbForm && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                haptic.selection()
+                setShowForm(true)
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              Добавить замеры
+            </button>
+            <button
+              onClick={() => {
+                haptic.selection()
+                clearPending()
+                setShowPhotoForm(true)
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            >
+              <Camera className="w-4 h-4 shrink-0" />
+              Фото отчёт
+            </button>
+          </div>
           <button
             onClick={() => {
               haptic.selection()
-              setShowForm(true)
+              setShowFbForm(true)
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
           >
-            <Plus className="w-4 h-4 shrink-0" />
-            Добавить замеры
-          </button>
-          <button
-            onClick={() => {
-              haptic.selection()
-              clearPending()
-              setShowPhotoForm(true)
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-          >
-            <Camera className="w-4 h-4 shrink-0" />
-            Фото отчёт
+            <MessageSquare className="w-4 h-4 shrink-0" />
+            Впечатление от тренировок
           </button>
         </div>
+      )}
+
+      {/* Форма впечатления */}
+      {showFbForm && (
+        <Card>
+          <p className="text-text-primary mb-2">Впечатление от тренировок</p>
+          <p className="text-xs text-text-secondary mb-3">
+            Как прошли тренировки? Что было тяжело, что понравилось, как самочувствие —
+            это увидит тренер.
+          </p>
+          <textarea
+            value={fbText}
+            onChange={(e) => setFbText(e.target.value)}
+            rows={4}
+            placeholder="Например: спина хорошо зашла, но приседы тяжеловато — колено побаливает"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50 mb-3"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => fbAddMut.mutate()}
+              disabled={fbAddMut.isPending || !fbText.trim()}
+              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+            >
+              {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
+            </button>
+            <button
+              onClick={() => {
+                setFbText('')
+                setShowFbForm(false)
+              }}
+              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
+            >
+              Отмена
+            </button>
+          </div>
+        </Card>
       )}
 
       {/* Форма замера */}
@@ -878,57 +926,6 @@ export const ProgressPage = () => {
             ))}
           </div>
         </Fold>
-      )}
-
-      {/* Отдельный блок: впечатления от тренировок */}
-      <div className="pt-2" />
-      {/* ===== Впечатления от тренировок ===== */}
-      {showFbForm ? (
-        <Card>
-          <p className="text-text-primary mb-2">Впечатление от тренировок</p>
-          <p className="text-xs text-text-secondary mb-3">
-            Как прошли тренировки? Что было тяжело, что понравилось, как самочувствие —
-            это увидит тренер.
-          </p>
-          <textarea
-            value={fbText}
-            onChange={(e) => setFbText(e.target.value)}
-            rows={4}
-            placeholder="Например: спина хорошо зашла, но приседы тяжеловато — колено побаливает"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base outline-none focus:border-primary/50 mb-3"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => fbAddMut.mutate()}
-              disabled={fbAddMut.isPending || !fbText.trim()}
-              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
-            >
-              {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
-            </button>
-            <button
-              onClick={() => {
-                setFbText('')
-                setShowFbForm(false)
-              }}
-              className="px-5 bg-gray-100 text-text-secondary rounded-xl"
-            >
-              Отмена
-            </button>
-          </div>
-        </Card>
-      ) : (
-        <button
-          onClick={() => {
-            haptic.selection()
-            setShowFbForm(true)
-            setShowForm(false)
-            setShowPhotoForm(false)
-          }}
-          className="w-full flex items-center justify-center gap-2 bg-white border-2 border-primary text-primary py-3 rounded-xl font-medium active:scale-[0.98] transition-transform"
-        >
-          <MessageSquare className="w-5 h-5" />
-          Впечатление от тренировок
-        </button>
       )}
 
       {/* ===== История впечатлений ===== */}
