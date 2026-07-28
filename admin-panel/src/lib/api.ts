@@ -174,6 +174,7 @@ export const analyticsApi = {
     api.get('/analytics/sales', { params }),
   getEngagement: () => api.get('/analytics/engagement'),
   getBroadcasts: () => api.get('/analytics/broadcasts'),
+  getAds: () => api.get('/analytics/ads'),
   getManualPayments: () =>
     api.get('/analytics/manual-payments'),
   createManualPayment: (data: {

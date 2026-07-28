@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { initTelegram, getTelegramInitData } from '@/lib/telegram'
+import { initTelegram, getTelegramInitData, tg } from '@/lib/telegram'
 import { authApi, analyticsApi } from '@/lib/api'
 
 // Если приложение открыто по кнопке рассылки (?bc=<id>) — фиксируем переход
@@ -9,6 +9,23 @@ const trackBroadcastClick = () => {
     if (bc) {
       analyticsApi
         .trackView({ itemType: 'BROADCAST' as any, itemId: bc })
+        .catch(() => {})
+    }
+  } catch {
+    /* не мешаем запуску */
+  }
+}
+
+// Переход по рекламе: ссылка вида t.me/<bot>?startapp=<метка> кладёт метку
+// в start_param — фиксируем как ContentView типа AD (itemId = метка).
+const trackAdClick = () => {
+  try {
+    const sp =
+      (tg as any)?.initDataUnsafe?.start_param ||
+      new URLSearchParams(window.location.search).get('tgWebAppStartParam')
+    if (sp) {
+      analyticsApi
+        .trackView({ itemType: 'AD' as any, itemId: String(sp).slice(0, 64) })
         .catch(() => {})
     }
   } catch {
@@ -49,6 +66,7 @@ export const TelegramProvider = ({ children }: { children: React.ReactNode }) =>
           setUser(response.data.user)
           setIsAuthenticated(true)
           trackBroadcastClick()
+          trackAdClick()
         } catch (error) {
           // ВАЖНО: при сбое НЕ считаем пользователя авторизованным —
           // иначе он работал бы без токена (все запросы без доступа).

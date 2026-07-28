@@ -7,6 +7,7 @@ export enum ContentType {
   RECIPE = 'RECIPE',
   NEWS = 'NEWS',
   BROADCAST = 'BROADCAST',
+  AD = 'AD',
 }
 
 export class TrackViewDto {

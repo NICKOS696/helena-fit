@@ -111,6 +111,15 @@ export class AnalyticsController {
   }
 
   /**
+   * Переходы по рекламным меткам ?startapp= (для админов)
+   */
+  @Get('ads')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async getAds() {
+    return this.analyticsService.getAds();
+  }
+
+  /**
    * Продажи с фильтрами: период (from/to, даты YYYY-MM-DD по Ташкенту) и сборник
    */
   @Get('sales')

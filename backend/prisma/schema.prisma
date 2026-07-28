@@ -372,6 +372,7 @@ enum ContentType {
   RECIPE
   NEWS
   BROADCAST // переход по кнопке рассылки (itemId = Broadcast.id)
+  AD // переход по рекламе (itemId = метка из ?startapp=, напр. insta_reels5)
 }
 
 // Журнал рассылок: для аналитики «сколько перешло по кнопке».

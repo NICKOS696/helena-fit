@@ -140,6 +140,9 @@ export class AnalyticsService {
               coverImage: null,
             }
           : null;
+      } else if (itemType === 'AD') {
+        // itemId — метка рекламной кампании из ?startapp=
+        return { title: `Переход по рекламе: «${itemId}»`, coverImage: null };
       }
     } catch (error) {
       console.error('Error fetching content details:', error);
@@ -591,6 +594,43 @@ export class AnalyticsService {
       });
     }
     return result;
+  }
+
+  /**
+   * Переходы по рекламе (метки ?startapp= из объявлений):
+   * по каждой метке — уникальные люди, всего открытий, первый/последний переход.
+   */
+  async getAds() {
+    const views = await this.prisma.contentView.findMany({
+      where: { itemType: 'AD' as any },
+      select: { itemId: true, userId: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const byLabel = new Map<
+      string,
+      { users: Set<string>; total: number; firstAt: Date; lastAt: Date }
+    >();
+    for (const v of views) {
+      const rec = byLabel.get(v.itemId) || {
+        users: new Set<string>(),
+        total: 0,
+        firstAt: v.createdAt,
+        lastAt: v.createdAt,
+      };
+      rec.users.add(v.userId);
+      rec.total += 1;
+      rec.lastAt = v.createdAt;
+      byLabel.set(v.itemId, rec);
+    }
+    return Array.from(byLabel.entries())
+      .map(([label, r]) => ({
+        label,
+        uniqueUsers: r.users.size,
+        total: r.total,
+        firstAt: r.firstAt,
+        lastAt: r.lastAt,
+      }))
+      .sort((a, b) => +new Date(b.lastAt) - +new Date(a.lastAt));
   }
 
   /**

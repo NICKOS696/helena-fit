@@ -12,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
   UserX,
+  Megaphone,
 } from 'lucide-react'
 
 const formatMoney = (n: number) => (n || 0).toLocaleString('ru-RU') + ' сум'
@@ -234,6 +235,79 @@ const BroadcastsSection = () => {
           )}
           <p className="text-[11px] text-gray-400 mt-3">
             «Перешли» — уникальные пользователи, открывшие приложение по кнопке рассылки.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Секция «Реклама»: переходы по меткам ?startapp= из объявлений
+const AdsSection = () => {
+  const [open, setOpen] = useState(false)
+  const { data } = useQuery({
+    queryKey: ['analytics-ads'],
+    queryFn: () => analyticsApi.getAds(),
+    enabled: open,
+  })
+  const items: any[] = data?.data || []
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-8">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+          open ? 'border-b' : ''
+        }`}
+      >
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Megaphone className="w-6 h-6 text-primary" />
+          Реклама
+          {items.length > 0 && (
+            <span className="text-sm font-normal text-gray-400">({items.length})</span>
+          )}
+        </h2>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="p-6">
+          {items.length === 0 ? (
+            <p className="text-center text-gray-500 py-6">
+              Пока нет переходов по рекламе. Чтобы они считались, ссылка в объявлении
+              должна вести на t.me/Helena_Bodyfit_bot?startapp=метка
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {items.map((a) => (
+                <div
+                  key={a.label}
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 border border-gray-100 rounded-lg p-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{a.label}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(a.firstAt)} — {formatDate(a.lastAt)}
+                    </p>
+                  </div>
+                  <div className="flex gap-4 text-center flex-shrink-0">
+                    <div>
+                      <p className="text-sm font-bold text-primary">{a.uniqueUsers}</p>
+                      <p className="text-[11px] text-gray-500">человек</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{a.total}</p>
+                      <p className="text-[11px] text-gray-500">открытий</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-gray-400 mt-3">
+            «Человек» — уникальные пользователи, открывшие приложение по рекламной ссылке;
+            «открытий» — все переходы, включая повторные.
           </p>
         </div>
       )}
@@ -748,6 +822,9 @@ export const AnalyticsPage = () => {
 
       {/* Рассылки: доставка и переходы */}
       <BroadcastsSection />
+
+      {/* Реклама: переходы по меткам из объявлений */}
+      <AdsSection />
 
       {/* Популярный контент (коллекции) */}
       <CollapsibleSection
