@@ -452,13 +452,13 @@ export const RecipeCollectionPage = () => {
             ...presentCategories,
           ]
           return (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-wrap gap-2">
               {filterButtons.map((cat) => (
                 <button
                   key={cat.value}
                   onClick={() => selectCategory(cat.value)}
                   className={clsx(
-                    'px-3 py-2 rounded-xl text-sm font-medium border transition-colors',
+                    'px-3 py-2 rounded-xl text-sm font-medium border transition-colors whitespace-nowrap',
                     selectedCategory === cat.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-primary border-gray-200',
