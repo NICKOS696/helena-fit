@@ -452,13 +452,15 @@ export const RecipeCollectionPage = () => {
             ...presentCategories,
           ]
           return (
-            <div className="flex flex-wrap gap-2">
+            // Одна строка-лента: чипы по ширине текста, лишние уезжают в
+            // горизонтальный скролл (от края до края, скроллбар скрыт)
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
               {filterButtons.map((cat) => (
                 <button
                   key={cat.value}
                   onClick={() => selectCategory(cat.value)}
                   className={clsx(
-                    'px-3 py-2 rounded-xl text-sm font-medium border transition-colors whitespace-nowrap',
+                    'shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap',
                     selectedCategory === cat.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-primary border-gray-200',

@@ -98,3 +98,12 @@ body {
   margin-bottom: 0.5em;
   color: #1f2937;
 }
+
+/* Горизонтальные ленты чипов — скроллятся, но без видимого скроллбара */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

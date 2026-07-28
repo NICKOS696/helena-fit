@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, X, Copy, Check, CreditCard } from 'lucide-react'
+import { ArrowLeft, X, Copy, Check, CreditCard, MessageCircle } from 'lucide-react'
 import {
   RUBLE_CARD,
   RUBLE_CARD_HOLDER,
@@ -96,13 +96,27 @@ export const PaymentMethodSheet = ({
 
             <button
               onClick={() => setView('ruble')}
-              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 active:scale-[0.98] transition-transform"
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 mb-3 active:scale-[0.98] transition-transform"
             >
               <div className="text-left">
                 <p className="font-semibold text-text-primary">Карта МИР</p>
                 <p className="text-sm text-text-secondary">Рублёвой картой · {rub} ₽</p>
               </div>
               <CreditCard className="w-5 h-5 text-text-secondary" />
+            </button>
+
+            {/* Нет Payme / покупка в подарок — договоримся об оплате в переписке */}
+            <button
+              onClick={openSupport}
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 active:scale-[0.98] transition-transform"
+            >
+              <div className="text-left">
+                <p className="font-semibold text-text-primary">Другой способ</p>
+                <p className="text-sm text-text-secondary">
+                  Нет Payme или хотите купить в подарок? Напишите нам — подберём удобный вариант
+                </p>
+              </div>
+              <MessageCircle className="w-5 h-5 text-text-secondary shrink-0 ml-3" />
             </button>
           </>
         ) : (
