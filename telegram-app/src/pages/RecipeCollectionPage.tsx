@@ -458,10 +458,10 @@ export const RecipeCollectionPage = () => {
                   key={cat.value}
                   onClick={() => selectCategory(cat.value)}
                   className={clsx(
-                    'px-3 py-2 rounded-xl text-sm font-medium transition-all',
+                    'px-3 py-2 rounded-xl text-sm font-medium border transition-colors',
                     selectedCategory === cat.value
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-white text-text-primary border border-gray-200',
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-white text-text-primary border-gray-200',
                   )}
                 >
                   {cat.label}
