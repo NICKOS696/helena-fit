@@ -21,6 +21,8 @@ export const WorkoutCollectionPage = () => {
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [showPayMethods, setShowPayMethods] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  // Фильтр по разделам (чипы как в сборнике рецептов): 'all' или id раздела
+  const [selectedSection, setSelectedSection] = useState<string>('all')
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -287,10 +289,37 @@ export const WorkoutCollectionPage = () => {
           </Card>
         )}
 
+        {/* Чипы-фильтры по разделам (как в сборнике рецептов).
+            «Все» — привычный список аккордеонов; выбор раздела показывает
+            только его, сразу развёрнутым. */}
+        {collection.hasAccess && collection.sections && collection.sections.length > 1 && (
+          <div className="flex flex-wrap gap-2">
+            {[{ id: 'all', title: 'Все' }, ...collection.sections].map((s: any) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  haptic.selection()
+                  setSelectedSection(s.id)
+                }}
+                className={clsx(
+                  'flex-1 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap',
+                  selectedSection === s.id
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'bg-white text-text-primary border-gray-200',
+                )}
+              >
+                {s.title}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Разделы - показываем если есть доступ */}
         {collection.hasAccess && collection.sections && collection.sections.length > 0 && (
           <div className="space-y-3">
-            {collection.sections.map((section: any) => {
+            {collection.sections
+              .filter((s: any) => selectedSection === 'all' || s.id === selectedSection)
+              .map((section: any) => {
               // Прогресс по видеоразделу: сколько тренировок отмечено выполненными
               const isVideoSection = section.type === 'VIDEO'
               const totalItems = section.items?.length || 0
@@ -298,6 +327,9 @@ export const WorkoutCollectionPage = () => {
                 ? (section.items || []).filter((i: any) => completedIds.has(i.id)).length
                 : 0
               const allDone = isVideoSection && totalItems > 0 && doneItems === totalItems
+              // Раздел, выбранный чипом, всегда развёрнут
+              const isExpanded =
+                selectedSection === section.id || expandedSections.has(section.id)
 
               return (
               <div key={section.id} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -330,13 +362,13 @@ export const WorkoutCollectionPage = () => {
                   </div>
                   <ChevronDown
                     className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
-                      expandedSections.has(section.id) ? 'rotate-180' : ''
+                      isExpanded ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
-                
+
                 {/* Контент раздела - показываем только если развёрнут */}
-                {expandedSections.has(section.id) && (
+                {isExpanded && (
                   <div className="p-4 bg-gray-50">
                     {section.type === 'VIDEO' ? (
                   // Видео тренировки
