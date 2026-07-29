@@ -16,6 +16,9 @@ model User {
   phoneNumber   String?
   photoUrl      String?
   status        UserStatus @default(ACTIVE)
+  // Доступность бота для пользователя: обновляется по результатам рассылок
+  tgStatus      TgBotStatus @default(OK)
+  tgStatusAt    DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -34,6 +37,13 @@ enum UserStatus {
   PENDING
   ACTIVE
   BLOCKED
+}
+
+// Доступность бота (по результатам рассылок)
+enum TgBotStatus {
+  OK      // сообщения доходят
+  BLOCKED // пользователь заблокировал бота
+  DELETED // аккаунт Telegram удалён/деактивирован
 }
 
 model WorkoutCollection {

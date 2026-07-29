@@ -75,6 +75,10 @@ export class AdminBroadcastService {
     let deleted = 0; // 400 chat not found / deactivated — удалили аккаунт или не запускали
     let other = 0; // прочие ошибки (таймауты и т.п.)
     const errors: string[] = [];
+    // Для пометок в «Пользователях»: кому дошло / кто заблокировал / кто удалён
+    const sentIds: string[] = [];
+    const blockedIds: string[] = [];
+    const deletedIds: string[] = [];
 
     for (const user of recipients) {
       try {
@@ -110,6 +114,7 @@ export class AdminBroadcastService {
 
         if (result.ok) {
           sent++;
+          sentIds.push(user.telegramId);
         } else if (result.error_code === 429) {
           // Лимит Telegram: ждём сколько попросили и повторяем один раз
           const wait = (result.parameters?.retry_after || 3) * 1000;
@@ -119,18 +124,22 @@ export class AdminBroadcastService {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           }).then((r) => r.json());
-          if (retry.ok) sent++;
-          else {
+          if (retry.ok) {
+            sent++;
+            sentIds.push(user.telegramId);
+          } else {
             other++;
             errors.push(`${user.telegramId}: ${retry.description || 'retry failed'}`);
           }
         } else if (result.error_code === 403) {
           blocked++;
+          blockedIds.push(user.telegramId);
         } else if (
           result.error_code === 400 &&
           /chat not found|deactivated/i.test(result.description || '')
         ) {
           deleted++;
+          deletedIds.push(user.telegramId);
         } else {
           other++;
           errors.push(`${user.telegramId}: ${result.description || 'unknown'}`);
@@ -156,6 +165,27 @@ export class AdminBroadcastService {
           data: { sent, blocked, deleted },
         })
         .catch(() => undefined);
+    }
+
+    // Пометки в «Пользователях»: кто заблокировал бота / удалил аккаунт.
+    // Успешная доставка снимает старую пометку (человек разблокировал).
+    if (!data.test) {
+      const now = new Date();
+      const mark = (ids: string[], tgStatus: 'OK' | 'BLOCKED' | 'DELETED') =>
+        ids.length
+          ? this.prisma.user.updateMany({
+              where: {
+                telegramId: { in: ids },
+                NOT: { tgStatus: tgStatus as any },
+              },
+              data: { tgStatus: tgStatus as any, tgStatusAt: now },
+            })
+          : Promise.resolve(null);
+      await Promise.all([
+        mark(blockedIds, 'BLOCKED'),
+        mark(deletedIds, 'DELETED'),
+        mark(sentIds, 'OK'),
+      ]).catch((e) => this.logger.error(`tgStatus update failed: ${e.message}`));
     }
 
     return {

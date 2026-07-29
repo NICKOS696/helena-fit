@@ -34,8 +34,8 @@ export const authApi = {
 }
 
 export const adminUsersApi = {
-  getUsers: (search?: string, status?: string) =>
-    api.get('/admin/users', { params: { search, status } }),
+  getUsers: (search?: string, status?: string, tgStatus?: string) =>
+    api.get('/admin/users', { params: { search, status, tgStatus } }),
   createUser: (telegramId: string) =>
     api.post('/admin/users', { telegramId }),
   getUserAccess: (id: string) =>

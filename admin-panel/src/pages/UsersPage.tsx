@@ -96,6 +96,8 @@ const UserLogModal = ({ user, onClose }: { user: any; onClose: () => void }) => 
 export const UsersPage = () => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  // Фильтр по доступности бота (пометки из рассылок)
+  const [tgStatus, setTgStatus] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAccessModal, setShowAccessModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
@@ -111,8 +113,8 @@ export const UsersPage = () => {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', search, status],
-    queryFn: () => adminUsersApi.getUsers(search, status),
+    queryKey: ['admin-users', search, status, tgStatus],
+    queryFn: () => adminUsersApi.getUsers(search, status, tgStatus),
   })
 
   const { data: workoutsData } = useQuery({
@@ -249,6 +251,16 @@ export const UsersPage = () => {
             <option value="PENDING">Ожидание</option>
             <option value="BLOCKED">Заблокированные</option>
           </select>
+          <select
+            value={tgStatus}
+            onChange={(e) => setTgStatus(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+          >
+            <option value="">Бот: все</option>
+            <option value="OK">Бот доступен</option>
+            <option value="BLOCKED">Заблокировали бота</option>
+            <option value="DELETED">Удалили аккаунт</option>
+          </select>
         </div>
       </div>
 
@@ -292,17 +304,29 @@ export const UsersPage = () => {
                     {user.username || '-'}
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        user.status === 'ACTIVE'
-                          ? 'bg-green-100 text-green-700'
-                          : user.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {user.status}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          user.status === 'ACTIVE'
+                            ? 'bg-green-100 text-green-700'
+                            : user.status === 'PENDING'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {user.status}
+                      </span>
+                      {user.tgStatus === 'BLOCKED' && (
+                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
+                          🚫 заблокировал бота
+                        </span>
+                      )}
+                      {user.tgStatus === 'DELETED' && (
+                        <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600">
+                          👻 удалил аккаунт
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {user._count.workoutAccess + user._count.recipeAccess} доступов
@@ -365,17 +389,29 @@ export const UsersPage = () => {
                     <p className="text-sm text-gray-500">@{user.username}</p>
                   )}
                 </div>
-                <span
-                  className={`flex-shrink-0 px-2 py-1 text-xs rounded-full ${
-                    user.status === 'ACTIVE'
-                      ? 'bg-green-100 text-green-700'
-                      : user.status === 'PENDING'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}
-                >
-                  {user.status}
-                </span>
+                <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      user.status === 'ACTIVE'
+                        ? 'bg-green-100 text-green-700'
+                        : user.status === 'PENDING'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {user.status}
+                  </span>
+                  {user.tgStatus === 'BLOCKED' && (
+                    <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
+                      🚫 блок бота
+                    </span>
+                  )}
+                  {user.tgStatus === 'DELETED' && (
+                    <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600">
+                      👻 аккаунт удалён
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t">
                 <span className="text-sm text-gray-500">

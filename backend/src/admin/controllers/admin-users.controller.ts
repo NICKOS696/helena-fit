@@ -20,8 +20,12 @@ export class AdminUsersController {
   constructor(private adminUsersService: AdminUsersService) {}
 
   @Get()
-  async getUsers(@Query('search') search?: string, @Query('status') status?: string) {
-    return this.adminUsersService.getUsers(search, status);
+  async getUsers(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('tgStatus') tgStatus?: string,
+  ) {
+    return this.adminUsersService.getUsers(search, status, tgStatus);
   }
 
   @Post()

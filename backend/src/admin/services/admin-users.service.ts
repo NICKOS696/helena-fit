@@ -5,7 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AdminUsersService {
   constructor(private prisma: PrismaService) {}
 
-  async getUsers(search?: string, status?: string) {
+  async getUsers(search?: string, status?: string, tgStatus?: string) {
     const where: any = {};
 
     if (search) {
@@ -18,6 +18,11 @@ export class AdminUsersService {
 
     if (status) {
       where.status = status;
+    }
+
+    // Фильтр по доступности бота (пометки из рассылок)
+    if (tgStatus) {
+      where.tgStatus = tgStatus;
     }
 
     return this.prisma.user.findMany({
