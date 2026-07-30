@@ -16,6 +16,15 @@ const trackBroadcastClick = () => {
   }
 }
 
+// Суффикс рекламной метки → стартовый экран. Метка insta_reels5_sb1
+// откроет карточку сборника №1; статистика при этом считает полную метку.
+const AD_ROUTES: Record<string, string> = {
+  sb1: '/recipes/1af56da3-1140-489a-966c-bbc74880dad3', // Сборник рецептов №1
+  sb2: '/recipes/f2c682f5-030f-4c3c-908a-6b27055e81a5', // Сборник рецептов №2
+  recipes: '/recipes',
+  workouts: '/workouts',
+}
+
 // Переход по рекламе: ссылка вида t.me/<bot>?startapp=<метка> кладёт метку
 // в start_param — фиксируем как ContentView типа AD (itemId = метка).
 const trackAdClick = () => {
@@ -27,6 +36,11 @@ const trackAdClick = () => {
       analyticsApi
         .trackView({ itemType: 'AD' as any, itemId: String(sp).slice(0, 64) })
         .catch(() => {})
+      // Роутинг по суффиксу метки: заберёт AdRedirect внутри роутера
+      const suffix = String(sp).split('_').pop() || ''
+      if (AD_ROUTES[suffix]) {
+        sessionStorage.setItem('ad_route', AD_ROUTES[suffix])
+      }
     }
   } catch {
     /* не мешаем запуску */
