@@ -26,11 +26,13 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // В env можно указать несколько origin через запятую
+  // (хелена-фит.рф и helena-fit.ru работают параллельно)
   app.enableCors({
     origin: [
-      process.env.TELEGRAM_APP_URL || 'http://localhost:5173',
-      process.env.ADMIN_PANEL_URL || 'http://localhost:5174',
-    ],
+      ...(process.env.TELEGRAM_APP_URL || 'http://localhost:5173').split(','),
+      ...(process.env.ADMIN_PANEL_URL || 'http://localhost:5174').split(','),
+    ].map((s) => s.trim()),
     credentials: true,
   });
 
