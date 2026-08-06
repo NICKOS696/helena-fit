@@ -15,10 +15,10 @@ export class UploadController {
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   uploadImage(@UploadedFile() file: Express.Multer.File) {
-    // Возвращаем полный URL для использования в админке и приложении
-    const baseUrl = process.env.BASE_URL || 'https://helena-fit.ru';
+    // Относительный путь: работает с любого домена (хелена-фит.рф,
+    // helena-fit.ru), браузер сам подставляет текущий origin
     return {
-      url: `${baseUrl}/uploads/${file.filename}`,
+      url: `/uploads/${file.filename}`,
       filename: file.filename,
     };
   }
