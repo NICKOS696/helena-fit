@@ -107,3 +107,14 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Telegram Desktop / широкие окна: приложение — «телефонная» колонка
+   по центру, как на смартфоне. На телефонах ничего не меняется. */
+@media (min-width: 640px) {
+  #root {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.08);
+  }
+}

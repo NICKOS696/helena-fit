@@ -652,7 +652,7 @@ export const RecipeCollectionPage = () => {
 
       {/* Компактные плавающие кнопки списка покупок (тест на Сборнике №2) */}
       {shoppingEnabled && collection.hasAccess && listIds.size > 0 && !showList && (
-        <div className="fixed right-3 bottom-24 z-30 flex items-center gap-2">
+        <div className="fixed right-3 sm:right-[calc(50%-240px+0.75rem)] bottom-24 z-30 flex items-center gap-2">
           <button
             onClick={clearList}
             className="bg-white/95 border border-gray-200 text-text-secondary text-xs px-3 py-1.5 rounded-full shadow active:scale-95 transition-transform"

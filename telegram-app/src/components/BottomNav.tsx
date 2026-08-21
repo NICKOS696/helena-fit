@@ -12,7 +12,7 @@ const navItems = [
 export const BottomNav = () => {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50"
+      className="fixed bottom-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[480px] bg-white border-t border-gray-200 z-50"
       style={{ paddingBottom: 'var(--app-safe-bottom)' }}
     >
       <div className="flex justify-around items-center h-16">
