@@ -81,7 +81,12 @@ export const applySafeAreaInsets = () => {
 export const initTelegram = () => {
   if (tg) {
     tg.ready()
-    tg.expand()
+    // Разворачиваем на весь экран только на телефонах: на десктопе
+    // expand() раздувает окно Mini App — оставляем компактное оконное
+    const platform = (tg as any).platform || ''
+    if (platform === 'ios' || platform === 'android') {
+      tg.expand()
+    }
 
     // Отключаем вертикальные свайпы (доступно с версии 7.7)
     if (typeof tg.disableVerticalSwipes === 'function') {
