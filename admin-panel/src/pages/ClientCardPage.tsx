@@ -155,7 +155,7 @@ export const ClientCardPage = () => {
     // грузим фото только когда раскрыта фото-секция или сравнение фото
     enabled: !!id && (photosOpen || cmpPhotoOpen),
   })
-  const photos: any[] = photosData?.data || []
+  const photos: any[] = useMemo(() => photosData?.data || [], [photosData])
   const photoDays = useMemo(() => {
     const map = new Map<string, any>()
     for (const p of photos) {
