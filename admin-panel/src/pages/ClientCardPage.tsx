@@ -408,72 +408,94 @@ export const ClientCardPage = () => {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            {/* Параметры — строками, замеры (даты) — колонками, свежий слева.
+                Первая колонка закреплена, чтобы на телефоне при прокрутке
+                было видно название параметра. */}
+            <table className="text-sm border-separate border-spacing-0">
               <thead>
-                <tr className="text-xs text-gray-500 uppercase border-b">
-                  {/* Дата забирает свободное место — числовые колонки жмутся к содержимому */}
-                  <th className="text-left py-2 pr-3 w-full">Дата</th>
-                  {FIELDS.map((f) => (
-                    <th key={f.key} className="text-right py-2 px-3 whitespace-nowrap">
-                      {f.label}
-                    </th>
-                  ))}
-                  <th className="py-2 pl-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {measurements.map((m, i) => {
-                  const prev = measurements[i + 1]
-                  return (
-                    <tr key={m.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {fmtDate(m.date)}
+                <tr className="text-xs text-gray-500 border-b">
+                  <th className="sticky left-0 z-10 bg-white text-left py-2 pr-3 border-b border-r border-gray-100 font-medium uppercase">
+                    Параметр
+                  </th>
+                  {measurements.map((m) => (
+                    <th
+                      key={m.id}
+                      className="text-right py-2 px-3 whitespace-nowrap border-b border-gray-100 font-medium align-top"
+                    >
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>{fmtDate(m.date)}</span>
                         {m.byTrainer && (
-                          <span className="ml-1 text-[10px] text-gray-400" title="внёс тренер">Т</span>
+                          <span className="text-[10px] text-gray-400" title="внёс тренер">Т</span>
                         )}
-                        {m.note && (
-                          <p className="text-xs text-gray-400 max-w-[160px] truncate">{m.note}</p>
-                        )}
-                      </td>
-                      {FIELDS.map((f) => {
-                        const v = m[f.key]
-                        const pv = prev?.[f.key]
-                        const delta =
-                          v != null && pv != null ? Math.round((v - pv) * 10) / 10 : null
-                        return (
-                          <td key={f.key} className="text-right py-2.5 px-3 whitespace-nowrap">
-                            {v != null ? (
-                              <>
-                                <span className="font-medium">{v}</span>
-                                {delta !== null && delta !== 0 && (
-                                  <span
-                                    className={`ml-1 text-xs ${
-                                      delta < 0 ? 'text-green-600' : 'text-red-500'
-                                    }`}
-                                  >
-                                    {delta > 0 ? `+${delta}` : delta}
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
-                        )
-                      })}
-                      <td className="py-2.5 pl-2 text-right">
                         <button
                           onClick={() => {
                             if (confirm('Удалить этот замер?')) delMut.mutate(m.id)
                           }}
                           className="text-gray-300 hover:text-red-500"
+                          title="Удалить замер"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {FIELDS.map((f) => (
+                  <tr key={f.key} className="hover:bg-gray-50">
+                    <td className="sticky left-0 z-10 bg-white py-2.5 pr-3 whitespace-nowrap border-b border-r border-gray-100">
+                      {f.label}
+                      <span className="ml-1 text-xs text-gray-400">{f.unit}</span>
+                    </td>
+                    {measurements.map((m, i) => {
+                      const prev = measurements[i + 1]
+                      const v = m[f.key]
+                      const pv = prev?.[f.key]
+                      const delta =
+                        v != null && pv != null ? Math.round((v - pv) * 10) / 10 : null
+                      return (
+                        <td
+                          key={m.id}
+                          className="text-right py-2.5 px-3 whitespace-nowrap border-b border-gray-100"
+                        >
+                          {v != null ? (
+                            <>
+                              <span className="font-medium">{v}</span>
+                              {delta !== null && delta !== 0 && (
+                                <span
+                                  className={`ml-1 text-xs ${
+                                    delta < 0 ? 'text-green-600' : 'text-red-500'
+                                  }`}
+                                >
+                                  {delta > 0 ? `+${delta}` : delta}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                {measurements.some((m) => m.note) && (
+                  <tr>
+                    <td className="sticky left-0 z-10 bg-white py-2.5 pr-3 whitespace-nowrap border-r border-gray-100 text-gray-500">
+                      Заметка
+                    </td>
+                    {measurements.map((m) => (
+                      <td
+                        key={m.id}
+                        className="py-2.5 px-3 text-xs text-gray-400 align-top max-w-[160px]"
+                        title={m.note || undefined}
+                      >
+                        {m.note ? <span className="line-clamp-3">{m.note}</span> : ''}
                       </td>
-                    </tr>
-                  )
-                })}
+                    ))}
+                  </tr>
+                )}
               </tbody>
             </table>
             <p className="text-xs text-gray-400 mt-2">
