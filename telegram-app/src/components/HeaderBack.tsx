@@ -6,13 +6,19 @@ import { tg } from '@/lib/telegram'
  * нативная кнопка «Назад» (см. useTelegramBackButton) — там стрелку не рисуем,
  * чтобы не было двух кнопок. В браузере и на старых клиентах стрелка остаётся.
  */
-export const HeaderBack = ({ onClick }: { onClick: () => void }) => {
+export const HeaderBack = ({
+  onClick,
+  className = '-ml-1 p-1',
+}: {
+  onClick: () => void
+  className?: string
+}) => {
   const w = tg as any
   const hasNativeBack =
     !!w?.initData && !!w?.BackButton && (w.isVersionAtLeast?.('6.1') ?? false)
   if (hasNativeBack) return null
   return (
-    <button onClick={onClick} aria-label="Назад" className="-ml-1 p-1">
+    <button onClick={onClick} aria-label="Назад" className={className}>
       <ArrowLeft className="w-6 h-6" />
     </button>
   )

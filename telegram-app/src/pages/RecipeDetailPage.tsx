@@ -9,7 +9,7 @@ import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
 import { isInShoppingList, toggleShoppingList } from '@/lib/shoppingList'
-import { Clock, ShoppingBag, Check } from 'lucide-react'
+import { Clock, Flame, ShoppingBag, Check } from 'lucide-react'
 import clsx from 'clsx'
 
 export const RecipeDetailPage = () => {
@@ -116,146 +116,142 @@ export const RecipeDetailPage = () => {
     .filter((s: string) => s.length > 0)
 
   return (
-    <div className="pb-4">
-      {/* Header */}
-      <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <HeaderBack onClick={() => navigate(-1)} />
-        <h1 className="text-lg font-bold text-text-primary">Рецепт</h1>
-      </div>
-
-      {/* Cover Image */}
-      {recipe.coverImage && (
-        <div className="relative">
+    <div>
+      {/* Фото во всю ширину; контент «наезжает» на него скруглённым листом */}
+      <div className="relative">
+        {recipe.coverImage ? (
           <img
             src={recipe.coverImage}
             alt={recipe.title}
-            className="w-full h-80 object-cover bg-gray-100"
+            className="w-full h-[22rem] object-cover bg-gray-100"
             style={{ objectPosition: recipe.coverImagePosition || 'center' }}
           />
-          {/* Favorite Button */}
-          <div className="absolute top-4 right-4">
-            <FavoriteButton
-              recipeId={recipe.id}
-              isFavorite={recipe.isFavorite || false}
-              size="md"
-            />
-          </div>
-          {/* Кнопка «в список покупок» (тест на Сборнике №2) */}
-          {shoppingEnabled && !recipe.locked && (
-            <button
-              onClick={toggleInList}
-              aria-label="В список покупок"
-              className={clsx(
-                'absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-colors',
-                inList ? 'bg-primary-light text-white' : 'bg-white/95 text-primary-dark',
-              )}
-            >
-              {inList ? <Check className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />}
-            </button>
-          )}
+        ) : (
+          <div className="w-full h-28 bg-gray-100" />
+        )}
+        {/* В Telegram «назад» — нативная кнопка; в браузере — эта */}
+        <HeaderBack
+          onClick={() => navigate(-1)}
+          className="absolute top-3 left-3 w-10 h-10 rounded-full bg-white/95 shadow-md flex items-center justify-center"
+        />
+        <div className="absolute top-3 right-3">
+          <FavoriteButton recipeId={recipe.id} isFavorite={recipe.isFavorite || false} size="md" />
         </div>
-      )}
+      </div>
 
-      <div className="p-4 space-y-4">
-        {/* Название — сразу под фото */}
+      <div className="relative -mt-6 rounded-t-[28px] bg-background px-4 pt-5 pb-4 space-y-4">
+        {/* Название и краткие факты */}
         <div>
-          <h2 className="text-[22px] font-bold leading-tight text-text-primary">{recipe.title}</h2>
-          {recipe.cookingTime && (
-            <div className="flex items-center gap-1.5 text-text-secondary mt-1.5">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">{recipe.cookingTime} мин</span>
+          <h1 className="text-[22px] font-bold leading-tight text-text-primary">{recipe.title}</h1>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {recipe.cookingTime && (
+              <span className="inline-flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 text-sm text-text-primary shadow-card">
+                <Clock className="w-4 h-4 text-primary" />
+                {recipe.cookingTime} мин
+              </span>
+            )}
+            {!!recipe.caloriesPerServing && (
+              <span className="inline-flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 text-sm text-text-primary shadow-card">
+                <Flame className="w-4 h-4 text-primary" />
+                {recipe.caloriesPerServing} ккал
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Пищевая ценность: переключатель — компактно в шапке карточки */}
+        <Card>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-base font-semibold text-text-primary">Пищевая ценность</h2>
+            <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium shrink-0">
+              <button
+                onClick={() => setNutritionMode('serving')}
+                className={clsx(
+                  'px-2.5 py-1.5 rounded-md transition-colors',
+                  nutritionMode === 'serving'
+                    ? 'bg-white text-text-primary shadow-sm'
+                    : 'text-text-secondary',
+                )}
+              >
+                Всё блюдо
+              </button>
+              <button
+                onClick={() => setNutritionMode('100g')}
+                className={clsx(
+                  'px-2.5 py-1.5 rounded-md transition-colors',
+                  nutritionMode === '100g'
+                    ? 'bg-white text-text-primary shadow-sm'
+                    : 'text-text-secondary',
+                )}
+              >
+                100 г
+              </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Nutrition Toggle */}
-        <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
-          <button
-            onClick={() => setNutritionMode('serving')}
-            className={clsx(
-              'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              nutritionMode === 'serving'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-text-secondary'
-            )}
-          >
-            на все блюдо
-          </button>
-          <button
-            onClick={() => setNutritionMode('100g')}
-            className={clsx(
-              'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              nutritionMode === '100g'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-text-secondary'
-            )}
-          >
-            на 100 грамм
-          </button>
-        </div>
-
-        {/* КБЖУ: калорийность крупно + пропорция Б/Ж/У */}
-        <div className="bg-white rounded-xl p-4 shadow-card">
-          <div className="flex items-baseline justify-between mb-3">
-            <span className="text-sm text-text-secondary">Калорийность</span>
-            <span className="text-2xl font-bold text-text-primary">
-              {nutrition.calories || 0}{' '}
-              <span className="text-base font-medium text-text-secondary">ккал</span>
-            </span>
+          <div className="flex items-baseline gap-1.5 mb-3">
+            <span className="text-3xl font-bold text-text-primary">{nutrition.calories || 0}</span>
+            <span className="text-sm text-text-secondary">ккал</span>
           </div>
 
           {macroTotal > 0 && (
-            <div className="flex h-2.5 rounded-full overflow-hidden mb-3">
-              <div className="bg-primary" style={{ width: `${macroPct(p)}%` }} />
-              <div className="bg-amber-400" style={{ width: `${macroPct(f)}%` }} />
-              <div className="bg-[#C4936F]" style={{ width: `${macroPct(c)}%` }} />
+            <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mb-3">
+              <div className="bg-primary rounded-full" style={{ width: `${macroPct(p)}%` }} />
+              <div className="bg-amber-400 rounded-full" style={{ width: `${macroPct(f)}%` }} />
+              <div className="bg-[#C4936F] rounded-full" style={{ width: `${macroPct(c)}%` }} />
             </div>
           )}
 
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
-                <span className="w-2 h-2 rounded-full bg-primary" />
-                Белки
+            {[
+              { label: 'Белки', value: p, dot: 'bg-primary' },
+              { label: 'Жиры', value: f, dot: 'bg-amber-400' },
+              { label: 'Углеводы', value: c, dot: 'bg-[#C4936F]' },
+            ].map((m) => (
+              <div key={m.label}>
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary mb-0.5">
+                  <span className={clsx('w-2 h-2 rounded-full', m.dot)} />
+                  {m.label}
+                </div>
+                <div className="text-base font-semibold text-text-primary">{m.value} г</div>
               </div>
-              <div className="text-base font-bold text-text-primary">{p} г</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                Жиры
-              </div>
-              <div className="text-base font-bold text-text-primary">{f} г</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
-                <span className="w-2 h-2 rounded-full bg-[#C4936F]" />
-                Углеводы
-              </div>
-              <div className="text-base font-bold text-text-primary">{c} г</div>
-            </div>
+            ))}
           </div>
-        </div>
+        </Card>
 
-        {/* Ингредиенты — аккуратными строками, с разделами */}
+        {/* Ингредиенты + кнопка «в список покупок» */}
         <Card>
-          <h3 className="text-base font-semibold text-gray-800 mb-3">Ингредиенты</h3>
-          <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h2 className="text-base font-semibold text-text-primary">Ингредиенты</h2>
+            {shoppingEnabled && !recipe.locked && (
+              <button
+                onClick={toggleInList}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0',
+                  inList ? 'bg-primary text-white' : 'bg-primary/10 text-primary-dark',
+                )}
+              >
+                {inList ? <Check className="w-3.5 h-3.5" /> : <ShoppingBag className="w-3.5 h-3.5" />}
+                {inList ? 'В списке покупок' : 'В список покупок'}
+              </button>
+            )}
+          </div>
+          <div className="space-y-3">
             {ingredientGroups.map((group: any, gi: number) => (
               <div key={gi}>
                 {group.title && (
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1 mt-1">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary mt-3 mb-0.5">
                     {group.title}
-                  </h4>
+                  </h3>
                 )}
                 <div>
                   {(group.items || []).map((ing: any, i: number) => (
                     <div
                       key={i}
-                      className="flex justify-between items-baseline gap-3 py-2 border-b border-gray-100 last:border-0"
+                      className="flex justify-between items-baseline gap-3 py-2.5 border-b border-gray-100 last:border-0"
                     >
-                      <span className="text-gray-700">{ing.name}</span>
-                      <span className="text-gray-500 text-right whitespace-nowrap text-sm">
+                      <span className="text-[15px] text-text-primary">{ing.name}</span>
+                      <span className="text-sm font-medium text-text-secondary text-right whitespace-nowrap">
                         {ing.amount}
                       </span>
                     </div>
@@ -270,14 +266,14 @@ export const RecipeDetailPage = () => {
             (например, у напитков/смузи способа приготовления нет). */}
         {steps.length > 0 && (
           <Card>
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Способ приготовления</h3>
-            <ol className="space-y-3">
+            <h2 className="text-base font-semibold text-text-primary mb-4">Приготовление</h2>
+            <ol className="space-y-4">
               {steps.map((step: string, i: number) => (
                 <li key={i} className="flex gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary-dark text-xs font-bold flex items-center justify-center">
                     {i + 1}
                   </span>
-                  <span className="text-gray-700 leading-relaxed">{step}</span>
+                  <span className="text-[15px] text-text-primary leading-relaxed">{step}</span>
                 </li>
               ))}
             </ol>
@@ -287,11 +283,8 @@ export const RecipeDetailPage = () => {
         {/* Польза — для смузи и напитков вместо способа приготовления */}
         {recipe.benefits && recipe.benefits.trim() && (
           <Card>
-            <h3 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              Польза
-              <span aria-hidden>🌱</span>
-            </h3>
-            <div className="whitespace-pre-line text-gray-700 leading-relaxed">
+            <h2 className="text-base font-semibold text-text-primary mb-3">Польза</h2>
+            <div className="whitespace-pre-line text-[15px] text-text-primary leading-relaxed">
               {recipe.benefits}
             </div>
           </Card>
