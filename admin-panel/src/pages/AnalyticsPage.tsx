@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { analyticsApi, adminRecipesApi, adminWorkoutsApi } from '@/lib/api'
 import {
-  BarChart3,
   ChevronDown,
   ShoppingBag,
   Banknote,
@@ -11,7 +10,6 @@ import {
   Send,
   TrendingUp,
   TrendingDown,
-  UserX,
   Megaphone,
 } from 'lucide-react'
 
@@ -19,43 +17,6 @@ const formatMoney = (n: number) => (n || 0).toLocaleString('ru-RU') + ' сум'
 
 // Курс для рублёвой карты (как в telegram-app/lib/payments.ts)
 const RUBLE_RATE = 155
-
-// Сворачиваемый блок: по умолчанию закрыт, раскрывается по клику на заголовок.
-const CollapsibleSection = ({
-  title,
-  icon,
-  count,
-  children,
-}: {
-  title: string
-  icon: ReactNode
-  count?: number
-  children: ReactNode
-}) => {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
-          open ? 'border-b' : ''
-        }`}
-      >
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          {icon}
-          {title}
-          {typeof count === 'number' && (
-            <span className="text-sm font-normal text-gray-400">({count})</span>
-          )}
-        </h2>
-        <ChevronDown
-          className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-      {open && <div className="p-6">{children}</div>}
-    </div>
-  )
-}
 
 const formatDate = (d?: string) => {
   if (!d) return ''
@@ -68,7 +29,149 @@ const formatDate = (d?: string) => {
   })
 }
 
-// Секция «Посещаемость»: уникальные посетители по дням, тренд, активные без покупок
+// «Сегодня» по Ташкенту (UTC+5) со сдвигом в днях, в формате ГГГГ-ММ-ДД
+const tashkentToday = (shiftDays = 0) => {
+  const d = new Date(Date.now() + 5 * 3600 * 1000 + shiftDays * 24 * 3600 * 1000)
+  return d.toISOString().slice(0, 10)
+}
+
+// Крупные числа коротко: 51 246 000 → «51,2 млн сум»
+const compactMoney = (n: number) =>
+  (n || 0) >= 1_000_000
+    ? ((n || 0) / 1_000_000).toFixed(1).replace('.', ',').replace(',0', '') + ' млн сум'
+    : formatMoney(n)
+
+// Плитка с одним показателем
+const Kpi = ({
+  label,
+  value,
+  hint,
+  tone = 'text-gray-900',
+}: {
+  label: string
+  value: ReactNode
+  hint?: string
+  tone?: string
+}) => (
+  <div className="bg-white rounded-2xl shadow p-4">
+    <p className="text-xs text-gray-500">{label}</p>
+    <p className={`text-2xl font-bold mt-1 leading-tight ${tone}`}>{value}</p>
+    {hint && <p className="text-[11px] text-gray-400 mt-1">{hint}</p>}
+  </div>
+)
+
+// Главные цифры: посетители за неделю, динамика, выручка и покупки за 30 дней
+const OverviewKpis = () => {
+  const { data: engData } = useQuery({
+    queryKey: ['analytics-engagement'],
+    queryFn: () => analyticsApi.getEngagement(),
+  })
+  const from = tashkentToday(-29)
+  const to = tashkentToday()
+  const { data: salesData } = useQuery({
+    queryKey: ['analytics-sales', from, to, ''],
+    queryFn: () => analyticsApi.getSales({ from, to, collectionId: undefined }),
+  })
+  const eng = engData?.data
+  const sales = salesData?.data
+  const trend: number | null = eng?.trendPct ?? null
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 md:mb-6">
+      <Kpi
+        label="Посетителей за 7 дней"
+        value={eng?.last7 ?? '—'}
+        hint={`неделей раньше — ${eng?.prev7 ?? '—'}`}
+      />
+      <Kpi
+        label="К прошлой неделе"
+        tone={trend === null ? 'text-gray-400' : trend >= 0 ? 'text-green-600' : 'text-red-500'}
+        value={
+          trend === null ? (
+            '—'
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              {trend >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              {trend > 0 ? `+${trend}` : trend}%
+            </span>
+          )
+        }
+        hint="рост или падение посещаемости"
+      />
+      <Kpi
+        label="Выручка за 30 дней"
+        tone="text-primary-dark"
+        value={sales ? compactMoney(sales.totalRevenue) : '—'}
+        hint="оплаты через Payme и вручную"
+      />
+      <Kpi
+        label="Покупок за 30 дней"
+        value={sales ? sales.count : '—'}
+        hint={`заходят, но не купили: ${eng?.activeNoAccess ?? '—'}`}
+      />
+    </div>
+  )
+}
+
+// Рейтинг по просмотрам: место, обложка, название, полоса и число
+const Ranking = ({ title, items }: { title: string; items: any[] }) => {
+  const [all, setAll] = useState(false)
+  const max = Math.max(1, ...items.map((i) => i.views || 0))
+  const shown = all ? items : items.slice(0, 10)
+  return (
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6 p-4 md:p-6">
+      <h2 className="text-lg md:text-xl font-bold mb-4">
+        {title}
+        <span className="text-sm font-normal text-gray-400 ml-2">по просмотрам</span>
+      </h2>
+      {items.length === 0 ? (
+        <p className="text-center text-gray-500 py-6">Пока нет данных</p>
+      ) : (
+        <div className="space-y-3">
+          {shown.map((item, i) => (
+            <div key={item.itemId} className="flex items-center gap-3">
+              <span className="w-5 text-sm font-semibold text-gray-400 text-right shrink-0">
+                {i + 1}
+              </span>
+              {item.coverImage ? (
+                <img
+                  src={item.coverImage}
+                  alt=""
+                  loading="lazy"
+                  className="w-10 h-10 rounded-lg object-cover shrink-0 bg-gray-100"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-gray-100 shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm font-medium text-gray-900 truncate">{item.title}</span>
+                  <span className="text-sm font-semibold text-gray-900 shrink-0">{item.views}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+                  <div
+                    className="h-full bg-primary/70 rounded-full"
+                    style={{ width: `${Math.max(2, ((item.views || 0) / max) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {items.length > 10 && (
+        <button
+          onClick={() => setAll((v) => !v)}
+          className="mt-4 text-sm font-medium text-primary"
+        >
+          {all ? 'Свернуть' : `Показать все (${items.length})`}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// Секция «Посещаемость»: уникальные посетители по дням за 30 дней
 const EngagementSection = () => {
   const { data } = useQuery({
     queryKey: ['analytics-engagement'],
@@ -77,55 +180,17 @@ const EngagementSection = () => {
   const eng = data?.data
   const byDay: { date: string; users: number }[] = eng?.byDay || []
   const maxUsers = Math.max(1, ...byDay.map((d) => d.users))
-  const trend: number | null = eng?.trendPct ?? null
 
   return (
-    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6 p-6">
-      <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-        <Activity className="w-6 h-6 text-primary" />
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6 p-4 md:p-6">
+      <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 mb-4">
+        <Activity className="w-5 h-5 text-primary" />
         Посещаемость
+        <span className="text-sm font-normal text-gray-400">за 30 дней</span>
       </h2>
 
-      {/* Плитки: за неделю, тренд, без покупок */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Уникальных за 7 дней</p>
-          <p className="text-xl font-bold">{eng?.last7 ?? '—'}</p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">К прошлой неделе</p>
-          {trend === null ? (
-            <p className="text-xl font-bold text-gray-400">—</p>
-          ) : (
-            <p
-              className={`text-xl font-bold flex items-center justify-center gap-1 ${
-                trend >= 0 ? 'text-green-600' : 'text-red-500'
-              }`}
-            >
-              {trend >= 0 ? (
-                <TrendingUp className="w-5 h-5" />
-              ) : (
-                <TrendingDown className="w-5 h-5" />
-              )}
-              {trend > 0 ? `+${trend}` : trend}%
-            </p>
-          )}
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            было {eng?.prev7 ?? '—'} → стало {eng?.last7 ?? '—'}
-          </p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-            <UserX className="w-3.5 h-3.5" />
-            Активны, но без покупок
-          </p>
-          <p className="text-xl font-bold text-amber-600">{eng?.activeNoAccess ?? '—'}</p>
-          <p className="text-[11px] text-gray-400 mt-0.5">заходили за 7 дней</p>
-        </div>
-      </div>
-
       {/* Заходы по дням (уникальные), 30 дней */}
-      <p className="text-xs text-gray-500 mb-2">Посетителей в день · последние 30 дней</p>
+      <p className="text-xs text-gray-500 mb-2">Уникальных посетителей в день</p>
       <div className="flex items-end gap-[2px] h-28">
         {byDay.map((d) => (
           <div
@@ -163,7 +228,7 @@ const EngagementSection = () => {
 
 // Секция «Рассылки»: доставка и переходы по кнопке
 const BroadcastsSection = () => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const { data } = useQuery({
     queryKey: ['analytics-broadcasts'],
     queryFn: () => analyticsApi.getBroadcasts(),
@@ -175,11 +240,11 @@ const BroadcastsSection = () => {
     <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+        className={`w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 ${
           open ? 'border-b' : ''
         }`}
       >
-        <h2 className="text-xl font-bold flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
           <Send className="w-6 h-6 text-primary" />
           Рассылки
           {items.length > 0 && (
@@ -191,7 +256,7 @@ const BroadcastsSection = () => {
         />
       </button>
       {open && (
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {items.length === 0 ? (
             <p className="text-center text-gray-500 py-6">
               Пока нет рассылок с учётом переходов. Переходы считаются у рассылок,
@@ -244,7 +309,7 @@ const BroadcastsSection = () => {
 
 // Секция «Реклама»: переходы по меткам ?startapp= из объявлений
 const AdsSection = () => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const { data } = useQuery({
     queryKey: ['analytics-ads'],
     queryFn: () => analyticsApi.getAds(),
@@ -256,11 +321,11 @@ const AdsSection = () => {
     <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+        className={`w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 ${
           open ? 'border-b' : ''
         }`}
       >
-        <h2 className="text-xl font-bold flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
           <Megaphone className="w-6 h-6 text-primary" />
           Реклама
           {items.length > 0 && (
@@ -272,7 +337,7 @@ const AdsSection = () => {
         />
       </button>
       {open && (
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {items.length === 0 ? (
             <p className="text-center text-gray-500 py-6">
               Пока нет переходов по рекламе. Чтобы они считались, ссылка в объявлении
@@ -316,11 +381,6 @@ const AdsSection = () => {
 }
 
 // Дата YYYY-MM-DD «сегодня» по Ташкенту (UTC+5)
-const tashkentToday = (shiftDays = 0) => {
-  const d = new Date(Date.now() + 5 * 3600 * 1000 + shiftDays * 24 * 3600 * 1000)
-  return d.toISOString().slice(0, 10)
-}
-
 const PERIODS = [
   { key: 'today', label: 'Сегодня' },
   { key: '7d', label: '7 дней' },
@@ -331,7 +391,7 @@ const PERIODS = [
 
 // Секция «Продажи»: фильтры по периоду и сборнику, итоги, разбивки, список.
 const SalesSection = () => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [period, setPeriod] = useState<(typeof PERIODS)[number]['key']>('all')
   const [customFrom, setCustomFrom] = useState(tashkentToday(-6))
   const [customTo, setCustomTo] = useState(tashkentToday())
@@ -372,11 +432,11 @@ const SalesSection = () => {
     <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+        className={`w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 ${
           open ? 'border-b' : ''
         }`}
       >
-        <h2 className="text-xl font-bold flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
           <ShoppingBag className="w-6 h-6 text-primary" />
           Продажи
         </h2>
@@ -386,7 +446,7 @@ const SalesSection = () => {
       </button>
 
       {open && (
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {/* Фильтры */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {PERIODS.map((p) => (
@@ -645,11 +705,11 @@ const ManualPaymentsSection = () => {
     <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
+        className={`w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 ${
           open ? 'border-b' : ''
         }`}
       >
-        <h2 className="text-xl font-bold flex items-center gap-2">
+        <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
           <Banknote className="w-6 h-6 text-primary" />
           Рублёвые оплаты
           {items.length > 0 && (
@@ -662,7 +722,7 @@ const ManualPaymentsSection = () => {
       </button>
 
       {open && (
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {/* Форма записи оплаты */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -793,7 +853,16 @@ const ManualPaymentsSection = () => {
   )
 }
 
+const TABS = [
+  { key: 'overview', label: 'Обзор' },
+  { key: 'sales', label: 'Продажи' },
+  { key: 'content', label: 'Контент' },
+  { key: 'promo', label: 'Продвижение' },
+] as const
+
 export const AnalyticsPage = () => {
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('overview')
+
   const { data: collectionsData } = useQuery({
     queryKey: ['analytics-collections'],
     queryFn: () => analyticsApi.getCollectionStats(),
@@ -804,109 +873,60 @@ export const AnalyticsPage = () => {
     queryFn: () => analyticsApi.getRecipeStats(),
   })
 
-  const collections = collectionsData?.data || []
-  const recipes = recipesData?.data || []
+  const collections: any[] = collectionsData?.data || []
+  const recipes: any[] = recipesData?.data || []
 
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-5 md:mb-8">Статистика</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Статистика</h1>
 
-      {/* Посещаемость: динамика, тренд, активные без покупок */}
-      <EngagementSection />
+      {/* Вкладки вместо длинной простыни разделов */}
+      <div className="flex p-1 bg-gray-100 rounded-xl mb-4 md:mb-6 md:inline-flex">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 md:flex-none md:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+              tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Продажи: фильтры, итоги, разбивки */}
-      <SalesSection />
+      {tab === 'overview' && (
+        <>
+          <OverviewKpis />
+          <EngagementSection />
+          <Ranking title="Топ рецептов" items={recipes.slice(0, 5)} />
+        </>
+      )}
 
-      {/* Рублёвые оплаты (ручной учёт) */}
-      <ManualPaymentsSection />
+      {tab === 'sales' && (
+        <>
+          {/* Продажи: фильтры, итоги, разбивки */}
+          <SalesSection />
+          {/* Рублёвые оплаты (ручной учёт) */}
+          <ManualPaymentsSection />
+        </>
+      )}
 
-      {/* Рассылки: доставка и переходы */}
-      <BroadcastsSection />
+      {tab === 'content' && (
+        <>
+          <Ranking title="Сборники" items={collections} />
+          <Ranking title="Рецепты" items={recipes} />
+        </>
+      )}
 
-      {/* Реклама: переходы по меткам из объявлений */}
-      <AdsSection />
-
-      {/* Популярный контент (коллекции) */}
-      <CollapsibleSection
-        title="Популярный контент"
-        icon={<BarChart3 className="w-6 h-6 text-primary" />}
-        count={collections.length}
-      >
-          {collections.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">Пока нет данных</p>
-          ) : (
-            <div className="space-y-4">
-              {collections.map((item: any, index: number) => (
-                <div
-                  key={item.itemId}
-                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="text-2xl font-bold text-gray-400 w-8">
-                    #{index + 1}
-                  </div>
-                  {item.coverImage && (
-                    <img
-                      src={item.coverImage}
-                      alt={item.title}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-bold">{item.title}</h3>
-                    <p className="text-sm text-gray-600">
-                      {item.itemType === 'WORKOUT_COLLECTION' && '🏋️ Тренировка'}
-                      {item.itemType === 'RECIPE_COLLECTION' && '🍽️ Рецепт'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">{item.views}</p>
-                    <p className="text-sm text-gray-600">просмотров</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-      </CollapsibleSection>
-
-      {/* Популярные рецепты */}
-      <CollapsibleSection
-        title="Популярные рецепты"
-        icon={<BarChart3 className="w-6 h-6 text-primary" />}
-        count={recipes.length}
-      >
-          {recipes.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">Пока нет данных</p>
-          ) : (
-            <div className="space-y-4">
-              {recipes.map((item: any, index: number) => (
-                <div
-                  key={item.itemId}
-                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="text-2xl font-bold text-gray-400 w-8">
-                    #{index + 1}
-                  </div>
-                  {item.coverImage && (
-                    <img
-                      src={item.coverImage}
-                      alt={item.title}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-bold">{item.title}</h3>
-                    <p className="text-sm text-gray-600">🍽️ Рецепт</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">{item.views}</p>
-                    <p className="text-sm text-gray-600">просмотров</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-      </CollapsibleSection>
-
+      {tab === 'promo' && (
+        <>
+          {/* Рассылки: доставка и переходы */}
+          <BroadcastsSection />
+          {/* Реклама: переходы по меткам из объявлений */}
+          <AdsSection />
+        </>
+      )}
     </div>
   )
 }
