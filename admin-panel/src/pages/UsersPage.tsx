@@ -432,11 +432,11 @@ export const UsersPage = () => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                <span className="text-sm text-gray-500">
-                  <span className="whitespace-nowrap">{accessLabel(user._count.workoutAccess + user._count.recipeAccess)}</span>
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <span className="block text-xs text-gray-400 mb-2">
+                  {accessLabel(user._count.workoutAccess + user._count.recipeAccess)}
                 </span>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between">
                   <button
                     onClick={() => handleOpenAccessModal(user)}
                     className="flex items-center gap-1 text-primary font-medium text-sm"
