@@ -34,7 +34,7 @@ const CollapsibleSection = ({
 }) => {
   const [open, setOpen] = useState(false)
   return (
-    <div className="bg-white rounded-lg shadow mb-8">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
         className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
@@ -80,7 +80,7 @@ const EngagementSection = () => {
   const trend: number | null = eng?.trendPct ?? null
 
   return (
-    <div className="bg-white rounded-lg shadow mb-8 p-6">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6 p-6">
       <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
         <Activity className="w-6 h-6 text-primary" />
         Посещаемость
@@ -172,7 +172,7 @@ const BroadcastsSection = () => {
   const items: any[] = data?.data || []
 
   return (
-    <div className="bg-white rounded-lg shadow mb-8">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
         className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
@@ -253,7 +253,7 @@ const AdsSection = () => {
   const items: any[] = data?.data || []
 
   return (
-    <div className="bg-white rounded-lg shadow mb-8">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
         className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
@@ -369,7 +369,7 @@ const SalesSection = () => {
   const maxDayRevenue = Math.max(1, ...byDay.map((d: any) => d.revenue))
 
   return (
-    <div className="bg-white rounded-lg shadow mb-8">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
         className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
@@ -642,7 +642,7 @@ const ManualPaymentsSection = () => {
   const rub = amountNum > 0 ? Math.round(amountNum / RUBLE_RATE) : 0
 
   return (
-    <div className="bg-white rounded-lg shadow mb-8">
+    <div className="bg-white rounded-2xl shadow mb-4 md:mb-6">
       <button
         onClick={() => setOpen((v) => !v)}
         className={`w-full p-6 flex items-center justify-between hover:bg-gray-50 ${
@@ -809,7 +809,7 @@ export const AnalyticsPage = () => {
 
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-3xl font-bold mb-8">📊 Статистика</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-5 md:mb-8">Статистика</h1>
 
       {/* Посещаемость: динамика, тренд, активные без покупок */}
       <EngagementSection />

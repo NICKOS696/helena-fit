@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/providers/AuthProvider'
 import { Users, Dumbbell, UtensilsCrossed, Newspaper, BarChart3, LogOut, Menu, X, Carrot, HeartHandshake } from 'lucide-react'
 import clsx from 'clsx'
@@ -22,6 +22,13 @@ export const DashboardLayout = () => {
   // Состояние выезжающего меню на мобильных. На десктопе (lg+) меню всегда видно.
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // При переходе на другую страницу — всегда наверх (раньше карточка клиента
+  // открывалась прокрученной туда, где был список)
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   // Тренер видит только свои разделы
   const visibleItems =
     role === 'MODERATOR'
@@ -29,7 +36,7 @@ export const DashboardLayout = () => {
       : navItems
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen bg-background lg:flex">
       {/* Затемнение под меню на мобильных */}
       {menuOpen && (
         <div
@@ -41,7 +48,7 @@ export const DashboardLayout = () => {
       {/* Боковое меню: статичное на lg+, выезжающее на мобильных */}
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0',
           menuOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -92,9 +99,9 @@ export const DashboardLayout = () => {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0">
         {/* Верхняя полоса с «гамбургером» — только на мобильных */}
-        <header className="lg:hidden bg-white shadow-sm flex items-center gap-3 p-4 sticky top-0 z-20">
+        <header className="lg:hidden bg-white/95 backdrop-blur border-b border-gray-100 flex items-center gap-3 px-4 py-3 sticky top-0 z-20">
           <button
             onClick={() => setMenuOpen(true)}
             className="text-gray-700"
@@ -102,10 +109,10 @@ export const DashboardLayout = () => {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-bold text-primary">Helena Fit</h1>
+          <h1 className="text-lg font-bold text-primary-dark">Helena Fit</h1>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main>
           {/* На широких мониторах контент не растягивается на всю ширину */}
           <div className="max-w-[1320px] mx-auto">
             <Outlet />

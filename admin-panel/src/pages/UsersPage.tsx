@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminUsersApi, adminWorkoutsApi, adminRecipesApi, analyticsApi, adminClientsApi } from '@/lib/api'
-import { Plus, Search, Edit, Trash2, X, History, HeartHandshake } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X, History, HeartHandshake, Check, ChevronRight } from 'lucide-react'
 
 const typeLabel: Record<string, string> = {
   WORKOUT_COLLECTION: '🏋️ Сборник тренировок',
@@ -185,11 +186,24 @@ export const UsersPage = () => {
     },
   })
 
+  // Кто уже клиент: userId → id карточки (чтобы сразу показать и открыть)
+  const navigate = useNavigate()
+  const { data: clientsData } = useQuery({
+    queryKey: ['admin-clients'],
+    queryFn: () => adminClientsApi.list(),
+  })
+  const clientByUser = useMemo(() => {
+    const map = new Map<string, string>()
+    ;((clientsData?.data as any[]) || []).forEach((c) => {
+      if (c.status === 'ACTIVE' && c.user?.id) map.set(c.user.id, c.id)
+    })
+    return map
+  }, [clientsData])
+
   const markClientMutation = useMutation({
     mutationFn: (userId: string) => adminClientsApi.mark(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-clients'] })
-      alert('Готово! Пользователь отмечен как клиент — у него в боте открылся раздел «Мой прогресс». Карточка — в разделе «Клиенты».')
     },
     onError: (e: any) =>
       alert(e?.response?.data?.message || 'Не удалось отметить клиентом'),
@@ -237,33 +251,43 @@ export const UsersPage = () => {
 
   return (
     <div className="p-4 md:p-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+      <div className="flex items-center justify-between gap-3 mb-4 md:mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Пользователи</h1>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90"
+          className="flex items-center justify-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium px-3.5 py-2 rounded-xl hover:bg-gray-50"
         >
-          <Plus className="w-5 h-5" />
-          Добавить пользователя
+          <Plus className="w-4 h-4" />
+          Добавить
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по Telegram ID или имени..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-            />
-          </div>
+      {/* Поиск — главное действие страницы */}
+      <div className="mb-4 md:mb-6 space-y-2 sm:space-y-0 sm:flex sm:gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Имя, @username или Telegram ID"
+            className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl shadow-sm text-[15px] focus:border-primary outline-none"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Очистить"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-gray-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+            className="h-10 sm:h-12 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:border-primary outline-none"
           >
             <option value="">Все статусы</option>
             <option value="ACTIVE">Активные</option>
@@ -273,7 +297,7 @@ export const UsersPage = () => {
           <select
             value={tgStatus}
             onChange={(e) => setTgStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+            className="h-10 sm:h-12 px-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:border-primary outline-none"
           >
             <option value="">Бот: все</option>
             <option value="OK">Бот доступен</option>
@@ -396,85 +420,112 @@ export const UsersPage = () => {
 
         {/* Мобильные: карточки пользователей */}
         <div className="md:hidden space-y-3">
-          {users.map((user: any) => (
-            <div key={user.id} className="bg-white rounded-lg shadow p-4">
-              <div className="flex justify-between items-start gap-3">
-                <div className="min-w-0">
-                  <p className="font-bold text-gray-900 truncate">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">ID: {user.telegramId}</p>
-                  {user.username && (
-                    <p className="text-sm text-gray-500">@{user.username}</p>
+          {users.length === 0 && (
+            <p className="text-center text-gray-500 py-10">Никого не нашлось</p>
+          )}
+          {users.map((user: any) => {
+            const clientId = clientByUser.get(user.id)
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Без имени'
+            return (
+              <div key={user.id} className="bg-white rounded-2xl shadow p-4">
+                <div className="flex items-center gap-3">
+                  {user.photoUrl ? (
+                    <img src={user.photoUrl} alt="" className="w-11 h-11 rounded-full shrink-0 object-cover" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary-dark font-semibold flex items-center justify-center shrink-0">
+                      {fullName.charAt(0).toUpperCase()}
+                    </div>
                   )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 truncate">{fullName}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.username ? `@${user.username} · ` : ''}ID {user.telegramId}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span className="text-xs text-gray-400">
+                        {accessLabel(user._count.workoutAccess + user._count.recipeAccess)}
+                      </span>
+                      {user.status !== 'ACTIVE' && (
+                        <span
+                          className={`px-2 py-0.5 text-[11px] rounded-full ${
+                            user.status === 'PENDING'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {STATUS_LABEL[user.status] || user.status}
+                        </span>
+                      )}
+                      {user.tgStatus === 'BLOCKED' && (
+                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-700">
+                          блок бота
+                        </span>
+                      )}
+                      {user.tgStatus === 'DELETED' && (
+                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-200 text-gray-600">
+                          аккаунт удалён
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      user.status === 'ACTIVE'
-                        ? 'bg-green-100 text-green-700'
-                        : user.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {STATUS_LABEL[user.status] || user.status}
-                  </span>
-                  {user.tgStatus === 'BLOCKED' && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
-                      🚫 блок бота
-                    </span>
-                  )}
-                  {user.tgStatus === 'DELETED' && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600">
-                      👻 аккаунт удалён
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <span className="block text-xs text-gray-400 mb-2">
-                  {accessLabel(user._count.workoutAccess + user._count.recipeAccess)}
-                </span>
-                <div className="flex items-center justify-between">
+
+                {/* Главное действие: сделать клиентом / открыть карточку клиента */}
+                {clientId ? (
                   <button
-                    onClick={() => handleOpenAccessModal(user)}
-                    className="flex items-center gap-1 text-primary font-medium text-sm"
+                    onClick={() => navigate(`/clients/${clientId}`)}
+                    className="mt-3 w-full h-11 rounded-xl bg-primary/10 text-primary-dark text-sm font-semibold flex items-center justify-center gap-1.5"
                   >
-                    <Edit className="w-4 h-4" />
-                    Доступ
+                    <Check className="w-4 h-4" />
+                    Клиент — открыть карточку
+                    <ChevronRight className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => setLogUser(user)}
-                    className="flex items-center gap-1 text-gray-500 font-medium text-sm"
-                  >
-                    <History className="w-4 h-4" />
-                    Журнал
-                  </button>
+                ) : (
                   <button
                     onClick={() => {
-                      if (confirm(`Сделать ${user.firstName || 'пользователя'} клиентом?`))
+                      if (confirm(`Сделать ${user.firstName || 'пользователя'} клиентом? У него в боте откроется раздел «Мой прогресс».`))
                         markClientMutation.mutate(user.id)
                     }}
-                    className="flex items-center gap-1 text-gray-500 font-medium text-sm"
+                    disabled={markClientMutation.isPending}
+                    className="mt-3 w-full h-11 rounded-xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     <HeartHandshake className="w-4 h-4" />
-                    Клиент
+                    Сделать клиентом
                   </button>
+                )}
+
+                <div className="flex items-center justify-between mt-2.5 text-sm">
+                  <div className="flex items-center gap-5">
+                    <button
+                      onClick={() => handleOpenAccessModal(user)}
+                      className="flex items-center gap-1.5 text-gray-600 font-medium py-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Доступ
+                    </button>
+                    <button
+                      onClick={() => setLogUser(user)}
+                      className="flex items-center gap-1.5 text-gray-600 font-medium py-1"
+                    >
+                      <History className="w-4 h-4" />
+                      Журнал
+                    </button>
+                  </div>
                   <button
                     onClick={() => {
                       if (confirm('Удалить пользователя?')) {
                         deleteMutation.mutate(user.id)
                       }
                     }}
-                    className="text-red-600"
+                    aria-label="Удалить пользователя"
+                    className="text-gray-300 hover:text-red-600 p-1"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-[18px] h-[18px]" />
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         </>
       )}
