@@ -133,10 +133,10 @@ export const CalorieCalculator = () => {
       </button>
 
       {open && (
-        <form onSubmit={calculate} className="px-4 pb-4 space-y-3">
+        <form onSubmit={calculate} className="px-4 pb-4 pt-1 space-y-3.5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-text-secondary mb-1">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
                 Возраст
               </label>
               <input
@@ -146,20 +146,20 @@ export const CalorieCalculator = () => {
                 max="100"
                 value={form.age}
                 onChange={(e) => setForm({ ...form, age: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-text-primary"
+                className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl text-text-primary focus:outline-none focus:border-primary focus:bg-white transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Пол</label>
-              <div className="flex gap-2">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">Пол</label>
+              <div className="flex h-11 p-1 bg-gray-100 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, gender: 'female' })}
-                  className={`flex-1 py-2 rounded-lg border text-sm ${
+                  className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
                     form.gender === 'female'
-                      ? 'bg-primary text-white border-primary'
-                      : 'border-gray-300 text-text-primary'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-text-secondary'
                   }`}
                 >
                   Жен
@@ -167,10 +167,10 @@ export const CalorieCalculator = () => {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, gender: 'male' })}
-                  className={`flex-1 py-2 rounded-lg border text-sm ${
+                  className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
                     form.gender === 'male'
-                      ? 'bg-primary text-white border-primary'
-                      : 'border-gray-300 text-text-primary'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-text-secondary'
                   }`}
                 >
                   Муж
@@ -181,7 +181,7 @@ export const CalorieCalculator = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-text-secondary mb-1">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
                 Вес (кг)
               </label>
               <input
@@ -192,12 +192,12 @@ export const CalorieCalculator = () => {
                 max="300"
                 value={form.weight}
                 onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-text-primary"
+                className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl text-text-primary focus:outline-none focus:border-primary focus:bg-white transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
                 Рост (см)
               </label>
               <input
@@ -207,22 +207,23 @@ export const CalorieCalculator = () => {
                 max="250"
                 value={form.height}
                 onChange={(e) => setForm({ ...form, height: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-text-primary"
+                className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl text-text-primary focus:outline-none focus:border-primary focus:bg-white transition-colors"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-text-secondary mb-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">
               Уровень активности
             </label>
+            <div className="relative">
             <select
               value={form.activity}
               onChange={(e) =>
                 setForm({ ...form, activity: parseFloat(e.target.value) as Activity })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-text-primary bg-white"
+              className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl text-text-primary focus:outline-none focus:border-primary focus:bg-white transition-colors appearance-none pr-9"
             >
               {activityOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -230,20 +231,22 @@ export const CalorieCalculator = () => {
                 </option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm text-text-secondary mb-1">Цель</label>
-            <div className="grid grid-cols-3 gap-2">
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Цель</label>
+            <div className="grid grid-cols-3 h-11 p-1 bg-gray-100 rounded-xl">
               {goalOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setForm({ ...form, goal: opt.value })}
-                  className={`py-2 rounded-lg border text-sm ${
+                  className={`rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors ${
                     form.goal === opt.value
-                      ? 'bg-primary text-white border-primary'
-                      : 'border-gray-300 text-text-primary'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-text-secondary'
                   }`}
                 >
                   {opt.label}
@@ -254,7 +257,7 @@ export const CalorieCalculator = () => {
 
           <button
             type="submit"
-            className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:opacity-90"
+            className="w-full bg-primary text-white py-3 rounded-xl font-semibold active:scale-[0.98] transition-transform"
           >
             Рассчитать
           </button>
@@ -262,7 +265,7 @@ export const CalorieCalculator = () => {
           {result && (
             <div className="mt-4">
               {/* Тот же стиль, что блок КБЖУ в рецепте */}
-              <div className="bg-white rounded-xl p-4 shadow-card">
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
                 <div className="flex items-baseline justify-between mb-3">
                   <span className="text-sm text-text-secondary">Калорийность</span>
                   <span className="text-2xl font-bold text-text-primary">
