@@ -103,12 +103,12 @@ const Avatar = ({ url, name }: { url?: string | null; name: string }) => {
         src={url}
         alt=""
         onError={() => setFailed(true)}
-        className="w-11 h-11 rounded-full shrink-0 object-cover bg-gray-100"
+        className="w-10 h-10 rounded-full shrink-0 object-cover bg-gray-100"
       />
     )
   }
   return (
-    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary-dark font-semibold flex items-center justify-center shrink-0">
+    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary-dark font-semibold flex items-center justify-center shrink-0">
       {name.charAt(0).toUpperCase()}
     </div>
   )
@@ -208,6 +208,8 @@ export const UsersPage = () => {
 
   // Кто уже клиент: userId → id карточки (чтобы сразу показать и открыть)
   const navigate = useNavigate()
+  // Какая строка списка раскрыта (мобильный вид)
+  const [openUserId, setOpenUserId] = useState<string | null>(null)
   const { data: clientsData } = useQuery({
     queryKey: ['admin-clients'],
     queryFn: () => adminClientsApi.list(),
@@ -439,108 +441,121 @@ export const UsersPage = () => {
           </table>
         </div>
 
-        {/* Мобильные: карточки пользователей */}
-        <div className="md:hidden space-y-3">
-          {users.length === 0 && (
+        {/* Мобильные: компактный список; действия раскрываются по нажатию на строку */}
+        <div className="md:hidden">
+          {users.length === 0 ? (
             <p className="text-center text-gray-500 py-10">Никого не нашлось</p>
-          )}
-          {users.map((user: any) => {
-            const clientId = clientByUser.get(user.id)
-            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Без имени'
-            return (
-              <div key={user.id} className="bg-white rounded-2xl shadow p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar url={user.photoUrl} name={fullName} />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-gray-900 truncate">{fullName}</p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {user.username ? `@${user.username} · ` : ''}ID {user.telegramId}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className="text-xs text-gray-400">
-                        {accessLabel(user._count.workoutAccess + user._count.recipeAccess)}
-                      </span>
-                      {user.status !== 'ACTIVE' && (
-                        <span
-                          className={`px-2 py-0.5 text-[11px] rounded-full ${
-                            user.status === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
+          ) : (
+            <div className="bg-white rounded-2xl shadow divide-y divide-gray-100 overflow-hidden">
+              {users.map((user: any) => {
+                const clientId = clientByUser.get(user.id)
+                const fullName =
+                  `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Без имени'
+                const accessCount = user._count.workoutAccess + user._count.recipeAccess
+                const open = openUserId === user.id
+                const pill =
+                  'inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-gray-100 text-sm text-gray-700 active:bg-gray-200'
+                return (
+                  <div key={user.id}>
+                    <button
+                      onClick={() => setOpenUserId(open ? null : user.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                    >
+                      <Avatar url={user.photoUrl} name={fullName} />
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[15px] font-medium text-gray-900 truncate">
+                            {fullName}
+                          </span>
+                          {clientId && (
+                            <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary-dark">
+                              клиент
+                            </span>
+                          )}
+                          {user.status !== 'ACTIVE' && (
+                            <span
+                              className={`shrink-0 px-1.5 py-0.5 text-[10px] rounded-full ${
+                                user.status === 'PENDING'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {STATUS_LABEL[user.status] || user.status}
+                            </span>
+                          )}
+                          {user.tgStatus === 'BLOCKED' && (
+                            <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded-full bg-red-100 text-red-700">
+                              блок бота
+                            </span>
+                          )}
+                          {user.tgStatus === 'DELETED' && (
+                            <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded-full bg-gray-200 text-gray-600">
+                              удалён
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {user.username ? `@${user.username} · ` : ''}ID {user.telegramId}
+                          {accessCount > 0 ? ` · ${accessLabel(accessCount)}` : ''}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        className={`w-4 h-4 text-gray-300 shrink-0 transition-transform ${
+                          open ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {open && (
+                      <div className="px-4 pb-3 pl-[68px] flex flex-wrap gap-2">
+                        <button onClick={() => handleOpenAccessModal(user)} className={pill}>
+                          <Edit className="w-4 h-4" />
+                          Доступ
+                        </button>
+                        <button onClick={() => setLogUser(user)} className={pill}>
+                          <History className="w-4 h-4" />
+                          Журнал
+                        </button>
+                        {clientId ? (
+                          <button onClick={() => navigate(`/clients/${clientId}`)} className={pill}>
+                            <Check className="w-4 h-4" />
+                            Карточка клиента
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Сделать ${user.firstName || 'пользователя'} клиентом? У него в боте откроется раздел «Мой прогресс».`,
+                                )
+                              )
+                                markClientMutation.mutate(user.id)
+                            }}
+                            disabled={markClientMutation.isPending}
+                            className={pill}
+                          >
+                            <HeartHandshake className="w-4 h-4" />
+                            В клиенты
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (confirm('Удалить пользователя?')) {
+                              deleteMutation.mutate(user.id)
+                            }
+                          }}
+                          aria-label="Удалить пользователя"
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 text-gray-400 active:bg-red-50 active:text-red-600"
                         >
-                          {STATUS_LABEL[user.status] || user.status}
-                        </span>
-                      )}
-                      {user.tgStatus === 'BLOCKED' && (
-                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-700">
-                          блок бота
-                        </span>
-                      )}
-                      {user.tgStatus === 'DELETED' && (
-                        <span className="px-2 py-0.5 text-[11px] rounded-full bg-gray-200 text-gray-600">
-                          аккаунт удалён
-                        </span>
-                      )}
-                    </div>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Главное действие: сделать клиентом / открыть карточку клиента */}
-                {clientId ? (
-                  <button
-                    onClick={() => navigate(`/clients/${clientId}`)}
-                    className="mt-3 w-full h-11 rounded-xl bg-primary/10 text-primary-dark text-sm font-semibold flex items-center justify-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" />
-                    Клиент — открыть карточку
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (confirm(`Сделать ${user.firstName || 'пользователя'} клиентом? У него в боте откроется раздел «Мой прогресс».`))
-                        markClientMutation.mutate(user.id)
-                    }}
-                    disabled={markClientMutation.isPending}
-                    className="mt-3 w-full h-11 rounded-xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    <HeartHandshake className="w-4 h-4" />
-                    Сделать клиентом
-                  </button>
-                )}
-
-                <div className="flex items-center justify-between mt-2.5 text-sm">
-                  <div className="flex items-center gap-5">
-                    <button
-                      onClick={() => handleOpenAccessModal(user)}
-                      className="flex items-center gap-1.5 text-gray-600 font-medium py-1"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Доступ
-                    </button>
-                    <button
-                      onClick={() => setLogUser(user)}
-                      className="flex items-center gap-1.5 text-gray-600 font-medium py-1"
-                    >
-                      <History className="w-4 h-4" />
-                      Журнал
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (confirm('Удалить пользователя?')) {
-                        deleteMutation.mutate(user.id)
-                      }
-                    }}
-                    aria-label="Удалить пользователя"
-                    className="text-gray-300 hover:text-red-600 p-1"
-                  >
-                    <Trash2 className="w-[18px] h-[18px]" />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+                )
+              })}
+            </div>
+          )}
         </div>
         </>
       )}
