@@ -420,6 +420,7 @@ model ClientProfile {
   measurements ClientMeasurement[]
   photos       ClientPhoto[]
   feedback     ClientFeedback[]
+  reminders    ClientReminder[]
 
   @@map("client_profiles")
 }
@@ -487,6 +488,21 @@ model ClientFeedback {
 
   @@index([clientId, createdAt])
   @@map("client_feedback")
+}
+
+// Журнал автоматических напоминаний клиенту (анкета/замеры/фотоотчёт).
+// Уникальность (клиент, вид, срок) защищает от повторной отправки.
+model ClientReminder {
+  id       String   @id @default(uuid())
+  clientId String
+  kind     String // ONBOARDING | MONTHLY_PRE | MONTHLY_DAY | MONTHLY_LATE
+  dueKey   String // номер шага (ONBOARDING) или дата срока замеров (MONTHLY_*)
+  sentAt   DateTime @default(now())
+
+  client ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, kind, dueKey])
+  @@map("client_reminders")
 }
 
 // Ручной учёт оплат «мимо Payme» (рублёвая карта МИР).

@@ -5,6 +5,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { ClientsService, PRIVATE_UPLOAD_DIR } from './clients.service';
 import { ClientsController } from './clients.controller';
 import { AdminClientsController } from './admin-clients.controller';
+import { ClientRemindersService } from './client-reminders.service';
 
 // Фото прогресса — только изображения, в приватное хранилище
 const ALLOWED_MIME: Record<string, string> = {
@@ -49,6 +50,6 @@ const ALLOWED_MIME: Record<string, string> = {
     }),
   ],
   controllers: [ClientsController, AdminClientsController],
-  providers: [ClientsService],
+  providers: [ClientsService, ClientRemindersService],
 })
 export class ClientsModule {}

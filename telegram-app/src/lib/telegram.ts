@@ -86,6 +86,16 @@ export const initTelegram = () => {
     const platform = (tg as any).platform || ''
     if (platform === 'ios' || platform === 'android') {
       tg.expand()
+      // Полноэкранный режим всегда, откуда бы ни открыли (кнопка меню в чате
+      // по умолчанию открывает «шторкой»). Доступно с Bot API 8.0.
+      try {
+        const w = tg as any
+        if (w.isVersionAtLeast?.('8.0') && !w.isFullscreen && typeof w.requestFullscreen === 'function') {
+          w.requestFullscreen()
+        }
+      } catch {
+        /* старый клиент — остаёмся в обычном режиме */
+      }
     }
 
     // Отключаем вертикальные свайпы (доступно с версии 7.7)
