@@ -312,7 +312,7 @@ export const ProgressPage = () => {
   })
   const measurements: any[] = useMemo(() => data?.data || [], [data])
 
-  // Сводка: дата следующих замеров (через месяц после последних) и изменения с первого замера
+  // Сводка: дата следующих замеров (через месяц после последних)
   const summary = useMemo(() => {
     const sorted = [...measurements].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -324,34 +324,21 @@ export const ProgressPage = () => {
         first: null,
         overdue: false,
         nextText: '',
-        sinceText: '',
         daysLeft: 0,
         progressPct: 0,
-        diffs: [] as { label: string; value: number; unit: string }[],
       }
     }
     const next = new Date(last.date)
     next.setMonth(next.getMonth() + 1)
     const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
-    const diff = (key: string) => {
-      // последнее и первое НЕпустое значение параметра
-      const vals = sorted.map((m) => m[key]).filter((v) => v != null)
-      if (vals.length < 2) return null
-      return Math.round((vals[vals.length - 1] - vals[0]) * 10) / 10
-    }
-    const diffs = FIELDS.map((f) => ({ label: f.label, value: diff(f.key), unit: f.unit })).filter(
-      (d) => d.value !== null,
-    ) as { label: string; value: number; unit: string }[]
     const total = next.getTime() - new Date(last.date).getTime()
     const passed = Date.now() - new Date(last.date).getTime()
     return {
       first,
-      sinceText: new Date(first.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
       progressPct: Math.min(100, Math.max(4, Math.round((passed / total) * 100))),
       overdue: daysLeft < 0,
       nextText: next.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
       daysLeft: Math.max(0, daysLeft),
-      diffs: sorted.length > 1 ? diffs : [],
     }
   }, [measurements])
 
@@ -616,31 +603,6 @@ export const ProgressPage = () => {
               Добавить замеры
             </button>
           </div>
-
-          {/* Результат с первого замера — мягкие плитки */}
-          {summary.diffs.length > 0 && (
-            <Card>
-              <p className="text-xs text-text-secondary">
-                Результат с {summary.sinceText}
-              </p>
-              <div className="grid grid-cols-3 gap-2 mt-2.5">
-                {summary.diffs.map((d) => (
-                  <div key={d.label} className="min-w-0 rounded-xl bg-primary/5 px-2.5 py-2.5">
-                    <p className="text-[11px] text-text-secondary truncate">{d.label}</p>
-                    <p
-                      className={`text-[15px] font-semibold mt-0.5 ${
-                        d.value > 0 ? 'text-amber-700' : 'text-primary-dark'
-                      }`}
-                    >
-                      {d.value > 0 ? '+' : d.value < 0 ? '−' : ''}
-                      {Math.abs(d.value)}
-                      <span className="text-xs font-normal text-text-secondary"> {d.unit}</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
 
           {/* Второстепенные действия — светлые кнопки */}
           <div className="flex gap-2">
