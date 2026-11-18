@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { AuthImage } from '@/components/AuthImage'
-import { haptic } from '@/lib/telegram'
+import { haptic, tg } from '@/lib/telegram'
+import { pluralize } from '@/utils/plural'
 import {
   ArrowLeft,
   Plus,
@@ -15,8 +16,8 @@ import {
   TrendingDown,
   ChevronDown,
   Camera,
+  CalendarDays,
   Image,
-  History,
   MessageSquare,
   X,
 } from 'lucide-react'
@@ -317,7 +318,15 @@ export const ProgressPage = () => {
     const first = sorted[0]
     const last = sorted[sorted.length - 1]
     if (!first || !last) {
-      return { first: null, overdue: false, nextText: '', daysLeft: 0, diffs: [] as any[] }
+      return {
+        first: null,
+        overdue: false,
+        nextText: '',
+        sinceText: '',
+        daysLeft: 0,
+        progressPct: 0,
+        diffs: [] as { label: string; value: number; unit: string }[],
+      }
     }
     const next = new Date(last.date)
     next.setMonth(next.getMonth() + 1)
@@ -333,8 +342,12 @@ export const ProgressPage = () => {
       { label: 'Талия', value: diff('waist'), unit: 'см' },
       { label: 'Бёдра', value: diff('hips'), unit: 'см' },
     ].filter((d) => d.value !== null) as { label: string; value: number; unit: string }[]
+    const total = next.getTime() - new Date(last.date).getTime()
+    const passed = Date.now() - new Date(last.date).getTime()
     return {
       first,
+      sinceText: new Date(first.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+      progressPct: Math.min(100, Math.max(4, Math.round((passed / total) * 100))),
       overdue: daysLeft < 0,
       nextText: next.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
       daysLeft: Math.max(0, daysLeft),
@@ -383,6 +396,25 @@ export const ProgressPage = () => {
     mutationFn: (id: string) => clientsApi.deleteMeasurement(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-measurements'] }),
   })
+
+  // Сегодняшний фотоотчёт (день по Ташкенту): его можно дополнять и заменять
+  const todayKey = new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10)
+  const todayPhotos: Record<string, any> =
+    photoDays.find((d) => d.day === todayKey)?.byAngle || {}
+  const hasTodayPhotos = Object.keys(todayPhotos).length > 0
+  // Каких ракурсов не хватает с учётом уже загруженных и только что выбранных
+  const missingAngles = ANGLES.filter((a) => !pendingPhotos[a.key] && !todayPhotos[a.key])
+  const missingText = missingAngles.map((a) => `«${a.label}»`).join(', ')
+
+  // Вопрос «да/нет»: внутри Telegram — его окно, в браузере — обычное
+  const askConfirm = (text: string, onYes: () => void) => {
+    const w = tg as any
+    if (w?.initData && typeof w.showConfirm === 'function' && w.isVersionAtLeast?.('6.2')) {
+      w.showConfirm(text, (ok: boolean) => ok && onYes())
+    } else if (window.confirm(text)) {
+      onYes()
+    }
+  }
 
   const clearPending = () => {
     Object.values(pendingPhotos).forEach((p) => p && URL.revokeObjectURL(p.url))
@@ -480,7 +512,8 @@ export const ProgressPage = () => {
     return <QuestionnaireForm onDone={() => qc.invalidateQueries({ queryKey: ['client-me'] })} />
   }
 
-  const hasAnyValue = FIELDS.some((f) => (form as any)[f.key] !== '')
+  // Замер сохраняется только целиком: нужны все шесть значений
+  const allFilled = FIELDS.every((f) => String((form as any)[f.key] ?? '').trim() !== '')
 
   // Сравнение замеров: по умолчанию первый ↔ последний
   const first = measurements[measurements.length - 1]
@@ -515,70 +548,85 @@ export const ProgressPage = () => {
       {/* ===== Сводка: что сделать сейчас и результат с начала ===== */}
       {!showForm && !showPhotoForm && !showFbForm && (
         <>
-          <Card>
-            {summary.first ? (
-              <>
-                <p className="text-xs text-text-secondary">Следующие замеры</p>
-                <p
-                  className={`text-[17px] font-semibold leading-snug mt-0.5 ${
-                    summary.overdue ? 'text-amber-600' : 'text-text-primary'
-                  }`}
-                >
-                  {summary.overdue ? 'Пора сделать замеры' : summary.nextText}
+          {/* Оливковая карточка: когда следующие замеры и главная кнопка */}
+          <div className="rounded-card bg-primary text-white p-4 shadow-card">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-white/70">
+                  {summary.first ? 'Следующие замеры' : 'Мой прогресс'}
                 </p>
-                <p className="text-xs text-text-secondary mt-0.5">
-                  {summary.overdue
-                    ? `срок был ${summary.nextText}`
-                    : summary.daysLeft === 0
-                      ? 'сегодня'
-                      : `через ${summary.daysLeft} дн. · раз в месяц`}
+                <p className="text-[19px] font-semibold leading-snug mt-0.5">
+                  {!summary.first
+                    ? 'Начнём с точки «до»'
+                    : summary.overdue
+                      ? 'Пора сделать замеры'
+                      : summary.nextText}
                 </p>
-                {summary.diffs.length > 0 && (
-                  <div className="flex gap-2 mt-3">
-                    {summary.diffs.map((d) => (
-                      <div key={d.label} className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
-                        <p className="text-[11px] text-text-secondary">{d.label}</p>
-                        <p
-                          className={`text-base font-bold ${
-                            d.value < 0
-                              ? 'text-green-600'
-                              : d.value > 0
-                                ? 'text-red-500'
-                                : 'text-text-primary'
-                          }`}
-                        >
-                          {d.value > 0 ? '+' : ''}
-                          {d.value} {d.unit}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {summary.diffs.length > 0 && (
-                  <p className="text-[11px] text-text-secondary mt-1.5">
-                    изменения с первого замера
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-bold text-text-primary">Начнём с точки «до»</p>
-                <p className="text-sm text-text-secondary mt-1">
-                  Внеси первые замеры и сделай фото — так будет видно твой результат.
+                <p className="text-xs text-white/70 mt-0.5">
+                  {!summary.first
+                    ? 'Внеси первые замеры и сделай фото'
+                    : summary.overdue
+                      ? `срок был ${summary.nextText}`
+                      : summary.daysLeft === 0
+                        ? 'сегодня'
+                        : `через ${summary.daysLeft} ${pluralize(summary.daysLeft, 'день', 'дня', 'дней')}`}
                 </p>
-              </>
+              </div>
+              <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                <CalendarDays className="w-5 h-5" />
+              </span>
+            </div>
+
+            {/* Сколько прошло от последнего замера до следующего */}
+            {summary.first && (
+              <div className="h-1.5 rounded-full bg-white/20 mt-3 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${summary.progressPct}%` }}
+                />
+              </div>
             )}
+
             <button
               onClick={() => {
                 haptic.selection()
                 setShowForm(true)
               }}
-              className="mt-4 w-full flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform"
+              className="mt-4 w-full flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform"
             >
               <Plus className="w-4 h-4 shrink-0" />
               Добавить замеры
             </button>
-          </Card>
+          </div>
+
+          {/* Результат с первого замера */}
+          {summary.diffs.length > 0 && (
+            <Card>
+              <p className="text-sm font-semibold text-text-primary">
+                Результат
+                <span className="font-normal text-text-secondary"> · с {summary.sinceText}</span>
+              </p>
+              <div className="flex divide-x divide-gray-100 mt-3">
+                {summary.diffs.map((d) => (
+                  <div key={d.label} className="flex-1 text-center px-1">
+                    <p
+                      className={`text-lg font-bold ${
+                        d.value < 0
+                          ? 'text-green-600'
+                          : d.value > 0
+                            ? 'text-red-500'
+                            : 'text-text-primary'
+                      }`}
+                    >
+                      {d.value > 0 ? '+' : d.value < 0 ? '−' : ''}
+                      {Math.abs(d.value)} {d.unit}
+                    </p>
+                    <p className="text-xs text-text-secondary mt-0.5">{d.label}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* Второстепенные действия — светлые кнопки */}
           <div className="flex gap-2">
@@ -591,7 +639,7 @@ export const ProgressPage = () => {
               className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
             >
               <Camera className="w-4 h-4 shrink-0" />
-              Фотоотчёт
+              {hasTodayPhotos && missingAngles.length > 0 ? 'Догрузить фото' : 'Фотоотчёт'}
             </button>
             <button
               onClick={() => {
@@ -667,16 +715,15 @@ export const ProgressPage = () => {
             ))}
           </div>
           <p className="text-xs text-text-secondary mb-3">
-            Живот и бёдра измеряй по самой выпуклой части. Заполни то, что измерила, —
-            остальное можно пропустить.
+            Нужны все шесть замеров. Живот и бёдра измеряй по самой выпуклой части.
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => addMut.mutate()}
-              disabled={addMut.isPending || !hasAnyValue}
+              disabled={addMut.isPending || !allFilled}
               className="flex-1 bg-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
             >
-              {addMut.isPending ? 'Сохраняю…' : 'Сохранить'}
+              {addMut.isPending ? 'Сохраняю…' : allFilled ? 'Сохранить' : 'Заполни все поля'}
             </button>
             <button
               onClick={() => setShowForm(false)}
@@ -696,18 +743,21 @@ export const ProgressPage = () => {
           </p>
           <p className="text-xs text-text-secondary mb-3">
             Сделай фото в четырёх ракурсах и нажми «Сохранить». Фото приватные — увидите
-            только ты и тренер. Новые фото за сегодня заменят прежние.
+            только ты и тренер.
+            {hasTodayPhotos &&
+              ' Сегодняшние фото уже здесь: нажми на любое, чтобы заменить, или добавь недостающие.'}
           </p>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {ANGLES.map((a) => {
               const pending = pendingPhotos[a.key]
+              const existing = todayPhotos[a.key]
               return (
                 // Свой input на каждый ракурс — исключает подстановку файла
                 // от соседнего слота (общий input путал левый/правый бок)
                 <label
                   key={a.key}
                   className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border cursor-pointer ${
-                    pending
+                    pending || existing
                       ? 'border-primary/40'
                       : 'bg-gray-100 border-dashed border-gray-300'
                   }`}
@@ -724,23 +774,54 @@ export const ProgressPage = () => {
                       className="absolute inset-0 w-full h-full object-cover"
                       alt={a.label}
                     />
+                  ) : existing ? (
+                    <AuthImage
+                      src={clientsApi.photoFileUrl(existing.id)}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   ) : (
                     <>
                       <Camera className="w-6 h-6 text-gray-400" />
                       <span className="text-xs text-text-secondary">Сделать фото</span>
                     </>
                   )}
+                  {/* Пометка состояния слота */}
+                  {pending ? (
+                    <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold text-white bg-primary px-1.5 py-0.5 rounded-full">
+                      новое
+                    </span>
+                  ) : existing ? (
+                    <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold text-primary-dark bg-white/90 px-1.5 py-0.5 rounded-full">
+                      загружено
+                    </span>
+                  ) : null}
                   <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5 truncate px-1">
                     {a.label}
-                    {pending?.file?.name ? ` · ${pending.file.name.slice(0, 12)}` : ''}
+                    {pending || existing ? ' · заменить' : ''}
                   </span>
                 </label>
               )
             })}
           </div>
+          {/* Предупреждение: загружены не все ракурсы */}
+          {missingAngles.length > 0 && (Object.keys(pendingPhotos).length > 0 || hasTodayPhotos) && (
+            <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-3">
+              Не хватает {missingAngles.length} из 4 фото: {missingText}. Можно сохранить и
+              догрузить позже сегодня.
+            </p>
+          )}
           <div className="flex gap-2">
             <button
-              onClick={() => photoSaveMut.mutate()}
+              onClick={() => {
+                if (missingAngles.length > 0) {
+                  askConfirm(
+                    `Загружены не все фото. Не хватает: ${missingText}. Сохранить как есть?`,
+                    () => photoSaveMut.mutate(),
+                  )
+                } else {
+                  photoSaveMut.mutate()
+                }
+              }}
               disabled={
                 photoSaveMut.isPending || Object.keys(pendingPhotos).length === 0
               }
@@ -759,6 +840,20 @@ export const ProgressPage = () => {
             </button>
           </div>
         </Card>
+      )}
+
+      {/* Пока сравнивать не с чем — говорим, что сравнение появится позже */}
+      {!isLoading && (measurements.length === 1 || photoDays.length === 1) && (
+        <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-card px-4 py-3">
+          <TrendingDown className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <p className="text-sm text-text-primary leading-snug">
+            {measurements.length === 1 && photoDays.length === 1
+              ? 'Сравнение замеров и фото «было — стало» появится здесь после следующих замеров и фотоотчёта.'
+              : measurements.length === 1
+                ? 'Сравнение замеров «было — стало» появится здесь после следующих замеров.'
+                : 'Сравнение фото «было — стало» появится здесь после следующего фотоотчёта.'}
+          </p>
+        </div>
       )}
 
       {/* ===== 3. Сравнить замеры ===== */}
@@ -915,7 +1010,7 @@ export const ProgressPage = () => {
       ) : (
         measurements.length > 0 && (
           <Fold
-            icon={<History className="w-5 h-5 text-primary" />}
+            icon={<Ruler className="w-5 h-5 text-primary" />}
             title="История замеров"
             count={measurements.length}
           >
@@ -925,51 +1020,56 @@ export const ProgressPage = () => {
                 const filled = FIELDS.filter((f) => m[f.key] != null)
                 return (
                   <div key={m.id} className="border border-gray-100 rounded-xl p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-text-primary mb-1">
-                          {fmtDate(m.date)}
-                          {m.byTrainer && (
-                            <span className="text-text-secondary"> · тренер</span>
-                          )}
-                        </p>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-primary">
-                          {filled.map((f) => {
-                            const v = m[f.key]
-                            const pv = prev?.[f.key]
-                            const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
-                            return (
-                              <span key={f.key} className="whitespace-nowrap">
-                                <span className="text-text-secondary">{f.label}</span>{' '}
-                                {v}
-                                <span className="text-text-secondary text-xs"> {f.unit}</span>
-                                {d !== null && d !== 0 && (
-                                  <span
-                                    className={`text-xs ${
-                                      d < 0 ? 'text-green-600' : 'text-red-500'
-                                    }`}
-                                  >
-                                    {' '}
-                                    {d > 0 ? `+${d}` : d}
-                                  </span>
-                                )}
-                              </span>
-                            )
-                          })}
-                        </div>
-                        {m.note && (
-                          <p className="text-xs text-text-secondary mt-1">{m.note}</p>
+                    {/* Дата и удаление */}
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {fmtDate(m.date)}
+                        {m.byTrainer && (
+                          <span className="font-normal text-text-secondary"> · внёс тренер</span>
                         )}
-                      </div>
+                      </p>
                       <button
                         onClick={() => {
                           if (confirm('Удалить этот замер?')) delMut.mutate(m.id)
                         }}
-                        className="text-gray-300 shrink-0 mt-0.5"
+                        aria-label="Удалить замер"
+                        className="text-gray-300 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                    {/* Ровная сетка: подпись, значение, изменение к прошлому замеру */}
+                    <div className="grid grid-cols-3 gap-x-2 gap-y-2.5">
+                      {filled.map((f) => {
+                        const v = m[f.key]
+                        const pv = prev?.[f.key]
+                        const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
+                        return (
+                          <div key={f.key} className="min-w-0">
+                            <p className="text-[11px] text-text-secondary leading-tight truncate">
+                              {f.label}
+                            </p>
+                            <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
+                              {v}
+                              <span className="text-xs font-normal text-text-secondary">
+                                {' '}
+                                {f.unit}
+                              </span>
+                              {d !== null && d !== 0 && (
+                                <span
+                                  className={`text-[11px] font-medium ml-1 ${
+                                    d < 0 ? 'text-green-600' : 'text-red-500'
+                                  }`}
+                                >
+                                  {d > 0 ? `+${d}` : `−${Math.abs(d)}`}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {m.note && <p className="text-xs text-text-secondary mt-2">{m.note}</p>}
                   </div>
                 )
               })}
@@ -989,12 +1089,48 @@ export const ProgressPage = () => {
           <div className="space-y-3">
             {photoDays.map((d) => (
               <div key={d.day}>
-                <p className="text-xs text-text-primary mb-1">{fmtDate(d.date)}</p>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-xs text-text-primary">{fmtDate(d.date)}</p>
+                  {d.day === todayKey && (
+                    <button
+                      onClick={() => {
+                        clearPending()
+                        setShowPhotoForm(true)
+                        window.scrollTo(0, 0)
+                      }}
+                      className="text-xs font-medium text-primary"
+                    >
+                      Заменить или догрузить
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {ANGLES.map((a) => {
                     const p = d.byAngle[a.key]
                     if (!p)
-                      return <div key={a.key} className="aspect-[3/4] rounded-xl bg-gray-50" />
+                      return d.day === todayKey ? (
+                        <button
+                          key={a.key}
+                          onClick={() => {
+                            clearPending()
+                            setShowPhotoForm(true)
+                            window.scrollTo(0, 0)
+                          }}
+                          className="aspect-[3/4] rounded-xl bg-amber-50 border border-dashed border-amber-300 flex flex-col items-center justify-center gap-1 text-amber-700"
+                        >
+                          <Camera className="w-5 h-5" />
+                          <span className="text-xs font-medium">Догрузить</span>
+                          <span className="text-[10px]">{a.label}</span>
+                        </button>
+                      ) : (
+                        <div
+                          key={a.key}
+                          className="aspect-[3/4] rounded-xl bg-gray-50 flex flex-col items-center justify-center text-[10px] text-gray-400"
+                        >
+                          <span>нет фото</span>
+                          <span>{a.label}</span>
+                        </div>
+                      )
                     return (
                       <div key={a.key} className="relative">
                         <AuthImage
