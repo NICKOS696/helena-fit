@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { adminClientsApi } from '@/lib/api'
@@ -20,6 +21,7 @@ const reportStatus = (c: any): { text: string; cls: string } => {
 
 export const ClientsPage = () => {
   const navigate = useNavigate()
+  const [showArchive, setShowArchive] = useState(false)
   const { data, isLoading } = useQuery({
     queryKey: ['admin-clients'],
     queryFn: () => adminClientsApi.list(),
@@ -103,10 +105,19 @@ export const ClientsPage = () => {
       ) : (
         <div className="space-y-3">
           {active.map(renderRow)}
+          {/* Архив свёрнут — раскрывается по нажатию */}
           {archived.length > 0 && (
             <>
-              <p className="text-sm text-gray-400 pt-4">Архив ({archived.length})</p>
-              {archived.map(renderRow)}
+              <button
+                onClick={() => setShowArchive((v) => !v)}
+                className="flex items-center gap-1.5 text-sm text-gray-400 pt-4"
+              >
+                Архив ({archived.length})
+                <ChevronRight
+                  className={`w-4 h-4 transition-transform ${showArchive ? 'rotate-90' : ''}`}
+                />
+              </button>
+              {showArchive && archived.map(renderRow)}
             </>
           )}
         </div>
