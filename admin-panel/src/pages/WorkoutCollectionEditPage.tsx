@@ -251,13 +251,13 @@ export const WorkoutCollectionEditPage = () => {
   }
 
   if (isLoading) {
-    return <div className="p-8">Загрузка...</div>
+    return <div className="p-4 md:p-8">Загрузка...</div>
   }
 
   const collection = data?.data
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <button
         onClick={() => navigate('/workouts')}
         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
@@ -269,7 +269,7 @@ export const WorkoutCollectionEditPage = () => {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{collection.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{collection.title}</h1>
             <p className="text-gray-600 mb-4">{collection.description}</p>
             <div className="flex gap-4 text-sm text-gray-500">
               <span>Цена: {collection.price.toLocaleString()} сум</span>
@@ -290,7 +290,7 @@ export const WorkoutCollectionEditPage = () => {
 
       {/* Разделы */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
             Разделы ({collection.sections?.length || 0})
           </h2>

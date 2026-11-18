@@ -93,6 +93,25 @@ const UserLogModal = ({ user, onClose }: { user: any; onClose: () => void }) => 
   )
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  ACTIVE: 'Активен',
+  PENDING: 'Ожидает',
+  BLOCKED: 'Заблокирован',
+}
+
+// «1 доступ», «2 доступа», «5 доступов»
+const accessLabel = (n: number) => {
+  const m10 = n % 10
+  const m100 = n % 100
+  const word =
+    m10 === 1 && m100 !== 11
+      ? 'доступ'
+      : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)
+        ? 'доступа'
+        : 'доступов'
+  return `${n} ${word}`
+}
+
 export const UsersPage = () => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -314,7 +333,7 @@ export const UsersPage = () => {
                             : 'bg-red-100 text-red-700'
                         }`}
                       >
-                        {user.status}
+                        {STATUS_LABEL[user.status] || user.status}
                       </span>
                       {user.tgStatus === 'BLOCKED' && (
                         <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
@@ -329,7 +348,7 @@ export const UsersPage = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {user._count.workoutAccess + user._count.recipeAccess} доступов
+                    <span className="whitespace-nowrap">{accessLabel(user._count.workoutAccess + user._count.recipeAccess)}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
@@ -399,7 +418,7 @@ export const UsersPage = () => {
                         : 'bg-red-100 text-red-700'
                     }`}
                   >
-                    {user.status}
+                    {STATUS_LABEL[user.status] || user.status}
                   </span>
                   {user.tgStatus === 'BLOCKED' && (
                     <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
@@ -415,7 +434,7 @@ export const UsersPage = () => {
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t">
                 <span className="text-sm text-gray-500">
-                  {user._count.workoutAccess + user._count.recipeAccess} доступов
+                  <span className="whitespace-nowrap">{accessLabel(user._count.workoutAccess + user._count.recipeAccess)}</span>
                 </span>
                 <div className="flex items-center gap-4">
                   <button

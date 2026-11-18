@@ -262,7 +262,7 @@ export const ClientCardPage = () => {
               if (confirm('Убрать из клиентов? История замеров сохранится (архив).'))
                 archiveMut.mutate()
             }}
-            className="text-sm text-red-600 hover:text-red-700 flex-shrink-0"
+            className="text-xs text-gray-400 hover:text-red-600 underline underline-offset-2 flex-shrink-0"
           >
             Убрать из клиентов
           </button>
