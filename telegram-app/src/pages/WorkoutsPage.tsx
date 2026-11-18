@@ -86,8 +86,6 @@ export const WorkoutsPage = () => {
 
   return (
     <div className="px-4 pt-3 pb-4 space-y-3">
-      <h1 className="text-xl font-bold text-text-primary">Тренировки</h1>
-
       {/* Превью «Справочник упражнений» — виден только владельцу */}
       {isPreviewUser() && (
         <button

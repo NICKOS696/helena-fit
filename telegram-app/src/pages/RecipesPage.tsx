@@ -85,8 +85,6 @@ export const RecipesPage = () => {
 
   return (
     <div className="px-4 pt-3 pb-4 space-y-3">
-      <h1 className="text-xl font-bold text-text-primary">Рецепты</h1>
-
       <div className="space-y-4">
         {collections.map((collection: any) => (
           <Card key={collection.id} className={clsx("!p-0 overflow-hidden", collection.isInDevelopment && "opacity-90")}>
