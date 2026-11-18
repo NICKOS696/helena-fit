@@ -49,7 +49,8 @@ export const DashboardLayout = () => {
       <aside
         className={clsx(
           'fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:translate-x-0',
-          menuOpen ? 'translate-x-0' : '-translate-x-full',
+          // Закрытое меню на телефоне полностью скрыто, чтобы не давало боковой прокрутки
+          menuOpen ? 'translate-x-0' : '-translate-x-full invisible lg:visible',
         )}
       >
         <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">

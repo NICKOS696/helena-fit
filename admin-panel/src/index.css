@@ -14,8 +14,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F6F4EF;
+  background-color: #FFFFFF;
   color: #2F302B;
+}
+
+/* Страница не должна ездить влево-вправо на телефоне (скрытое боковое меню,
+   широкие таблицы прокручиваются внутри своих блоков) */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 #root {

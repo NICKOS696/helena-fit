@@ -454,7 +454,7 @@ export const UsersPage = () => {
                 const accessCount = user._count.workoutAccess + user._count.recipeAccess
                 const open = openUserId === user.id
                 const pill =
-                  'inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-gray-100 text-sm text-gray-700 active:bg-gray-200'
+                  'inline-flex items-center gap-1 h-8 px-2.5 rounded-full bg-gray-100 text-xs text-gray-700 whitespace-nowrap active:bg-gray-200'
                 return (
                   <div key={user.id}>
                     <button
@@ -507,19 +507,19 @@ export const UsersPage = () => {
                     </button>
 
                     {open && (
-                      <div className="px-4 pb-3 pl-[68px] flex flex-wrap gap-2">
+                      <div className="px-3 pb-3 flex items-center gap-1.5">
                         <button onClick={() => handleOpenAccessModal(user)} className={pill}>
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                           Доступ
                         </button>
                         <button onClick={() => setLogUser(user)} className={pill}>
-                          <History className="w-4 h-4" />
+                          <History className="w-3.5 h-3.5" />
                           Журнал
                         </button>
                         {clientId ? (
                           <button onClick={() => navigate(`/clients/${clientId}`)} className={pill}>
                             <Check className="w-4 h-4" />
-                            Карточка клиента
+                            Карточка
                           </button>
                         ) : (
                           <button
@@ -545,7 +545,7 @@ export const UsersPage = () => {
                             }
                           }}
                           aria-label="Удалить пользователя"
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 text-gray-400 active:bg-red-50 active:text-red-600"
+                          className="ml-auto inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-full bg-gray-100 text-gray-400 active:bg-red-50 active:text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
