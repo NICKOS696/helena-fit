@@ -102,7 +102,7 @@ export const DashboardLayout = () => {
 
       <div className="flex-1 min-w-0">
         {/* Верхняя полоса с «гамбургером» — только на мобильных */}
-        <header className="lg:hidden bg-white/95 backdrop-blur border-b border-gray-100 flex items-center gap-3 px-4 py-3 sticky top-0 z-20">
+        <header className="lg:hidden bg-white border-b border-gray-100 flex items-center gap-3 px-4 py-3 sticky top-0 z-20">
           <button
             onClick={() => setMenuOpen(true)}
             className="text-gray-700"
@@ -113,7 +113,7 @@ export const DashboardLayout = () => {
           <h1 className="text-lg font-bold text-primary-dark">Helena Fit</h1>
         </header>
 
-        <main>
+        <main className="overflow-x-hidden">
           {/* На широких мониторах контент не растягивается на всю ширину */}
           <div className="max-w-[1320px] mx-auto">
             <Outlet />

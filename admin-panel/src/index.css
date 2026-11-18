@@ -31,6 +31,17 @@ body {
   min-height: 100vh;
 }
 
+/* iPhone сам приближает страницу при нажатии на поле с текстом мельче 16px
+   и не возвращает масштаб обратно — из-за этого «обрезало» правый край.
+   На телефонах все поля ввода — не мельче 16px. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Rich Text Editor Styles */
 .rich-text-editor .quill {
   border-radius: 0.5rem;

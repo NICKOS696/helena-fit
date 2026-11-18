@@ -23,7 +23,7 @@ export default {
         lg: '14px',
       },
       boxShadow: {
-        DEFAULT: '0 0 0 1px rgba(60, 50, 30, 0.06), 0 6px 20px rgba(60, 50, 30, 0.07)',
+        DEFAULT: '0 0 0 1px rgba(60, 50, 30, 0.07), 0 2px 6px rgba(60, 50, 30, 0.05)',
         sm: '0 1px 2px rgba(60, 50, 30, 0.05)',
       },
     },
