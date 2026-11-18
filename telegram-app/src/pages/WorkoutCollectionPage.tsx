@@ -15,6 +15,7 @@ import { RutubeVideo } from '@/components/RutubeVideo'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 import { pluralize } from '@/utils/plural'
+import { optUrl, thumbFallback } from '@/utils/thumb'
 
 export const WorkoutCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -202,7 +203,8 @@ export const WorkoutCollectionPage = () => {
             После покупки пользователь сразу видит разделы тренировок. */}
         {!collection.hasAccess && collection.coverImage && (
           <img
-            src={collection.coverImage}
+            src={optUrl(collection.coverImage)}
+            onError={thumbFallback(collection.coverImage)}
             alt={collection.title}
             className="w-full h-auto min-h-[12rem] rounded-card bg-gray-200"
           />

@@ -104,7 +104,8 @@ const ZoomableImage = ({ src, caption }: { src: string; caption?: string }) => {
   const lastTap = useRef(0)
 
   const onPointerDown = (e: React.PointerEvent) => {
-    ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+    const el = e.currentTarget as Element
+    el.setPointerCapture?.(e.pointerId)
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     const pts = [...pointers.current.values()]
     if (pts.length === 2) {
@@ -308,7 +309,7 @@ export const ProgressPage = () => {
     queryFn: () => clientsApi.getPhotos(),
     enabled: !!isClient,
   })
-  const photos: any[] = photosData?.data || []
+  const photos: any[] = useMemo(() => photosData?.data || [], [photosData])
 
   const photoDays = useMemo(() => {
     const map = new Map<string, any>()

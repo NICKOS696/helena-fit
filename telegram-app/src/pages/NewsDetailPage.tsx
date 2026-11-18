@@ -7,6 +7,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { Calendar, Dumbbell, UtensilsCrossed } from 'lucide-react'
+import { optUrl, thumbFallback } from '@/utils/thumb'
 
 export const NewsDetailPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -52,7 +53,8 @@ export const NewsDetailPage = () => {
       {/* Баннер */}
       {item.bannerImage && (
         <img
-          src={item.bannerImage}
+          src={optUrl(item.bannerImage)}
+          onError={thumbFallback(item.bannerImage)}
           alt={item.title}
           className="w-full h-56 object-cover"
         />

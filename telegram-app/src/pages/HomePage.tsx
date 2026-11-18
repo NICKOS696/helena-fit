@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { newsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Sparkles, ChevronRight } from 'lucide-react'
+import { optUrl, thumbFallback } from '@/utils/thumb'
 
 // Куда ведёт новость: связанный сборник, иначе — страница новости (если есть текст)
 const newsTarget = (item: any): string | null => {
@@ -38,7 +39,12 @@ export const HomePage = () => {
     <div className="pb-4">
       {/* Hero Section - Логотип */}
       <div className="mb-5">
-        <img src="/uploads/logo.png" alt="Helena Fit" className="w-full h-auto object-cover" />
+        <img
+          src="/uploads/opt/logo.jpg"
+          onError={thumbFallback('/uploads/logo.png')}
+          alt="Helena Fit"
+          className="w-full h-auto object-cover"
+        />
       </div>
 
       <div className="px-4 space-y-4">
@@ -69,7 +75,8 @@ export const HomePage = () => {
                 >
                   {item.bannerImage && (
                     <img
-                      src={item.bannerImage}
+                      src={optUrl(item.bannerImage)}
+                      onError={thumbFallback(item.bannerImage)}
                       alt={item.title}
                       className="w-full h-48 object-cover bg-gray-100"
                     />

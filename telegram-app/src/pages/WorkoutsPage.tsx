@@ -11,6 +11,7 @@ import { pluralize } from '@/utils/plural'
 import { Clock, Dumbbell, ChevronRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
+import { optUrl, thumbFallback } from '@/utils/thumb'
 
 export const WorkoutsPage = () => {
   const navigate = useNavigate()
@@ -123,7 +124,8 @@ export const WorkoutsPage = () => {
             {collection.coverImage && (
               <div className="relative bg-gray-100">
                 <img
-                  src={collection.coverImage}
+                  src={optUrl(collection.coverImage)}
+                  onError={thumbFallback(collection.coverImage)}
                   alt={collection.title}
                   className={clsx("w-full h-auto object-contain", collection.isInDevelopment && "grayscale-[40%]")}
                 />

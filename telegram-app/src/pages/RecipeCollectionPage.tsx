@@ -21,7 +21,7 @@ import { haptic } from '@/lib/telegram'
 import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check, ChevronDown, UtensilsCrossed } from 'lucide-react'
 import clsx from 'clsx'
 import { pluralize } from '@/utils/plural'
-import { thumbUrl, thumbFallback } from '@/utils/thumb'
+import { thumbUrl, thumbFallback, optUrl } from '@/utils/thumb'
 
 // Достаём плоский список ингредиентов рецепта (поддержка разделов и старого формата)
 function extractIngredients(recipe: any): { name: string; amount: string }[] {
@@ -347,7 +347,8 @@ export const RecipeCollectionPage = () => {
             После покупки пользователь сразу видит поиск, категории и рецепты. */}
         {!collection.hasAccess && collection.coverImage && (
           <img
-            src={collection.coverImage}
+            src={optUrl(collection.coverImage)}
+            onError={thumbFallback(collection.coverImage)}
             alt={collection.title}
             className="w-full h-auto min-h-[12rem] rounded-card bg-gray-200"
           />
