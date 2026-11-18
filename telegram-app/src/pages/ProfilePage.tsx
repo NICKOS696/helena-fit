@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTelegram } from '@/providers/TelegramProvider'
+import { getTelegramUser } from '@/lib/telegram'
 import { usersApi, clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { CalorieCalculator } from '@/components/CalorieCalculator'
@@ -54,6 +55,14 @@ const Section = ({
 
 export const ProfilePage = () => {
   const { user } = useTelegram()
+  // Имя и фото берём из Telegram (first_name / photo_url), а если их там нет —
+  // из нашего профиля на сервере (firstName / photoUrl)
+  const tgUser: any = getTelegramUser()
+  const firstName = tgUser?.first_name || user?.firstName || user?.first_name || ''
+  const lastName = tgUser?.last_name || user?.lastName || user?.last_name || ''
+  const username = tgUser?.username || user?.username || ''
+  const photoUrl = tgUser?.photo_url || user?.photoUrl || user?.photo_url || ''
+  const [photoFailed, setPhotoFailed] = useState(false)
   const navigate = useNavigate()
 
   // Клиент ли я у тренера — открывает блок «Мой прогресс»
@@ -86,27 +95,26 @@ export const ProfilePage = () => {
     <div className="p-4 space-y-4">
       <Card>
         <div className="flex items-center gap-4">
-          {user?.photo_url ? (
+          {photoUrl && !photoFailed ? (
             <img
-              src={user.photo_url}
-              alt={user.first_name}
-              className="w-16 h-16 rounded-full"
+              src={photoUrl}
+              alt={firstName}
+              onError={() => setPhotoFailed(true)}
+              className="w-16 h-16 rounded-full object-cover bg-gray-100"
             />
           ) : (
             <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
           )}
-          <div>
-            <h2 className="text-xl font-bold text-text-primary">
-              {user?.first_name || 'Пользователь'} {user?.last_name || ''}
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-text-primary truncate">
+              {`${firstName} ${lastName}`.trim() || 'Пользователь'}
             </h2>
             {profile?.phoneNumber && (
               <p className="text-text-secondary text-sm">{profile.phoneNumber}</p>
             )}
-            {user?.username && (
-              <p className="text-text-secondary text-sm">@{user.username}</p>
-            )}
+            {username && <p className="text-text-secondary text-sm truncate">@{username}</p>}
           </div>
         </div>
       </Card>
