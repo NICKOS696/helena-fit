@@ -84,8 +84,8 @@ export const RecipesPage = () => {
   const collections = data?.data || []
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold text-text-primary">Рецепты</h1>
+    <div className="px-4 pt-3 pb-4 space-y-3">
+      <h1 className="text-xl font-bold text-text-primary">Рецепты</h1>
 
       <div className="space-y-4">
         {collections.map((collection: any) => (
@@ -107,31 +107,24 @@ export const RecipesPage = () => {
               </div>
             )}
             
-            <div className="p-4 space-y-2.5">
+            <div className="px-4 pt-3 pb-4 space-y-2">
             {/* Заголовок */}
-            <h3 className="text-lg font-bold leading-snug text-text-primary">{collection.title}</h3>
-            
-            {/* Описание */}
-            {collection.description && (
-              <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line line-clamp-3">
-                {collection.description}
-              </p>
-            )}
-
-            {/* Информация */}
-            {!collection.isInDevelopment && (
-              <div className="flex items-center gap-4 text-sm text-text-secondary">
-                <span className="flex items-center gap-1.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="text-lg font-bold leading-snug text-text-primary">{collection.title}</h3>
+              {!collection.isInDevelopment && (
+                <span className="flex items-center gap-1.5 text-sm text-text-secondary whitespace-nowrap shrink-0">
                   <UtensilsCrossed className="w-4 h-4 text-primary" />
                   {collection.recipeCount}{' '}
                   {pluralize(collection.recipeCount, 'рецепт', 'рецепта', 'рецептов')}
                 </span>
-                {!collection.hasAccess && collection.finalPrice < collection.price && (
-                  <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-xs font-semibold">
-                    -{collection.discount}{collection.discountType === 'PERCENTAGE' ? '%' : ' сум'}
-                  </span>
-                )}
-              </div>
+              )}
+            </div>
+            
+            {/* Описание */}
+            {collection.description && (
+              <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line line-clamp-2">
+                {collection.description}
+              </p>
             )}
 
             {/* Кнопка / статус */}
@@ -147,7 +140,7 @@ export const RecipesPage = () => {
             ) : (
               <div className="space-y-3">
                 {/* Цена крупно */}
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-center gap-2">
                   {collection.finalPrice < collection.price && (
                     <span className="text-sm text-gray-400 line-through">
                       {collection.price.toLocaleString()} сум
@@ -156,6 +149,11 @@ export const RecipesPage = () => {
                   <span className="text-xl font-bold text-text-primary">
                     {collection.finalPrice.toLocaleString()} сум
                   </span>
+                  {collection.finalPrice < collection.price && (
+                    <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-xs font-semibold">
+                      -{collection.discount}{collection.discountType === 'PERCENTAGE' ? '%' : ' сум'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Кнопки */}
