@@ -18,7 +18,7 @@ import {
   Camera,
   CalendarDays,
   Image,
-  MessageSquare,
+  MessageCircleHeart,
   X,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -648,7 +648,7 @@ export const ProgressPage = () => {
               }}
               className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
             >
-              <MessageSquare className="w-4 h-4 shrink-0" />
+              <MessageCircleHeart className="w-4 h-4 shrink-0" />
               Впечатление
             </button>
           </div>
@@ -1165,7 +1165,7 @@ export const ProgressPage = () => {
       {/* ===== История впечатлений ===== */}
       {feedback.length > 0 && (
         <Fold
-          icon={<MessageSquare className="w-5 h-5 text-primary" />}
+          icon={<MessageCircleHeart className="w-5 h-5 text-primary" />}
           title="Мои впечатления"
           count={feedback.length}
         >
