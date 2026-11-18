@@ -244,6 +244,40 @@ export class ClientsService {
     date?: string,
   ) {
     const profile = await this.requireActiveProfile(userId);
+    // Клиент может ДОПОЛНИТЬ прошлый фотоотчёт недостающим ракурсом, но не
+    // заменить уже загруженное фото (заменять можно только сегодняшние).
+    if (date && file && ['FRONT', 'SIDE_LEFT', 'SIDE_RIGHT', 'BACK'].includes(angle)) {
+      const TZ_MS = 5 * 3600 * 1000; // границы дня — по Ташкенту
+      const dayOf = (d: Date) => Math.floor((d.getTime() + TZ_MS) / 86400000);
+      const target = new Date(date);
+      const reject = async (message: string) => {
+        // Файл уже сохранён multer-ом — убираем, раз не принимаем
+        try {
+          await unlink(join(PRIVATE_UPLOAD_DIR, file.filename));
+        } catch {
+          /* файла может уже не быть */
+        }
+        throw new ConflictException(message);
+      };
+      if (isNaN(target.getTime())) await reject('Неверная дата фотоотчёта');
+      const today = dayOf(new Date());
+      if (dayOf(target) > today) await reject('Нельзя загрузить фото на будущую дату');
+      if (dayOf(target) < today) {
+        const dayStart = new Date(dayOf(target) * 86400000 - TZ_MS);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
+        const exists = await this.prisma.clientPhoto.findFirst({
+          where: {
+            clientId: profile.id,
+            angle: angle as any,
+            date: { gte: dayStart, lt: dayEnd },
+          },
+          select: { id: true },
+        });
+        if (exists) {
+          await reject('Это фото уже загружено — в прошлом фотоотчёте его нельзя заменить');
+        }
+      }
+    }
     return this.createPhoto(profile.id, file, angle, date, false);
   }
 

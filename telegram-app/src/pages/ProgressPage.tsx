@@ -13,11 +13,11 @@ import {
   Plus,
   Trash2,
   Ruler,
-  TrendingDown,
+  ArrowLeftRight,
   ChevronDown,
   Camera,
   CalendarDays,
-  Image,
+  Columns2,
   MessageCircleHeart,
   X,
 } from 'lucide-react'
@@ -275,6 +275,8 @@ export const ProgressPage = () => {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [showPhotoForm, setShowPhotoForm] = useState(false)
+  // Какой фотоотчёт открыт в форме: null — сегодняшний, иначе день прошлого отчёта
+  const [photoDay, setPhotoDay] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm())
   // Сравнение замеров
   const [compareA, setCompareA] = useState('')
@@ -337,11 +339,9 @@ export const ProgressPage = () => {
       if (vals.length < 2) return null
       return Math.round((vals[vals.length - 1] - vals[0]) * 10) / 10
     }
-    const diffs = [
-      { label: 'Вес', value: diff('weight'), unit: 'кг' },
-      { label: 'Талия', value: diff('waist'), unit: 'см' },
-      { label: 'Бёдра', value: diff('hips'), unit: 'см' },
-    ].filter((d) => d.value !== null) as { label: string; value: number; unit: string }[]
+    const diffs = FIELDS.map((f) => ({ label: f.label, value: diff(f.key), unit: f.unit })).filter(
+      (d) => d.value !== null,
+    ) as { label: string; value: number; unit: string }[]
     const total = next.getTime() - new Date(last.date).getTime()
     const passed = Date.now() - new Date(last.date).getTime()
     return {
@@ -402,8 +402,21 @@ export const ProgressPage = () => {
   const todayPhotos: Record<string, any> =
     photoDays.find((d) => d.day === todayKey)?.byAngle || {}
   const hasTodayPhotos = Object.keys(todayPhotos).length > 0
+  const todayIncomplete = hasTodayPhotos && ANGLES.some((a) => !todayPhotos[a.key])
+  // Фотоотчёт, открытый в форме (сегодняшний или выбранный прошлый)
+  const formDay = photoDay ? photoDays.find((d) => d.day === photoDay) : undefined
+  const formPhotos: Record<string, any> = photoDay ? formDay?.byAngle || {} : todayPhotos
+  const hasFormPhotos = Object.keys(formPhotos).length > 0
   // Каких ракурсов не хватает с учётом уже загруженных и только что выбранных
-  const missingAngles = ANGLES.filter((a) => !pendingPhotos[a.key] && !todayPhotos[a.key])
+  const missingAngles = ANGLES.filter((a) => !pendingPhotos[a.key] && !formPhotos[a.key])
+  // Открыть форму фотоотчёта: без аргумента — сегодняшний, с днём — прошлый
+  const openPhotoForm = (day: string | null) => {
+    haptic.selection()
+    clearPending()
+    setPhotoDay(day && day !== todayKey ? day : null)
+    setShowPhotoForm(true)
+    window.scrollTo(0, 0)
+  }
   const missingText = missingAngles.map((a) => `«${a.label}»`).join(', ')
 
   // Вопрос «да/нет»: внутри Telegram — его окно, в браузере — обычное
@@ -426,7 +439,8 @@ export const ProgressPage = () => {
     mutationFn: async () => {
       for (const a of ANGLES) {
         const p = pendingPhotos[a.key]
-        if (p) await clientsApi.addPhoto(p.file, a.key)
+        // Для прошлого отчёта передаём его дату — фото попадёт в тот же день
+        if (p) await clientsApi.addPhoto(p.file, a.key, photoDay ? formDay?.date : undefined)
       }
     },
     onSuccess: () => {
@@ -434,10 +448,14 @@ export const ProgressPage = () => {
       qc.invalidateQueries({ queryKey: ['client-photos'] })
       clearPending()
       setShowPhotoForm(false)
+      setPhotoDay(null)
     },
-    onError: () => {
+    onError: (e: any) => {
       qc.invalidateQueries({ queryKey: ['client-photos'] })
-      alert('Не удалось загрузить фото. Проверьте соединение и попробуйте ещё раз.')
+      alert(
+        e?.response?.data?.message ||
+          'Не удалось загрузить фото. Проверьте соединение и попробуйте ещё раз.',
+      )
     },
   })
 
@@ -599,29 +617,25 @@ export const ProgressPage = () => {
             </button>
           </div>
 
-          {/* Результат с первого замера */}
+          {/* Результат с первого замера — мягкие плитки */}
           {summary.diffs.length > 0 && (
             <Card>
-              <p className="text-sm font-semibold text-text-primary">
-                Результат
-                <span className="font-normal text-text-secondary"> · с {summary.sinceText}</span>
+              <p className="text-xs text-text-secondary">
+                Результат с {summary.sinceText}
               </p>
-              <div className="flex divide-x divide-gray-100 mt-3">
+              <div className="grid grid-cols-3 gap-2 mt-2.5">
                 {summary.diffs.map((d) => (
-                  <div key={d.label} className="flex-1 text-center px-1">
+                  <div key={d.label} className="min-w-0 rounded-xl bg-primary/5 px-2.5 py-2.5">
+                    <p className="text-[11px] text-text-secondary truncate">{d.label}</p>
                     <p
-                      className={`text-lg font-bold ${
-                        d.value < 0
-                          ? 'text-green-600'
-                          : d.value > 0
-                            ? 'text-red-500'
-                            : 'text-text-primary'
+                      className={`text-[15px] font-semibold mt-0.5 ${
+                        d.value > 0 ? 'text-amber-700' : 'text-primary-dark'
                       }`}
                     >
                       {d.value > 0 ? '+' : d.value < 0 ? '−' : ''}
-                      {Math.abs(d.value)} {d.unit}
+                      {Math.abs(d.value)}
+                      <span className="text-xs font-normal text-text-secondary"> {d.unit}</span>
                     </p>
-                    <p className="text-xs text-text-secondary mt-0.5">{d.label}</p>
                   </div>
                 ))}
               </div>
@@ -631,15 +645,11 @@ export const ProgressPage = () => {
           {/* Второстепенные действия — светлые кнопки */}
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                haptic.selection()
-                clearPending()
-                setShowPhotoForm(true)
-              }}
+              onClick={() => openPhotoForm(null)}
               className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
             >
               <Camera className="w-4 h-4 shrink-0" />
-              {hasTodayPhotos && missingAngles.length > 0 ? 'Догрузить фото' : 'Фотоотчёт'}
+              {todayIncomplete ? 'Догрузить фото' : 'Фотоотчёт'}
             </button>
             <button
               onClick={() => {
@@ -739,24 +749,30 @@ export const ProgressPage = () => {
       {showPhotoForm && (
         <Card>
           <p className="text-text-primary mb-2">
-            Фотоотчёт — {new Date().toLocaleDateString('ru-RU')}
+            Фотоотчёт — {photoDay && formDay ? fmtDate(formDay.date) : new Date().toLocaleDateString('ru-RU')}
           </p>
           <p className="text-xs text-text-secondary mb-3">
             Сделай фото в четырёх ракурсах и нажми «Сохранить». Фото приватные — увидите
             только ты и тренер.
-            {hasTodayPhotos &&
-              ' Сегодняшние фото уже здесь: нажми на любое, чтобы заменить, или добавь недостающие.'}
+            {hasFormPhotos &&
+              (photoDay
+                ? ' Это прошлый фотоотчёт: можно добавить недостающие фото, заменить уже загруженные нельзя.'
+                : ' Загруженные фото уже здесь: нажми на любое, чтобы заменить, или добавь недостающие.')}
           </p>
           <div className="grid grid-cols-2 gap-2 mb-3">
             {ANGLES.map((a) => {
               const pending = pendingPhotos[a.key]
-              const existing = todayPhotos[a.key]
+              const existing = formPhotos[a.key]
+              // В прошлом отчёте уже загруженное фото заменить нельзя — только дополнить
+              const locked = !!photoDay && !!existing
               return (
                 // Свой input на каждый ракурс — исключает подстановку файла
                 // от соседнего слота (общий input путал левый/правый бок)
                 <label
                   key={a.key}
-                  className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border cursor-pointer ${
+                  className={`relative aspect-[3/4] rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 border ${
+                    locked ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     pending || existing
                       ? 'border-primary/40'
                       : 'bg-gray-100 border-dashed border-gray-300'
@@ -766,6 +782,7 @@ export const ProgressPage = () => {
                     type="file"
                     accept="image/*"
                     className="hidden"
+                    disabled={locked}
                     onChange={(e) => onPickAngle(a.key, e)}
                   />
                   {pending ? (
@@ -797,17 +814,17 @@ export const ProgressPage = () => {
                   ) : null}
                   <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white bg-black/40 py-0.5 truncate px-1">
                     {a.label}
-                    {pending || existing ? ' · заменить' : ''}
+                    {locked ? '' : pending || existing ? ' · заменить' : ''}
                   </span>
                 </label>
               )
             })}
           </div>
           {/* Предупреждение: загружены не все ракурсы */}
-          {missingAngles.length > 0 && (Object.keys(pendingPhotos).length > 0 || hasTodayPhotos) && (
+          {missingAngles.length > 0 && (Object.keys(pendingPhotos).length > 0 || hasFormPhotos) && (
             <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-3">
               Не хватает {missingAngles.length} из 4 фото: {missingText}. Можно сохранить и
-              догрузить позже сегодня.
+              догрузить позже.
             </p>
           )}
           <div className="flex gap-2">
@@ -833,6 +850,7 @@ export const ProgressPage = () => {
               onClick={() => {
                 clearPending()
                 setShowPhotoForm(false)
+                setPhotoDay(null)
               }}
               className="px-5 bg-gray-100 text-text-secondary rounded-xl"
             >
@@ -845,7 +863,7 @@ export const ProgressPage = () => {
       {/* Пока сравнивать не с чем — говорим, что сравнение появится позже */}
       {!isLoading && (measurements.length === 1 || photoDays.length === 1) && (
         <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-card px-4 py-3">
-          <TrendingDown className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <ArrowLeftRight className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <p className="text-sm text-text-primary leading-snug">
             {measurements.length === 1 && photoDays.length === 1
               ? 'Сравнение замеров и фото «было — стало» появится здесь после следующих замеров и фотоотчёта.'
@@ -859,7 +877,7 @@ export const ProgressPage = () => {
       {/* ===== 3. Сравнить замеры ===== */}
       {measurements.length >= 2 && (
         <Fold
-          icon={<TrendingDown className="w-5 h-5 text-primary" />}
+          icon={<ArrowLeftRight className="w-5 h-5 text-primary" />}
           title="Сравнить замеры"
         >
           <div className="grid grid-cols-2 gap-3 mb-3">
@@ -919,7 +937,7 @@ export const ProgressPage = () => {
       {/* ===== 4. Сравнить фотоотчёт ===== */}
       {photoDays.length >= 2 && (
         <Fold
-          icon={<Image className="w-5 h-5 text-primary" />}
+          icon={<Columns2 className="w-5 h-5 text-primary" />}
           title="Сравнить фотоотчёт"
         >
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -1091,16 +1109,12 @@ export const ProgressPage = () => {
               <div key={d.day}>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <p className="text-xs text-text-primary">{fmtDate(d.date)}</p>
-                  {d.day === todayKey && (
+                  {(d.day === todayKey || ANGLES.some((a) => !d.byAngle[a.key])) && (
                     <button
-                      onClick={() => {
-                        clearPending()
-                        setShowPhotoForm(true)
-                        window.scrollTo(0, 0)
-                      }}
+                      onClick={() => openPhotoForm(d.day)}
                       className="text-xs font-medium text-primary"
                     >
-                      Заменить или догрузить
+                      {ANGLES.some((a) => !d.byAngle[a.key]) ? 'Догрузить фото' : 'Заменить фото'}
                     </button>
                   )}
                 </div>
@@ -1108,28 +1122,16 @@ export const ProgressPage = () => {
                   {ANGLES.map((a) => {
                     const p = d.byAngle[a.key]
                     if (!p)
-                      return d.day === todayKey ? (
+                      return (
                         <button
                           key={a.key}
-                          onClick={() => {
-                            clearPending()
-                            setShowPhotoForm(true)
-                            window.scrollTo(0, 0)
-                          }}
+                          onClick={() => openPhotoForm(d.day)}
                           className="aspect-[3/4] rounded-xl bg-amber-50 border border-dashed border-amber-300 flex flex-col items-center justify-center gap-1 text-amber-700"
                         >
                           <Camera className="w-5 h-5" />
                           <span className="text-xs font-medium">Догрузить</span>
                           <span className="text-[10px]">{a.label}</span>
                         </button>
-                      ) : (
-                        <div
-                          key={a.key}
-                          className="aspect-[3/4] rounded-xl bg-gray-50 flex flex-col items-center justify-center text-[10px] text-gray-400"
-                        >
-                          <span>нет фото</span>
-                          <span>{a.label}</span>
-                        </div>
                       )
                     return (
                       <div key={a.key} className="relative">
@@ -1144,6 +1146,8 @@ export const ProgressPage = () => {
                             })
                           }
                         />
+                        {/* Удалять (и тем самым заменять) можно только сегодняшние фото */}
+                        {d.day === todayKey && (
                         <button
                           onClick={() => {
                             if (confirm('Удалить это фото?')) photoDelMut.mutate(p.id)
@@ -1152,6 +1156,7 @@ export const ProgressPage = () => {
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
+                        )}
                       </div>
                     )
                   })}

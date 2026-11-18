@@ -123,10 +123,12 @@ export const clientsApi = {
   addFeedback: (text: string) => api.post('/clients/me/feedback', { text }),
   deleteFeedback: (id: string) => api.delete(`/clients/me/feedback/${id}`),
   getPhotos: () => api.get('/clients/me/photos'),
-  addPhoto: (file: File, angle: string) => {
+  // date — чтобы дополнить или заменить фото в прошлом фотоотчёте (без неё — сегодня)
+  addPhoto: (file: File, angle: string, date?: string) => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('angle', angle)
+    if (date) fd.append('date', date)
     return api.post('/clients/me/photos', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
