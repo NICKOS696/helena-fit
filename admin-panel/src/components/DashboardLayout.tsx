@@ -41,14 +41,14 @@ export const DashboardLayout = () => {
       {/* Боковое меню: статичное на lg+, выезжающее на мобильных */}
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0',
           menuOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="p-6 border-b flex items-center justify-between">
+        <div className="px-5 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary">Helena Fit</h1>
-            <p className="text-sm text-gray-600">Админ-панель</p>
+            <h1 className="text-xl font-bold text-primary-dark">Helena Fit</h1>
+            <p className="text-xs text-gray-500">Админ-панель</p>
           </div>
           {/* Закрыть меню (только на мобильных) */}
           <button
@@ -60,7 +60,7 @@ export const DashboardLayout = () => {
           </button>
         </div>
 
-        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
           {visibleItems.map(({ path, icon: Icon, label }) => (
             <NavLink
               key={path}
@@ -68,21 +68,23 @@ export const DashboardLayout = () => {
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                  isActive ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100',
+                  'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[15px] transition-colors',
+                  isActive
+                    ? 'bg-primary/10 text-primary-dark font-semibold'
+                    : 'text-gray-600 hover:bg-gray-100',
                 )
               }
             >
               <Icon className="w-5 h-5" />
-              <span className="font-medium">{label}</span>
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-4 border-t">
+        <div className="p-3 border-t border-gray-100">
           <button
             onClick={logout}
-            className="flex items-center gap-3 px-4 py-3 w-full text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center gap-3 px-3.5 py-2.5 w-full text-[15px] text-red-600 hover:bg-red-50 rounded-xl transition-colors"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Выйти</span>
@@ -104,7 +106,10 @@ export const DashboardLayout = () => {
         </header>
 
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          {/* На широких мониторах контент не растягивается на всю ширину */}
+          <div className="max-w-[1320px] mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

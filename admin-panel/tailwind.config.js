@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -7,6 +9,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Тёплые нейтральные, как в Mini App
+        gray: colors.stone,
         primary: {
           DEFAULT: '#717C5A',
           light: '#8A9A6E',

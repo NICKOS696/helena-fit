@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminClientsApi } from '@/lib/api'
 import { AuthImage } from '@/components/AuthImage'
+import { ZoomableImage } from '@/components/ZoomableImage'
 import { ArrowLeft, Plus, Trash2, Users, Save, X, ChevronDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -101,6 +102,13 @@ export const ClientCardPage = () => {
     a?: { id: string; caption: string } | null
     b?: { id: string; caption: string } | null
   } | null>(null)
+
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFullscreen(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen])
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-client', id],
@@ -759,15 +767,22 @@ export const ClientCardPage = () => {
         )}
       </Fold>
 
-      {/* Полноэкранное сравнение пары фото */}
+      {/* Полноэкранное сравнение пары фото. Каждое фото приближается отдельно:
+          двойной клик или колесо мыши; закрытие — крестик или Esc. */}
       {fullscreen && (
-        <div
-          className="fixed inset-0 z-50 bg-black flex flex-col"
-          onClick={() => setFullscreen(null)}
-        >
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-white text-sm font-medium">{fullscreen.label}</span>
-            <button className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center">
+            <span className="text-white text-sm font-medium">
+              {fullscreen.label}
+              <span className="text-white/50 font-normal ml-3 text-xs">
+                двойной клик или колесо мыши — приблизить
+              </span>
+            </span>
+            <button
+              onClick={() => setFullscreen(null)}
+              aria-label="Закрыть"
+              className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -777,26 +792,18 @@ export const ClientCardPage = () => {
             }`}
           >
             {fullscreen.a && (
-              <div className="h-full min-h-0 flex flex-col">
-                <AuthImage
-                  src={adminClientsApi.photoFileUrl(id!, fullscreen.a.id)}
-                  className="flex-1 min-h-0 w-full object-contain"
-                />
-                <p className="text-center text-white/80 text-xs py-1.5">
-                  {fullscreen.a.caption}
-                </p>
-              </div>
+              <ZoomableImage
+                key={fullscreen.a.id}
+                src={adminClientsApi.photoFileUrl(id!, fullscreen.a.id)}
+                caption={fullscreen.a.caption}
+              />
             )}
             {fullscreen.b && (
-              <div className="h-full min-h-0 flex flex-col">
-                <AuthImage
-                  src={adminClientsApi.photoFileUrl(id!, fullscreen.b.id)}
-                  className="flex-1 min-h-0 w-full object-contain"
-                />
-                <p className="text-center text-white/80 text-xs py-1.5">
-                  {fullscreen.b.caption}
-                </p>
-              </div>
+              <ZoomableImage
+                key={fullscreen.b.id}
+                src={adminClientsApi.photoFileUrl(id!, fullscreen.b.id)}
+                caption={fullscreen.b.caption}
+              />
             )}
           </div>
         </div>
