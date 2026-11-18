@@ -1,5 +1,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
+import { hasNativeBack } from '@/components/HeaderBack'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
@@ -204,13 +206,15 @@ const QuestionnaireForm = ({ onDone }: { onDone: () => void }) => {
 
   return (
     <div className="p-4 space-y-3 pb-8">
-      <button
-        onClick={() => navigate('/profile')}
-        className="flex items-center gap-1 text-sm text-text-secondary"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Профиль
-      </button>
+      {!hasNativeBack() && (
+        <button
+          onClick={() => navigate('/profile')}
+          className="flex items-center gap-1 text-sm text-text-secondary"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Профиль
+        </button>
+      )}
       <h1 className="text-2xl font-bold text-text-primary">Анкета</h1>
       <Card>
         <p className="text-sm text-text-secondary mb-4">
@@ -265,6 +269,7 @@ const QuestionnaireForm = ({ onDone }: { onDone: () => void }) => {
 }
 
 export const ProgressPage = () => {
+  useTelegramBackButton()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
@@ -302,7 +307,40 @@ export const ProgressPage = () => {
     queryFn: () => clientsApi.getMeasurements(),
     enabled: !!isClient,
   })
-  const measurements: any[] = data?.data || []
+  const measurements: any[] = useMemo(() => data?.data || [], [data])
+
+  // Сводка: дата следующих замеров (через месяц после последних) и изменения с первого замера
+  const summary = useMemo(() => {
+    const sorted = [...measurements].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    )
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    if (!first || !last) {
+      return { first: null, overdue: false, nextText: '', daysLeft: 0, diffs: [] as any[] }
+    }
+    const next = new Date(last.date)
+    next.setMonth(next.getMonth() + 1)
+    const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
+    const diff = (key: string) => {
+      // последнее и первое НЕпустое значение параметра
+      const vals = sorted.map((m) => m[key]).filter((v) => v != null)
+      if (vals.length < 2) return null
+      return Math.round((vals[vals.length - 1] - vals[0]) * 10) / 10
+    }
+    const diffs = [
+      { label: 'Вес', value: diff('weight'), unit: 'кг' },
+      { label: 'Талия', value: diff('waist'), unit: 'см' },
+      { label: 'Бёдра', value: diff('hips'), unit: 'см' },
+    ].filter((d) => d.value !== null) as { label: string; value: number; unit: string }[]
+    return {
+      first,
+      overdue: daysLeft < 0,
+      nextText: next.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+      daysLeft: Math.max(0, daysLeft),
+      diffs: sorted.length > 1 ? diffs : [],
+    }
+  }, [measurements])
 
   const { data: photosData } = useQuery({
     queryKey: ['client-photos'],
@@ -462,53 +500,111 @@ export const ProgressPage = () => {
 
   return (
     <div className="p-4 space-y-3 pb-8">
-      <button
-        onClick={() => navigate('/profile')}
-        className="flex items-center gap-1 text-sm text-text-secondary"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Профиль
-      </button>
+      {!hasNativeBack() && (
+        <button
+          onClick={() => navigate('/profile')}
+          className="flex items-center gap-1 text-sm text-text-secondary"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Профиль
+        </button>
+      )}
 
       <h1 className="text-2xl font-bold text-text-primary mb-1">Мой прогресс</h1>
 
-      {/* ===== Кнопки добавления: замеры + фото в ряд, впечатление под ними ===== */}
+      {/* ===== Сводка: что сделать сейчас и результат с начала ===== */}
       {!showForm && !showPhotoForm && !showFbForm && (
-        <div className="space-y-2">
-          <div className="flex gap-2">
+        <>
+          <Card>
+            {summary.first ? (
+              <>
+                <p className="text-xs text-text-secondary">Следующие замеры</p>
+                <p
+                  className={`text-xl font-bold mt-0.5 ${
+                    summary.overdue ? 'text-amber-600' : 'text-text-primary'
+                  }`}
+                >
+                  {summary.overdue ? 'Пора сделать замеры' : summary.nextText}
+                </p>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  {summary.overdue
+                    ? `срок был ${summary.nextText}`
+                    : summary.daysLeft === 0
+                      ? 'сегодня'
+                      : `через ${summary.daysLeft} дн. · раз в месяц`}
+                </p>
+                {summary.diffs.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {summary.diffs.map((d) => (
+                      <div key={d.label} className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
+                        <p className="text-[11px] text-text-secondary">{d.label}</p>
+                        <p
+                          className={`text-base font-bold ${
+                            d.value < 0
+                              ? 'text-green-600'
+                              : d.value > 0
+                                ? 'text-red-500'
+                                : 'text-text-primary'
+                          }`}
+                        >
+                          {d.value > 0 ? '+' : ''}
+                          {d.value} {d.unit}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {summary.diffs.length > 0 && (
+                  <p className="text-[11px] text-text-secondary mt-1.5">
+                    изменения с первого замера
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-bold text-text-primary">Начнём с точки «до»</p>
+                <p className="text-sm text-text-secondary mt-1">
+                  Внеси первые замеры и сделай фото — так будет видно твой результат.
+                </p>
+              </>
+            )}
             <button
               onClick={() => {
                 haptic.selection()
                 setShowForm(true)
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              className="mt-4 w-full flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform"
             >
               <Plus className="w-4 h-4 shrink-0" />
               Добавить замеры
             </button>
+          </Card>
+
+          {/* Второстепенные действия — светлые кнопки */}
+          <div className="flex gap-2">
             <button
               onClick={() => {
                 haptic.selection()
                 clearPending()
                 setShowPhotoForm(true)
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
             >
               <Camera className="w-4 h-4 shrink-0" />
-              Фото отчёт
+              Фотоотчёт
+            </button>
+            <button
+              onClick={() => {
+                haptic.selection()
+                setShowFbForm(true)
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
+            >
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              Впечатление
             </button>
           </div>
-          <button
-            onClick={() => {
-              haptic.selection()
-              setShowFbForm(true)
-            }}
-            className="w-full flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-          >
-            <MessageSquare className="w-4 h-4 shrink-0" />
-            Впечатление от тренировок
-          </button>
-        </div>
+        </>
       )}
 
       {/* Форма впечатления */}
@@ -553,11 +649,11 @@ export const ProgressPage = () => {
           <p className="text-text-primary mb-3">
             Новый замер — {new Date().toLocaleDateString('ru-RU')}
           </p>
-          <div className="space-y-3 mb-3">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3 mb-3">
             {FIELDS.map((f) => (
               <div key={f.key}>
                 <label className="block text-xs text-text-secondary mb-1">
-                  {f.form}, {f.unit}
+                  {f.label}, {f.unit}
                 </label>
                 <input
                   type="number"
@@ -571,7 +667,8 @@ export const ProgressPage = () => {
             ))}
           </div>
           <p className="text-xs text-text-secondary mb-3">
-            Заполни то, что измерила — остальное можно пропустить.
+            Живот и бёдра измеряй по самой выпуклой части. Заполни то, что измерила, —
+            остальное можно пропустить.
           </p>
           <div className="flex gap-2">
             <button
@@ -591,11 +688,11 @@ export const ProgressPage = () => {
         </Card>
       )}
 
-      {/* Форма фото отчёта */}
+      {/* Форма фотоотчёта */}
       {showPhotoForm && (
         <Card>
           <p className="text-text-primary mb-2">
-            Фото отчёт — {new Date().toLocaleDateString('ru-RU')}
+            Фотоотчёт — {new Date().toLocaleDateString('ru-RU')}
           </p>
           <p className="text-xs text-text-secondary mb-3">
             Сделай фото в четырёх ракурсах и нажми «Сохранить». Фото приватные — увидите
@@ -724,11 +821,11 @@ export const ProgressPage = () => {
         </Fold>
       )}
 
-      {/* ===== 4. Сравнить фото отчёт ===== */}
+      {/* ===== 4. Сравнить фотоотчёт ===== */}
       {photoDays.length >= 2 && (
         <Fold
           icon={<Image className="w-5 h-5 text-primary" />}
-          title="Сравнить фото отчёт"
+          title="Сравнить фотоотчёт"
         >
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div>
@@ -779,7 +876,7 @@ export const ProgressPage = () => {
                 <div key={a.key}>
                   <p className="text-[11px] text-text-secondary mb-1">
                     {a.label}{' '}
-                    <span className="text-gray-300">· нажми, чтобы развернуть</span>
+                    <span className="text-gray-400">· нажми, чтобы развернуть</span>
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {pa ? (
@@ -882,11 +979,11 @@ export const ProgressPage = () => {
       )}
 
 
-      {/* ===== 6. История фото отчётов ===== */}
+      {/* ===== 6. История фотоотчётов ===== */}
       {photoDays.length > 0 && (
         <Fold
           icon={<Camera className="w-5 h-5 text-primary" />}
-          title="История фото отчётов"
+          title="История фотоотчётов"
           count={photoDays.length}
         >
           <div className="space-y-3">
@@ -957,16 +1054,6 @@ export const ProgressPage = () => {
             ))}
           </div>
         </Fold>
-      )}
-
-      {/* Пустое состояние */}
-      {!isLoading && measurements.length === 0 && photoDays.length === 0 && (
-        <Card>
-          <p className="text-center text-text-secondary py-6 text-sm">
-            Пока нет ни замеров, ни фото. Начни с первого замера — с него начнётся твоя
-            история 💪
-          </p>
-        </Card>
       )}
 
       {/* Полноэкранный просмотр фото / пары «было-стало» (щипок — зум) */}

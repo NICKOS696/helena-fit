@@ -721,14 +721,15 @@ export const RecipeCollectionPage = () => {
                 <button onClick={() => setShowList(false)}>
                   <ArrowLeft className="w-6 h-6" />
                 </button>
-                <h1 className="text-lg font-bold text-text-primary flex-1">Список покупок</h1>
+                <h1 className="text-lg font-bold text-text-primary flex-1 whitespace-nowrap">Список покупок</h1>
                 {/* Компактные действия */}
                 <button
                   onClick={() => handleCopyList(text)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+                  aria-label="Копировать список"
+                  className="h-9 flex items-center justify-center gap-1.5 text-sm font-medium text-primary bg-primary/10 px-3 rounded-full active:scale-95 transition-transform"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Готово' : 'Копировать'}
+                  {copied && 'Готово'}
                 </button>
                 <button
                   onClick={() => handleShareList(text)}
