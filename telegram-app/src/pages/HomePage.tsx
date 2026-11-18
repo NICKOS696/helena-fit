@@ -2,8 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { newsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Sparkles, Calendar, ChevronRight } from 'lucide-react'
+import { Sparkles, ChevronRight } from 'lucide-react'
+
+// Куда ведёт новость: связанный сборник, иначе — страница новости (если есть текст)
+const newsTarget = (item: any): string | null => {
+  if (item.workoutLinks?.[0]) return `/workouts/${item.workoutLinks[0].collectionId}`
+  if (item.recipeLinks?.[0]) return `/recipes/${item.recipeLinks[0].collectionId}`
+  if (item.content && item.content.trim()) return `/news/${item.id}`
+  return null
+}
 
 export const HomePage = () => {
   const navigate = useNavigate()
@@ -30,18 +37,14 @@ export const HomePage = () => {
   return (
     <div className="pb-4">
       {/* Hero Section - Логотип */}
-      <div className="mb-6">
-        <img 
-          src="/uploads/logo.png" 
-          alt="Helena Fit" 
-          className="w-full h-auto object-cover"
-        />
+      <div className="mb-5">
+        <img src="/uploads/logo.png" alt="Helena Fit" className="w-full h-auto object-cover" />
       </div>
 
       <div className="px-4 space-y-4">
         {/* Section Title */}
         <div className="flex items-center gap-2">
-          <div className="w-1 h-6 bg-primary rounded-full" />
+          <div className="w-1 h-5 bg-primary rounded-full" />
           <h2 className="text-xl font-bold text-text-primary">Новости и акции</h2>
         </div>
 
@@ -55,52 +58,49 @@ export const HomePage = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {news.map((item: any) => (
-              <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                {item.bannerImage && (
-                  <div className="relative -m-4 mb-4">
+            {news.map((item: any) => {
+              const target = newsTarget(item)
+              return (
+                // Карточка нажимается целиком
+                <Card
+                  key={item.id}
+                  className="!p-0 overflow-hidden"
+                  onClick={target ? () => navigate(target) : undefined}
+                >
+                  {item.bannerImage && (
                     <img
                       src={item.bannerImage}
                       alt={item.title}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-48 object-cover bg-gray-100"
                     />
-                    
-                  </div>
-                )}
-                <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-2">
-                  {item.title}
-                </h3>
-                {item.excerpt && (
-                  <p className="text-text-secondary mb-4 line-clamp-2 leading-relaxed">
-                    {item.excerpt}
-                  </p>
-                )}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-2 text-sm text-text-secondary">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(item.publishedAt).toLocaleDateString('ru-RU')}</span>
-                  </div>
-                  {(item.workoutLinks?.[0] || item.recipeLinks?.[0] || (item.content && item.content.trim())) && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (item.workoutLinks?.[0]) {
-                          navigate(`/workouts/${item.workoutLinks[0].collectionId}`)
-                        } else if (item.recipeLinks?.[0]) {
-                          navigate(`/recipes/${item.recipeLinks[0].collectionId}`)
-                        } else if (item.content && item.content.trim()) {
-                          navigate(`/news/${item.id}`)
-                        }
-                      }}
-                      className="flex items-center gap-1"
-                    >
-                      Подробнее
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
                   )}
-                </div>
-              </Card>
-            ))}
+                  <div className="p-4">
+                    <h3 className="text-[17px] font-bold leading-snug text-text-primary line-clamp-2">
+                      {item.title}
+                    </h3>
+                    {item.excerpt && (
+                      <p className="text-sm text-text-secondary mt-1.5 line-clamp-2 leading-relaxed">
+                        {item.excerpt}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-text-secondary">
+                        {new Date(item.publishedAt).toLocaleDateString('ru-RU', {
+                          day: 'numeric',
+                          month: 'long',
+                        })}
+                      </span>
+                      {target && (
+                        <span className="flex items-center gap-0.5 text-sm font-semibold text-primary">
+                          Подробнее
+                          <ChevronRight className="w-4 h-4" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>

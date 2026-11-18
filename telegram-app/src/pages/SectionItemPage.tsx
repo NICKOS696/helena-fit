@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/Card'
+import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
-import { ArrowLeft } from 'lucide-react'
 
 export const SectionItemPage = () => {
   const location = useLocation()
@@ -20,9 +20,7 @@ export const SectionItemPage = () => {
   return (
     <div className="pb-4">
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+        <HeaderBack onClick={() => navigate(-1)} />
         <div>
           <p className="text-xs text-gray-500">{sectionTitle}</p>
           <h1 className="text-lg font-bold text-text-primary">{item.title}</h1>

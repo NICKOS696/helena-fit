@@ -5,10 +5,11 @@ import { recipesApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { ErrorState } from '@/components/ErrorState'
+import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
 import { isInShoppingList, toggleShoppingList } from '@/lib/shoppingList'
-import { ArrowLeft, Clock, ShoppingBag, Check } from 'lucide-react'
+import { Clock, ShoppingBag, Check } from 'lucide-react'
 import clsx from 'clsx'
 
 export const RecipeDetailPage = () => {
@@ -118,9 +119,7 @@ export const RecipeDetailPage = () => {
     <div className="pb-4">
       {/* Header */}
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+        <HeaderBack onClick={() => navigate(-1)} />
         <h1 className="text-lg font-bold text-text-primary">Рецепт</h1>
       </div>
 
@@ -130,7 +129,7 @@ export const RecipeDetailPage = () => {
           <img
             src={recipe.coverImage}
             alt={recipe.title}
-            className="w-full h-96 object-cover"
+            className="w-full h-80 object-cover bg-gray-100"
             style={{ objectPosition: recipe.coverImagePosition || 'center' }}
           />
           {/* Favorite Button */}
@@ -148,7 +147,7 @@ export const RecipeDetailPage = () => {
               aria-label="В список покупок"
               className={clsx(
                 'absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-colors',
-                inList ? 'bg-primary-light text-white' : 'bg-white/90 text-primary-light/70',
+                inList ? 'bg-primary-light text-white' : 'bg-white/95 text-primary-dark',
               )}
             >
               {inList ? <Check className="w-5 h-5" /> : <ShoppingBag className="w-5 h-5" />}
@@ -158,6 +157,17 @@ export const RecipeDetailPage = () => {
       )}
 
       <div className="p-4 space-y-4">
+        {/* Название — сразу под фото */}
+        <div>
+          <h2 className="text-[22px] font-bold leading-tight text-text-primary">{recipe.title}</h2>
+          {recipe.cookingTime && (
+            <div className="flex items-center gap-1.5 text-text-secondary mt-1.5">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">{recipe.cookingTime} мин</span>
+            </div>
+          )}
+        </div>
+
         {/* Nutrition Toggle */}
         <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
           <button
@@ -198,7 +208,7 @@ export const RecipeDetailPage = () => {
             <div className="flex h-2.5 rounded-full overflow-hidden mb-3">
               <div className="bg-primary" style={{ width: `${macroPct(p)}%` }} />
               <div className="bg-amber-400" style={{ width: `${macroPct(f)}%` }} />
-              <div className="bg-violet-400" style={{ width: `${macroPct(c)}%` }} />
+              <div className="bg-[#C4936F]" style={{ width: `${macroPct(c)}%` }} />
             </div>
           )}
 
@@ -219,25 +229,13 @@ export const RecipeDetailPage = () => {
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
-                <span className="w-2 h-2 rounded-full bg-violet-400" />
+                <span className="w-2 h-2 rounded-full bg-[#C4936F]" />
                 Углеводы
               </div>
               <div className="text-base font-bold text-text-primary">{c} г</div>
             </div>
           </div>
         </div>
-
-        {/* Recipe Title */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">{recipe.title}</h2>
-          {recipe.cookingTime && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">Время приготовления: {recipe.cookingTime} мин</span>
-            </div>
-          )}
-        </div>
-
 
         {/* Ингредиенты — аккуратными строками, с разделами */}
         <Card>

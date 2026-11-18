@@ -4,8 +4,9 @@ import { newsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
+import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
-import { ArrowLeft, Calendar, Dumbbell, UtensilsCrossed } from 'lucide-react'
+import { Calendar, Dumbbell, UtensilsCrossed } from 'lucide-react'
 
 export const NewsDetailPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -44,9 +45,7 @@ export const NewsDetailPage = () => {
     <div className="pb-4">
       {/* Header в едином стиле с остальными детальными экранами */}
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+        <HeaderBack onClick={() => navigate(-1)} />
         <h1 className="text-lg font-bold text-text-primary">Новость</h1>
       </div>
 

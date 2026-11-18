@@ -2,14 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { workoutsApi, paymeApi, analyticsApi } from '@/lib/api'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
+import { StickyBuyBar } from '@/components/StickyBuyBar'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { showPaymentError } from '@/lib/payments'
 import { ErrorState } from '@/components/ErrorState'
+import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Flame, Clock, Lock, ChevronDown, Check } from 'lucide-react'
+import { Flame, Clock, Lock, ChevronDown, ChevronRight, Check, Play, FileText } from 'lucide-react'
 import { RutubeVideo } from '@/components/RutubeVideo'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
@@ -182,9 +183,7 @@ export const WorkoutCollectionPage = () => {
   return (
     <div className="pb-4">
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+        <HeaderBack onClick={() => navigate(-1)} />
         <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
       </div>
 
@@ -203,8 +202,7 @@ export const WorkoutCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 rounded-card object-cover bg-gray-200"
-            style={{ objectPosition: collection.coverImagePosition || 'center' }}
+            className="w-full h-auto min-h-[12rem] rounded-card bg-gray-200"
           />
         )}
 
@@ -214,7 +212,7 @@ export const WorkoutCollectionPage = () => {
           </p>
         )}
 
-        {!collection.hasAccess && (
+        {!collection.hasAccess && collection.finalPrice < collection.price && (
           <Card>
             <PriceDisplay
               price={collection.price}
@@ -223,14 +221,6 @@ export const WorkoutCollectionPage = () => {
               finalPrice={collection.finalPrice}
               discountEndDate={collection.discountEndDate}
             />
-            <Button
-              fullWidth
-              className="mt-4"
-              onClick={() => setShowPayMethods(true)}
-              disabled={isPaymentLoading}
-            >
-              {isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
-            </Button>
           </Card>
         )}
 
@@ -250,41 +240,31 @@ export const WorkoutCollectionPage = () => {
         {/* Что входит - только если нет доступа */}
         {!collection.hasAccess && collection.sections && collection.sections.length > 0 && (
           <Card>
-            <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Что входит:</h2>
-            
-            {/* Тренировки (VIDEO разделы) */}
-            {collection.sections.filter((s: any) => s.type === 'VIDEO').length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-bold text-gray-800 mb-2">Тренировки:</h3>
-                <div className="space-y-1">
-                  {collection.sections
-                    .filter((s: any) => s.type === 'VIDEO')
-                    .map((section: any) => (
-                      <div key={section.id} className="flex justify-between text-sm">
-                        <span className="text-gray-700">{section.title}:</span>
-                        <span className="text-gray-600">{section.items?.length || 0}{' '}{pluralize(section.items?.length || 0, 'занятие', 'занятия', 'занятий')}</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* Рекомендации (TEXT_FOLDER разделы) */}
-            {collection.sections.filter((s: any) => s.type === 'TEXT_FOLDER').length > 0 && (
-              <div>
-                <h3 className="font-bold text-gray-800 mb-2">Рекомендации:</h3>
-                <div className="space-y-1">
-                  {collection.sections
-                    .filter((s: any) => s.type === 'TEXT_FOLDER')
-                    .map((section: any) => (
-                      <div key={section.id} className="flex justify-between text-sm">
-                        <span className="text-gray-700">{section.title}:</span>
-                        <span className="text-gray-600">{section.items?.length || 0}{' '}{pluralize(section.items?.length || 0, 'запись', 'записи', 'записей')}</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
+            <h2 className="text-base font-bold text-text-primary mb-1">Что входит</h2>
+            <div className="divide-y divide-gray-100">
+              {collection.sections.map((section: any) => {
+                const isVideo = section.type === 'VIDEO'
+                const n = section.items?.length || 0
+                return (
+                  <div key={section.id} className="flex items-center gap-3 py-2.5">
+                    <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      {isVideo ? (
+                        <Play className="w-4 h-4 text-primary" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-primary" />
+                      )}
+                    </span>
+                    <span className="flex-1 text-sm text-text-primary">{section.title}</span>
+                    <span className="text-sm text-text-secondary">
+                      {n}{' '}
+                      {isVideo
+                        ? pluralize(n, 'занятие', 'занятия', 'занятий')
+                        : pluralize(n, 'запись', 'записи', 'записей')}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </Card>
         )}
 
@@ -302,14 +282,14 @@ export const WorkoutCollectionPage = () => {
               const isExpanded = expandedSections.has(section.id)
 
               return (
-              <div key={section.id} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div key={section.id} className="bg-white rounded-card shadow-card overflow-hidden">
                 {/* Заголовок раздела - кликабельный */}
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full bg-white p-4 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 py-3.5 flex items-center justify-between gap-3"
                 >
                   <div className="text-left min-w-0">
-                    <h2 className="text-lg font-bold text-gray-800">{section.title}</h2>
+                    <h2 className="text-base font-semibold text-text-primary">{section.title}</h2>
                     {isVideoSection && totalItems > 0 && (
                       <div className="flex items-center gap-2 mt-1">
                         <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
@@ -331,7 +311,7 @@ export const WorkoutCollectionPage = () => {
                     )}
                   </div>
                   <ChevronDown
-                    className={`w-5 h-5 text-gray-600 flex-shrink-0 transition-transform ${
+                    className={`w-5 h-5 text-text-secondary flex-shrink-0 transition-transform ${
                       isExpanded ? 'rotate-180' : ''
                     }`}
                   />
@@ -339,7 +319,7 @@ export const WorkoutCollectionPage = () => {
 
                 {/* Контент раздела - показываем только если развёрнут */}
                 {isExpanded && (
-                  <div className="p-4 bg-gray-50">
+                  <div className={section.type === 'VIDEO' ? 'p-3 bg-gray-50' : 'px-4 pb-1'}>
                     {section.type === 'VIDEO' ? (
                   // Видео тренировки
                   <div className="space-y-3">
@@ -399,7 +379,7 @@ export const WorkoutCollectionPage = () => {
                   </div>
                 ) : (
                   // Текстовые материалы (питание, рекомендации)
-                  <div className="space-y-2">
+                  <div className="divide-y divide-gray-100 border-t border-gray-100">
                     {section.items.map((item: any) => (
                       <button
                         key={item.id}
@@ -411,10 +391,14 @@ export const WorkoutCollectionPage = () => {
                           }
                         }}
                         disabled={!collection.hasAccess}
-                        className="w-full bg-primary text-white py-3 px-4 rounded-xl font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                        className="w-full py-3 text-left text-[15px] text-text-primary flex items-center justify-between gap-3 active:opacity-60 disabled:opacity-50"
                       >
                         <span>{item.title}</span>
-                        {!collection.hasAccess && <Lock className="w-4 h-4" />}
+                        {collection.hasAccess ? (
+                          <ChevronRight className="w-4 h-4 text-text-secondary shrink-0" />
+                        ) : (
+                          <Lock className="w-4 h-4 shrink-0" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -492,6 +476,20 @@ export const WorkoutCollectionPage = () => {
           </div>
         )}
       </div>
+
+      {/* Закреплённая панель покупки — только на продающей странице */}
+      {!collection.hasAccess && (
+        <>
+          <div className="h-16" />
+          <StickyBuyBar
+            price={collection.finalPrice}
+            oldPrice={collection.price}
+            label={isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
+            disabled={isPaymentLoading}
+            onClick={() => setShowPayMethods(true)}
+          />
+        </>
+      )}
     </div>
   )
 }

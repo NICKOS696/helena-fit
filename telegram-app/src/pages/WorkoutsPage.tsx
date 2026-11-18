@@ -118,12 +118,12 @@ export const WorkoutsPage = () => {
         </button>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {collections.map((collection: any) => (
-          <Card key={collection.id} className={clsx("p-4 space-y-3", collection.isInDevelopment && "opacity-90")}>
+          <Card key={collection.id} className={clsx("!p-0 overflow-hidden", collection.isInDevelopment && "opacity-90")}>
             {/* Картинка с закругленными углами */}
             {collection.coverImage && (
-              <div className="relative rounded-xl overflow-hidden">
+              <div className="relative bg-gray-100">
                 <img
                   src={collection.coverImage}
                   alt={collection.title}
@@ -138,12 +138,13 @@ export const WorkoutsPage = () => {
               </div>
             )}
             
+            <div className="p-4 space-y-2.5">
             {/* Заголовок */}
-            <h3 className="text-xl font-bold text-text-primary">{collection.title}</h3>
+            <h3 className="text-lg font-bold leading-snug text-text-primary">{collection.title}</h3>
             
             {/* Описание */}
             {collection.description && (
-              <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line">
+              <p className="text-text-secondary leading-relaxed text-sm whitespace-pre-line line-clamp-3">
                 {collection.description}
               </p>
             )}
@@ -179,11 +180,11 @@ export const WorkoutsPage = () => {
                 {/* Цена крупно */}
                 <div className="flex items-baseline gap-2">
                   {collection.finalPrice < collection.price && (
-                    <span className="text-lg text-gray-400 line-through">
+                    <span className="text-sm text-gray-400 line-through">
                       {collection.price.toLocaleString()} сум
                     </span>
                   )}
-                  <span className="text-2xl font-bold text-primary">
+                  <span className="text-xl font-bold text-text-primary">
                     {collection.finalPrice.toLocaleString()} сум
                   </span>
                 </div>
@@ -208,6 +209,7 @@ export const WorkoutsPage = () => {
                 </div>
               </div>
             )}
+            </div>
           </Card>
         ))}
       </div>

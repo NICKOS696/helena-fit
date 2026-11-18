@@ -144,7 +144,11 @@ export const ProfilePage = () => {
         {access?.workouts?.length > 0 ? (
           <div className="space-y-2">
             {access.workouts.map((workout: any) => (
-              <div key={workout.id} className="flex items-center gap-3">
+              <button
+                key={workout.id}
+                onClick={() => navigate(`/workouts/${workout.id}`)}
+                className="w-full flex items-center gap-3 text-left active:opacity-60"
+              >
                 {workout.coverImage && (
                   <img
                     src={workout.coverImage}
@@ -152,8 +156,9 @@ export const ProfilePage = () => {
                     className="w-12 h-12 rounded-lg object-cover"
                   />
                 )}
-                <span className="text-text-primary">{workout.title}</span>
-              </div>
+                <span className="flex-1 text-text-primary">{workout.title}</span>
+                <ChevronRight className="w-4 h-4 text-text-secondary shrink-0" />
+              </button>
             ))}
           </div>
         ) : (
@@ -170,7 +175,11 @@ export const ProfilePage = () => {
         {access?.recipes?.length > 0 ? (
           <div className="space-y-2">
             {access.recipes.map((recipe: any) => (
-              <div key={recipe.id} className="flex items-center gap-3">
+              <button
+                key={recipe.id}
+                onClick={() => navigate(`/recipes/${recipe.id}`)}
+                className="w-full flex items-center gap-3 text-left active:opacity-60"
+              >
                 {recipe.coverImage && (
                   <img
                     src={recipe.coverImage}
@@ -178,8 +187,9 @@ export const ProfilePage = () => {
                     className="w-12 h-12 rounded-lg object-cover"
                   />
                 )}
-                <span className="text-text-primary">{recipe.title}</span>
-              </div>
+                <span className="flex-1 text-text-primary">{recipe.title}</span>
+                <ChevronRight className="w-4 h-4 text-text-secondary shrink-0" />
+              </button>
             ))}
           </div>
         ) : (

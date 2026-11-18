@@ -9,15 +9,16 @@ import {
   type ShoppingRecipe,
 } from '@/lib/shoppingList'
 import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
+import { StickyBuyBar } from '@/components/StickyBuyBar'
 import { PriceDisplay } from '@/components/PriceDisplay'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { showPaymentError } from '@/lib/payments'
 import { ErrorState } from '@/components/ErrorState'
+import { HeaderBack } from '@/components/HeaderBack'
 import { useTelegramBackButton } from '@/hooks/useTelegramBackButton'
 import { haptic } from '@/lib/telegram'
-import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, Flame, Heart, Search, X, ShoppingBag, Copy, Share2, Check, ChevronDown, UtensilsCrossed } from 'lucide-react'
 import clsx from 'clsx'
 import { pluralize } from '@/utils/plural'
 
@@ -326,9 +327,7 @@ export const RecipeCollectionPage = () => {
     <div className="pb-4">
       {/* Header */}
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
-        <button onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+        <HeaderBack onClick={() => navigate(-1)} />
         <div>
           <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
           <p className="text-xs text-text-secondary">Рецепты с расчётом КБЖУ</p>
@@ -350,8 +349,7 @@ export const RecipeCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 rounded-card object-cover bg-gray-200"
-            style={{ objectPosition: collection.coverImagePosition || 'center' }}
+            className="w-full h-auto min-h-[12rem] rounded-card bg-gray-200"
           />
         )}
 
@@ -362,7 +360,7 @@ export const RecipeCollectionPage = () => {
         )}
 
         {/* Price Card - только если нет доступа */}
-        {!collection.hasAccess && (
+        {!collection.hasAccess && collection.finalPrice < collection.price && (
           <Card>
             <PriceDisplay
               price={collection.price}
@@ -371,14 +369,6 @@ export const RecipeCollectionPage = () => {
               finalPrice={collection.finalPrice}
               discountEndDate={collection.discountEndDate}
             />
-            <Button
-              fullWidth
-              className="mt-4"
-              onClick={() => setShowPayMethods(true)}
-              disabled={isPaymentLoading}
-            >
-              {isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
-            </Button>
           </Card>
         )}
 
@@ -398,14 +388,19 @@ export const RecipeCollectionPage = () => {
         {/* Что входит - только если нет доступа */}
         {!collection.hasAccess && (
         <Card>
-          <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Что входит:</h2>
-          <div className="space-y-1">
+          <h2 className="text-base font-bold text-text-primary mb-1">Что входит</h2>
+          <div className="divide-y divide-gray-100">
             {categories.filter(cat => cat.value !== 'all').map((cat) => {
               const count = collection.recipes?.filter((r: any) => r.category === cat.value).length || 0
               return count > 0 ? (
-                <div key={cat.value} className="flex justify-between text-sm">
-                  <span className="text-gray-700">{cat.label}:</span>
-                  <span className="text-gray-600">{count}</span>
+                <div key={cat.value} className="flex items-center gap-3 py-2.5">
+                  <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <UtensilsCrossed className="w-4 h-4 text-primary" />
+                  </span>
+                  <span className="flex-1 text-sm text-text-primary">{cat.label}</span>
+                  <span className="text-sm text-text-secondary">
+                    {count} {pluralize(count, 'рецепт', 'рецепта', 'рецептов')}
+                  </span>
                 </div>
               ) : null
             })}
@@ -415,7 +410,8 @@ export const RecipeCollectionPage = () => {
 
         {/* Поиск по рецептам сборника */}
         {collection.hasAccess && (
-          <div className="relative">
+          <div className="flex gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
             <input
               type="search"
@@ -435,6 +431,24 @@ export const RecipeCollectionPage = () => {
               </button>
             )}
           </div>
+          {/* Избранное — переключатель рядом с поиском (вместо отдельного чипа) */}
+          <button
+            onClick={() => selectCategory(selectedCategory === 'favorites' ? 'all' : 'favorites')}
+            aria-label="Избранное"
+            aria-pressed={selectedCategory === 'favorites'}
+            className={clsx(
+              'shrink-0 w-[42px] rounded-xl border flex items-center justify-center transition-colors',
+              selectedCategory === 'favorites'
+                ? 'bg-primary border-primary text-white'
+                : 'bg-white border-gray-200 text-text-secondary',
+            )}
+          >
+            <Heart
+              className="w-[18px] h-[18px]"
+              fill={selectedCategory === 'favorites' ? 'currentColor' : 'none'}
+            />
+          </button>
+          </div>
         )}
 
         {/* Categories - показываем если есть доступ.
@@ -448,19 +462,18 @@ export const RecipeCollectionPage = () => {
           )
           const filterButtons = [
             { value: 'all', label: 'Все' },
-            { value: 'favorites', label: 'Избранное' },
             ...presentCategories,
           ]
           return (
-            // Чипы переносятся по строкам, но flex-1 растягивает каждую
-            // строку на всю ширину — ровные ряды без пустых «дырок»
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3">
+            // Чипы делят ширину строки пропорционально тексту: ряд всегда заполнен
+            // от края до края, без прокрутки и пустого места справа
+            <div className="flex flex-wrap gap-1.5">
               {filterButtons.map((cat) => (
                 <button
                   key={cat.value}
                   onClick={() => selectCategory(cat.value)}
                   className={clsx(
-                    'shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap',
+                    'flex-auto px-3 py-1.5 rounded-full text-[13px] font-medium border transition-colors whitespace-nowrap',
                     selectedCategory === cat.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-primary border-gray-200',
@@ -569,7 +582,7 @@ export const RecipeCollectionPage = () => {
                       'absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center shadow-sm transition-colors',
                       listIds.has(recipe.id)
                         ? 'bg-primary-light text-white'
-                        : 'bg-white/90 text-primary-light/70',
+                        : 'bg-white/95 text-primary-dark',
                     )}
                   >
                     {listIds.has(recipe.id) ? (
@@ -649,6 +662,20 @@ export const RecipeCollectionPage = () => {
           )
         })()}
       </div>
+
+      {/* Закреплённая панель покупки — только на продающей странице */}
+      {!collection.hasAccess && (
+        <>
+          <div className="h-16" />
+          <StickyBuyBar
+            price={collection.finalPrice}
+            oldPrice={collection.price}
+            label={isPaymentLoading ? 'Создание платежа...' : 'Купить сборник'}
+            disabled={isPaymentLoading}
+            onClick={() => setShowPayMethods(true)}
+          />
+        </>
+      )}
 
       {/* Компактные плавающие кнопки списка покупок (тест на Сборнике №2) */}
       {shoppingEnabled && collection.hasAccess && listIds.size > 0 && !showList && (

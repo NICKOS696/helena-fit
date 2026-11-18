@@ -288,7 +288,7 @@ export const CalorieCalculator = () => {
                       }}
                     />
                     <div
-                      className="bg-violet-400"
+                      className="bg-[#C4936F]"
                       style={{
                         width: `${(result.carbs / (result.protein + result.fat + result.carbs)) * 100}%`,
                       }}
@@ -317,7 +317,7 @@ export const CalorieCalculator = () => {
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary mb-0.5">
-                      <span className="w-2 h-2 rounded-full bg-violet-400" />
+                      <span className="w-2 h-2 rounded-full bg-[#C4936F]" />
                       Углеводы
                     </div>
                     <div className="text-base font-bold text-text-primary">
