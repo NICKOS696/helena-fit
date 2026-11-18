@@ -329,10 +329,9 @@ export const RecipeCollectionPage = () => {
       {/* Header */}
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
         <HeaderBack onClick={() => navigate(-1)} />
-        <div>
-          <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
-          <p className="text-xs text-text-secondary">Рецепты с расчётом КБЖУ</p>
-        </div>
+        <h1 className="text-[17px] font-semibold leading-tight text-text-primary truncate py-1">
+          {collection.title}
+        </h1>
       </div>
 
       <div className="px-3 py-4 space-y-4">

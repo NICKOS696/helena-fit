@@ -184,7 +184,9 @@ export const WorkoutCollectionPage = () => {
     <div className="pb-4">
       <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
         <HeaderBack onClick={() => navigate(-1)} />
-        <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
+        <h1 className="text-[17px] font-semibold leading-tight text-text-primary truncate py-1">
+          {collection.title}
+        </h1>
       </div>
 
       <div className="p-4 space-y-4">

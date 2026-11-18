@@ -235,7 +235,8 @@ export class ClientRemindersService implements OnModuleInit, OnModuleDestroy {
   private async send(chatId: string, text: string, withButton: boolean): Promise<boolean> {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) return false;
-    const appUrl = (process.env.TELEGRAM_APP_URL || '').replace(/\/$/, '');
+    // TELEGRAM_APP_URL может содержать несколько адресов через запятую (для CORS) — берём первый
+    const appUrl = (process.env.TELEGRAM_APP_URL || '').split(',')[0].trim().replace(/\/$/, '');
     const body: any = { chat_id: chatId, text };
     if (withButton && appUrl.startsWith('https://')) {
       body.reply_markup = {
@@ -254,8 +255,11 @@ export class ClientRemindersService implements OnModuleInit, OnModuleDestroy {
       const json: any = await res.json();
       if (!json.ok) {
         this.logger.warn(`Reminder to ${chatId} failed: ${json.description || res.status}`);
-        // 403 (бот заблокирован) / 400 chat not found — считаем «доставлено», чтобы не долбить каждые 10 минут
-        return json.error_code === 403 || json.error_code === 400;
+        // 403 (бот заблокирован) / 400 chat not found — считаем «обработано», чтобы не повторять каждые 10 минут
+        return (
+          json.error_code === 403 ||
+          (json.error_code === 400 && /chat not found|deactivated/i.test(json.description || ''))
+        );
       }
       return true;
     } catch (e) {
