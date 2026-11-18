@@ -13,6 +13,7 @@ import { ArrowLeft, Flame, Clock, Lock, ChevronDown, Check } from 'lucide-react'
 import { RutubeVideo } from '@/components/RutubeVideo'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
+import { pluralize } from '@/utils/plural'
 
 export const WorkoutCollectionPage = () => {
   const { id } = useParams<{ id: string }>()
@@ -180,11 +181,11 @@ export const WorkoutCollectionPage = () => {
 
   return (
     <div className="pb-4">
-      <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-200 p-4 flex items-center gap-3 z-10">
+      <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
         <button onClick={() => navigate(-1)}>
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-bold text-text-primary">{collection.title}</h1>
+        <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
       </div>
 
       <div className="p-4 space-y-4">
@@ -202,7 +203,7 @@ export const WorkoutCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 rounded-lg object-cover"
+            className="w-full h-64 rounded-card object-cover bg-gray-200"
             style={{ objectPosition: collection.coverImagePosition || 'center' }}
           />
         )}
@@ -261,7 +262,7 @@ export const WorkoutCollectionPage = () => {
                     .map((section: any) => (
                       <div key={section.id} className="flex justify-between text-sm">
                         <span className="text-gray-700">{section.title}:</span>
-                        <span className="text-gray-600">{section.items?.length || 0} занятий</span>
+                        <span className="text-gray-600">{section.items?.length || 0}{' '}{pluralize(section.items?.length || 0, 'занятие', 'занятия', 'занятий')}</span>
                       </div>
                     ))}
                 </div>
@@ -278,7 +279,7 @@ export const WorkoutCollectionPage = () => {
                     .map((section: any) => (
                       <div key={section.id} className="flex justify-between text-sm">
                         <span className="text-gray-700">{section.title}:</span>
-                        <span className="text-gray-600">{section.items?.length || 0} записей</span>
+                        <span className="text-gray-600">{section.items?.length || 0}{' '}{pluralize(section.items?.length || 0, 'запись', 'записи', 'записей')}</span>
                       </div>
                     ))}
                 </div>

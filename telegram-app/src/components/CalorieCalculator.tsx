@@ -122,7 +122,7 @@ export const CalorieCalculator = () => {
         <div className="flex-1 min-w-0">
           <p className="text-text-primary text-base">Калькулятор КБЖУ</p>
           <p className="text-xs text-text-secondary mt-0.5">
-            Рассчитай свою дневную норму калорий и воды
+            Дневная норма калорий и воды
           </p>
         </div>
         <ChevronDown

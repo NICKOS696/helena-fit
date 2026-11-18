@@ -25,14 +25,14 @@ export const Button = ({
       onClick={onClick}
       disabled={disabled}
       className={clsx(
-        'rounded-lg font-medium transition-all active:scale-95',
+        'rounded-xl font-semibold transition-all active:scale-[0.97]',
         {
-          'bg-gradient-to-r from-primary-light to-primary text-white': variant === 'primary',
-          'bg-gray-200 text-text-primary': variant === 'secondary',
-          'border-2 border-primary text-primary bg-transparent': variant === 'outline',
-          'px-3 py-1.5 text-sm': size === 'sm',
-          'px-4 py-2 text-base': size === 'md',
-          'px-6 py-3 text-lg': size === 'lg',
+          'bg-primary text-white': variant === 'primary',
+          'bg-gray-100 text-text-primary': variant === 'secondary',
+          'border border-primary/40 text-primary bg-primary/5': variant === 'outline',
+          'px-3.5 py-2 text-sm': size === 'sm',
+          'px-4 py-3 text-[15px]': size === 'md',
+          'px-6 py-3.5 text-base': size === 'lg',
           'w-full': fullWidth,
           'opacity-50 cursor-not-allowed': disabled,
         },

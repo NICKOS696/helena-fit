@@ -325,17 +325,17 @@ export const RecipeCollectionPage = () => {
   return (
     <div className="pb-4">
       {/* Header */}
-      <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-200 p-4 flex items-center gap-3 z-10">
+      <div className="sticky top-[var(--app-safe-top)] bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-3 z-10">
         <button onClick={() => navigate(-1)}>
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-text-primary">{collection.title}</h1>
-          <p className="text-sm text-text-secondary">Рецепты с расчетом КБЖУ</p>
+          <h1 className="text-lg font-bold leading-tight text-text-primary">{collection.title}</h1>
+          <p className="text-xs text-text-secondary">Рецепты с расчётом КБЖУ</p>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="px-3 py-4 space-y-4">
         {/* Индикатор ожидания подтверждения оплаты */}
         {isPollingPayment && !collection.hasAccess && (
           <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-sm text-text-primary flex items-center gap-2">
@@ -350,7 +350,7 @@ export const RecipeCollectionPage = () => {
           <img
             src={collection.coverImage}
             alt={collection.title}
-            className="w-full h-64 rounded-lg object-cover"
+            className="w-full h-64 rounded-card object-cover bg-gray-200"
             style={{ objectPosition: collection.coverImagePosition || 'center' }}
           />
         )}
@@ -454,13 +454,13 @@ export const RecipeCollectionPage = () => {
           return (
             // Чипы переносятся по строкам, но flex-1 растягивает каждую
             // строку на всю ширину — ровные ряды без пустых «дырок»
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3">
               {filterButtons.map((cat) => (
                 <button
                   key={cat.value}
                   onClick={() => selectCategory(cat.value)}
                   className={clsx(
-                    'flex-1 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap',
+                    'shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap',
                     selectedCategory === cat.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-primary border-gray-200',
@@ -526,7 +526,7 @@ export const RecipeCollectionPage = () => {
                 !recipe.locked && navigate(`/recipes/${id}/recipe/${recipe.id}`)
               }
               className={clsx(
-                'bg-white rounded-xl overflow-hidden shadow-card flex flex-col',
+                'bg-white rounded-2xl overflow-hidden shadow-card flex flex-col',
                 !recipe.locked && 'cursor-pointer active:scale-95 transition-transform'
               )}
             >
@@ -536,11 +536,11 @@ export const RecipeCollectionPage = () => {
                   <img
                     src={recipe.coverImage}
                     alt={recipe.title}
-                    className="w-full h-40 object-cover"
+                    className="w-full h-48 object-cover bg-gray-100"
                     style={{ objectPosition: recipe.coverImagePosition || 'center' }}
                   />
                 ) : (
-                  <div className="w-full h-40 bg-gray-100" />
+                  <div className="w-full h-48 bg-gray-100" />
                 )}
                 {recipe.locked && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -599,7 +599,7 @@ export const RecipeCollectionPage = () => {
                   {recipe.caloriesPerServing && (
                     <div className="flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
-                      <span>{recipe.caloriesPerServing} Kcal</span>
+                      <span>{recipe.caloriesPerServing} ккал</span>
                     </div>
                   )}
                   {recipe.cookingTime && (
@@ -635,7 +635,7 @@ export const RecipeCollectionPage = () => {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2">
                       {g.label}
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">{g.items.map(renderCard)}</div>
+                    <div className="grid grid-cols-2 gap-2.5">{g.items.map(renderCard)}</div>
                   </div>
                 ))}
               </div>
@@ -643,7 +643,7 @@ export const RecipeCollectionPage = () => {
           }
 
           return (
-            <div key={selectedCategory} className="grid grid-cols-2 gap-3 animate-fadein">
+            <div key={selectedCategory} className="grid grid-cols-2 gap-2.5 animate-fadein">
               {filteredRecipes.map(renderCard)}
             </div>
           )

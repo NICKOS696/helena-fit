@@ -16,7 +16,7 @@ export const HomePage = () => {
     return (
       <div className="p-4">
         <div className="animate-pulse space-y-4">
-          <div className="bg-gradient-to-r from-primary-light to-primary rounded-2xl h-32" />
+          <div className="bg-gray-200 rounded-2xl h-32" />
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white rounded-2xl h-48" />
           ))}
@@ -32,7 +32,7 @@ export const HomePage = () => {
       {/* Hero Section - Логотип */}
       <div className="mb-6">
         <img 
-          src="https://helena-fit.ru/uploads/logo.png" 
+          src="/uploads/logo.png" 
           alt="Helena Fit" 
           className="w-full h-auto object-cover"
         />
@@ -41,7 +41,7 @@ export const HomePage = () => {
       <div className="px-4 space-y-4">
         {/* Section Title */}
         <div className="flex items-center gap-2">
-          <div className="w-1 h-6 bg-gradient-to-b from-primary to-primary-light rounded-full" />
+          <div className="w-1 h-6 bg-primary rounded-full" />
           <h2 className="text-xl font-bold text-text-primary">Новости и акции</h2>
         </div>
 
@@ -64,7 +64,7 @@ export const HomePage = () => {
                       alt={item.title}
                       className="w-full h-48 object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    
                   </div>
                 )}
                 <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-2">

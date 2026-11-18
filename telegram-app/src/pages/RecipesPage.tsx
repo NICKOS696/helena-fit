@@ -6,7 +6,8 @@ import { Button } from '@/components/Button'
 import { PaymentMethodSheet } from '@/components/PaymentMethodSheet'
 import { showPaymentError } from '@/lib/payments'
 import { haptic } from '@/lib/telegram'
-import { Lock } from 'lucide-react'
+import { Clock, UtensilsCrossed } from 'lucide-react'
+import { pluralize } from '@/utils/plural'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 
@@ -98,9 +99,9 @@ export const RecipesPage = () => {
                   className={clsx("w-full h-auto object-contain", collection.isInDevelopment && "grayscale-[40%]")}
                 />
                 {collection.isInDevelopment && (
-                  <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
-                    <span>🛠️</span>
-                    <span>В разработке</span>
+                  <div className="absolute top-2 left-2 bg-white/95 text-primary-dark text-xs font-semibold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Скоро</span>
                   </div>
                 )}
               </div>
@@ -119,9 +120,13 @@ export const RecipesPage = () => {
             {/* Информация */}
             {!collection.isInDevelopment && (
               <div className="flex items-center gap-4 text-sm text-text-secondary">
-                <span>🍽️ {collection.recipeCount} рецептов</span>
+                <span className="flex items-center gap-1.5">
+                  <UtensilsCrossed className="w-4 h-4 text-primary" />
+                  {collection.recipeCount}{' '}
+                  {pluralize(collection.recipeCount, 'рецепт', 'рецепта', 'рецептов')}
+                </span>
                 {!collection.hasAccess && collection.finalPrice < collection.price && (
-                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-xs font-semibold">
                     -{collection.discount}{collection.discountType === 'PERCENTAGE' ? '%' : ' сум'}
                   </span>
                 )}
@@ -130,10 +135,9 @@ export const RecipesPage = () => {
 
             {/* Кнопка / статус */}
             {collection.isInDevelopment ? (
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 text-center">
-                <div className="text-2xl mb-1">⏳</div>
-                <p className="font-bold text-yellow-900 text-sm">Скоро будет доступно</p>
-                <p className="text-xs text-yellow-700 mt-1">Этот сборник готовится для вас</p>
+              <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-center">
+                <p className="font-semibold text-primary-dark text-sm">Скоро будет доступно</p>
+                <p className="text-xs text-text-secondary mt-1">Этот сборник готовится для вас</p>
               </div>
             ) : collection.hasAccess ? (
               <Button fullWidth onClick={() => navigate(`/recipes/${collection.id}`)}>
@@ -160,8 +164,7 @@ export const RecipesPage = () => {
                     variant="outline"
                     onClick={() => navigate(`/recipes/${collection.id}`)}
                   >
-                    <Lock className="w-4 h-4 mr-2 inline" />
-                    Просмотр
+                    Подробнее
                   </Button>
                   <Button
                     fullWidth

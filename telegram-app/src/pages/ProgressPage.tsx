@@ -254,7 +254,7 @@ const QuestionnaireForm = ({ onDone }: { onDone: () => void }) => {
         <button
           onClick={() => mut.mutate()}
           disabled={!canSubmit || mut.isPending}
-          className="w-full mt-4 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+          className="w-full mt-4 bg-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
         >
           {mut.isPending ? 'Сохраняю…' : 'Сохранить и продолжить'}
         </button>
@@ -480,7 +480,7 @@ export const ProgressPage = () => {
                 haptic.selection()
                 setShowForm(true)
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
               <Plus className="w-4 h-4 shrink-0" />
               Добавить замеры
@@ -491,7 +491,7 @@ export const ProgressPage = () => {
                 clearPending()
                 setShowPhotoForm(true)
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
               <Camera className="w-4 h-4 shrink-0" />
               Фото отчёт
@@ -502,7 +502,7 @@ export const ProgressPage = () => {
               haptic.selection()
               setShowFbForm(true)
             }}
-            className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-primary-light to-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            className="w-full flex items-center justify-center gap-1.5 bg-primary text-white py-3.5 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
           >
             <MessageSquare className="w-4 h-4 shrink-0" />
             Впечатление от тренировок
@@ -529,7 +529,7 @@ export const ProgressPage = () => {
             <button
               onClick={() => fbAddMut.mutate()}
               disabled={fbAddMut.isPending || !fbText.trim()}
-              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+              className="flex-1 bg-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
             >
               {fbAddMut.isPending ? 'Отправляю…' : 'Отправить тренеру'}
             </button>
@@ -576,7 +576,7 @@ export const ProgressPage = () => {
             <button
               onClick={() => addMut.mutate()}
               disabled={addMut.isPending || !hasAnyValue}
-              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+              className="flex-1 bg-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
             >
               {addMut.isPending ? 'Сохраняю…' : 'Сохранить'}
             </button>
@@ -646,7 +646,7 @@ export const ProgressPage = () => {
               disabled={
                 photoSaveMut.isPending || Object.keys(pendingPhotos).length === 0
               }
-              className="flex-1 bg-gradient-to-r from-primary-light to-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
+              className="flex-1 bg-primary text-white py-3 rounded-xl font-medium disabled:opacity-50"
             >
               {photoSaveMut.isPending ? 'Сохраняю…' : 'Сохранить'}
             </button>

@@ -93,7 +93,7 @@ export const ProfilePage = () => {
               className="w-16 h-16 rounded-full"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary-light to-primary flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
           )}
@@ -116,7 +116,7 @@ export const ProfilePage = () => {
         <button
           onClick={() => navigate('/progress')}
           className="w-full text-left rounded-card overflow-hidden shadow-card active:scale-[0.98] transition-transform"
-          style={{ background: 'linear-gradient(110deg, #8A9A6E, #5F6A49)' }}
+          style={{ background: '#717C5A' }}
         >
           <div className="flex items-center gap-3 px-5 py-4">
             <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -138,7 +138,7 @@ export const ProfilePage = () => {
       <Section
         icon={<Dumbbell className="w-5 h-5 text-primary" />}
         title="Мои тренировки"
-        subtitle="Твои купленные сборники тренировок"
+        subtitle="Купленные сборники тренировок"
         count={access?.workouts?.length}
       >
         {access?.workouts?.length > 0 ? (
@@ -164,7 +164,7 @@ export const ProfilePage = () => {
       <Section
         icon={<UtensilsCrossed className="w-5 h-5 text-primary" />}
         title="Мои рецепты"
-        subtitle="Твои купленные сборники рецептов"
+        subtitle="Купленные сборники рецептов"
         count={access?.recipes?.length}
       >
         {access?.recipes?.length > 0 ? (
@@ -190,7 +190,7 @@ export const ProfilePage = () => {
       <Section
         icon={<Receipt className="w-5 h-5 text-primary" />}
         title="История покупок"
-        subtitle="Твои платежи и их статусы"
+        subtitle="Платежи и их статусы"
         count={transactions.length}
       >
         {transactions.length > 0 ? (
@@ -210,7 +210,7 @@ export const ProfilePage = () => {
                     {new Date(transaction.createdAt).toLocaleDateString('ru-RU')}
                   </span>
                   <span
-                    className={`text-xs px-2 py-1 rounded ${
+                    className={`text-xs px-2 py-1 rounded-full ${
                       transaction.status === 'COMPLETED'
                         ? 'bg-green-100 text-green-700'
                         : transaction.status === 'PENDING'
@@ -218,7 +218,11 @@ export const ProfilePage = () => {
                         : 'bg-red-100 text-red-700'
                     }`}
                   >
-                    {transaction.status}
+                    {transaction.status === 'COMPLETED'
+                      ? 'Оплачено'
+                      : transaction.status === 'PENDING'
+                      ? 'В ожидании'
+                      : 'Отменено'}
                   </span>
                 </div>
               </div>
