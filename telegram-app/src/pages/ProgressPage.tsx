@@ -426,13 +426,14 @@ export const ProgressPage = () => {
     const resultParts = [
       { v: diff('weight'), unit: 'кг', label: 'вес' },
       { v: diff('waist'), unit: 'см', label: 'талия' },
+      { v: diff('hips'), unit: 'см', label: 'бёдра' },
     ]
-      .filter((r) => r.v !== null && r.v !== 0)
+      .filter((r) => r.v !== null)
       .map((r) => ({ text: fmtDiff(r.v as number, r.unit), label: r.label }))
 
     const nextText = due ? fmtLong(due) : ''
     const monthOf = (d: Date) => d.toLocaleDateString('ru-RU', { month: 'long' })
-    let title = 'Всё сдано'
+    let title = 'Всё сдано 🌿'
     let sub = `следующий отчёт — ${nextText}, через ${daysLeft} ${pluralize(daysLeft, 'день', 'дня', 'дней')}`
     if (!last) {
       title = 'Начнём с точки «до»'
@@ -632,38 +633,36 @@ export const ProgressPage = () => {
         </button>
       )}
 
-      <h1 className="text-2xl font-bold text-text-primary mb-1">Мой прогресс</h1>
-
       {/* ===== Отчёт за месяц: что сдано и что осталось ===== */}
       {!showForm && !showPhotoForm && !showFbForm && (
         <>
-          <Card>
+          <div className="rounded-card bg-primary text-white p-4 shadow-card">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs text-text-secondary">{report.label}</p>
-                <p className="text-[17px] font-semibold leading-snug text-text-primary mt-0.5">
+                <p className="text-xs text-white/70">{report.label}</p>
+                <p className="text-[19px] font-semibold leading-snug mt-0.5">
                   {report.title}
                 </p>
-                <p className="text-xs text-text-secondary mt-0.5">{report.sub}</p>
+                <p className="text-xs text-white/70 mt-0.5">{report.sub}</p>
               </div>
-              <span className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <CalendarDays className="w-5 h-5 text-primary" />
+              <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                <CalendarDays className="w-5 h-5" />
               </span>
             </div>
 
-            <div className="mt-3 divide-y divide-gray-100 border-t border-gray-100">
+            <div className="mt-3 divide-y divide-white/20 border-t border-white/20">
               {/* Замеры */}
               <div className="flex items-center gap-3 py-3">
                 <span
                   className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center ${
-                    report.measDone ? 'bg-primary text-white' : 'border-2 border-gray-300'
+                    report.measDone ? 'bg-white text-primary-dark' : 'border-2 border-white/70'
                   }`}
                 >
                   {report.measDone && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-text-primary">Замеры</p>
-                  <p className="text-xs text-text-secondary">{report.measText}</p>
+                  <p className="text-[15px] font-semibold">Замеры</p>
+                  <p className="text-xs text-white/70">{report.measText}</p>
                 </div>
                 {!report.measDone && (
                   <button
@@ -671,7 +670,7 @@ export const ProgressPage = () => {
                       haptic.selection()
                       setShowForm(true)
                     }}
-                    className="shrink-0 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
+                    className="shrink-0 bg-white text-primary-dark text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
                   >
                     Внести
                   </button>
@@ -681,26 +680,43 @@ export const ProgressPage = () => {
               <div className="flex items-center gap-3 pt-3">
                 <span
                   className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center ${
-                    report.photoDone ? 'bg-primary text-white' : 'border-2 border-gray-300'
+                    report.photoDone ? 'bg-white text-primary-dark' : 'border-2 border-white/70'
                   }`}
                 >
                   {report.photoDone && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-text-primary">Фотоотчёт</p>
-                  <p className="text-xs text-text-secondary">{report.photoText}</p>
+                  <p className="text-[15px] font-semibold">Фотоотчёт</p>
+                  <p className="text-xs text-white/70">{report.photoText}</p>
                 </div>
                 {!report.photoDone && (
                   <button
                     onClick={() => openPhotoForm(report.photoDay)}
-                    className="shrink-0 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
+                    className="shrink-0 bg-white text-primary-dark text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
                   >
                     {report.photoCount > 0 ? 'Догрузить' : 'Сдать'}
                   </button>
                 )}
               </div>
             </div>
-          </Card>
+            {/* Результат с первого замера */}
+            {report.resultParts.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/20">
+                <p className="text-xs text-white/70 mb-2">Результат с {report.sinceText}</p>
+                <div className="flex gap-2">
+                  {report.resultParts.map((r) => (
+                    <div
+                      key={r.label}
+                      className="flex-1 rounded-xl bg-white/10 px-2 py-2 text-center"
+                    >
+                      <p className="text-[15px] font-semibold leading-tight">{r.text}</p>
+                      <p className="text-[11px] text-white/70 mt-0.5">{r.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Впечатление от тренировок — с пояснением */}
           <button
@@ -925,19 +941,6 @@ export const ProgressPage = () => {
           <Fold
             icon={<Ruler className="w-5 h-5 text-primary" />}
             title="Замеры"
-            subtitle={
-              report.resultParts.length > 0 ? (
-                <>
-                  с {report.sinceText}:{' '}
-                  {report.resultParts.map((r, i) => (
-                    <span key={r.label}>
-                      {i > 0 && ', '}
-                      <span className="font-semibold text-primary-dark">{r.text}</span> {r.label}
-                    </span>
-                  ))}
-                </>
-              ) : undefined
-            }
           >
             <Seg
               value={measTab}
