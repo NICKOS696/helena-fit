@@ -589,13 +589,13 @@ export const RecipeCollectionPage = () => {
 
               {/* Content: тянется на высоту ряда, статы прижаты к низу —
                   соседние карточки с разной длиной названия выровнены */}
-              <div className="p-3 flex flex-col flex-1">
-                <h3 className="text-[15px] font-medium leading-snug text-text-primary mb-2 line-clamp-3">
+              <div className="px-3 pt-2.5 pb-3 flex flex-col flex-1">
+                <h3 className="text-sm font-semibold leading-[1.3] tracking-[-0.01em] text-text-primary mb-2 line-clamp-2 min-h-[2.6em]">
                   {recipe.title}
                 </h3>
 
                 {/* Stats */}
-                <div className="flex items-center justify-between text-xs text-text-secondary mt-auto">
+                <div className="flex items-center gap-3 text-xs text-text-secondary mt-auto">
                   {recipe.caloriesPerServing && (
                     <div className="flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
