@@ -223,7 +223,7 @@ export const CalorieCalculator = () => {
               onChange={(e) =>
                 setForm({ ...form, activity: parseFloat(e.target.value) as Activity })
               }
-              className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl text-text-primary focus:outline-none focus:border-primary focus:bg-white transition-colors appearance-none pr-9"
+              className="w-full h-11 px-3 bg-white border border-gray-300 rounded-xl text-text-primary focus:outline-none focus:border-primary"
             >
               {activityOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -231,7 +231,6 @@ export const CalorieCalculator = () => {
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
             </div>
           </div>
 
