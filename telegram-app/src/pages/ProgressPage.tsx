@@ -13,11 +13,10 @@ import {
   Plus,
   Trash2,
   Ruler,
-  ArrowLeftRight,
+  Check,
   ChevronDown,
   Camera,
   CalendarDays,
-  Columns2,
   MessageCircleHeart,
   X,
 } from 'lucide-react'
@@ -55,15 +54,42 @@ const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 // Сворачиваемая секция в стиле профиля
+// Переключатель «Сравнение / История» внутри раздела
+const Seg = ({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: [string, string][]
+}) => (
+  <div className="flex bg-gray-100 rounded-xl p-1 mb-3 text-sm font-medium">
+    {options.map(([key, label]) => (
+      <button
+        key={key}
+        onClick={() => onChange(key)}
+        className={`flex-1 py-1.5 rounded-lg transition-colors ${
+          value === key ? 'bg-white text-text-primary shadow-sm' : 'text-text-secondary'
+        }`}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+)
+
 const Fold = ({
   icon,
   title,
   count,
+  subtitle,
   children,
 }: {
   icon: ReactNode
   title: string
   count?: number
+  subtitle?: ReactNode
   children: ReactNode
 }) => {
   const [open, setOpen] = useState(false)
@@ -73,15 +99,22 @@ const Fold = ({
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3.5"
       >
-        <span className="flex items-center gap-2 text-text-primary text-base">
-          {icon}
-          {title}
-          {typeof count === 'number' && count > 0 && (
-            <span className="text-text-secondary text-sm">({count})</span>
-          )}
+        <span className="flex items-center gap-2 min-w-0 text-left">
+          <span className="shrink-0">{icon}</span>
+          <span className="min-w-0">
+            <span className="block text-text-primary text-base">
+              {title}
+              {typeof count === 'number' && count > 0 && (
+                <span className="text-text-secondary text-sm"> ({count})</span>
+              )}
+            </span>
+            {subtitle && (
+              <span className="block text-xs text-text-secondary mt-0.5">{subtitle}</span>
+            )}
+          </span>
         </span>
         <ChevronDown
-          className={`w-5 h-5 text-text-secondary transition-transform ${
+          className={`w-5 h-5 text-text-secondary transition-transform shrink-0 ${
             open ? 'rotate-180' : ''
           }`}
         />
@@ -312,35 +345,6 @@ export const ProgressPage = () => {
   })
   const measurements: any[] = useMemo(() => data?.data || [], [data])
 
-  // Сводка: дата следующих замеров (через месяц после последних)
-  const summary = useMemo(() => {
-    const sorted = [...measurements].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    )
-    const first = sorted[0]
-    const last = sorted[sorted.length - 1]
-    if (!first || !last) {
-      return {
-        first: null,
-        overdue: false,
-        nextText: '',
-        daysLeft: 0,
-        progressPct: 0,
-      }
-    }
-    const next = new Date(last.date)
-    next.setMonth(next.getMonth() + 1)
-    const daysLeft = Math.ceil((next.getTime() - Date.now()) / 86400000)
-    const total = next.getTime() - new Date(last.date).getTime()
-    const passed = Date.now() - new Date(last.date).getTime()
-    return {
-      first,
-      progressPct: Math.min(100, Math.max(4, Math.round((passed / total) * 100))),
-      overdue: daysLeft < 0,
-      nextText: next.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
-      daysLeft: Math.max(0, daysLeft),
-    }
-  }, [measurements])
 
   const { data: photosData } = useQuery({
     queryKey: ['client-photos'],
@@ -384,12 +388,92 @@ export const ProgressPage = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['client-measurements'] }),
   })
 
+  // ===== Отчёт за месяц: что сдано, что осталось =====
+  const [measTab, setMeasTab] = useState('compare')
+  const [photoTab, setPhotoTab] = useState('compare')
+  const report = useMemo(() => {
+    const DAY = 86400000
+    const dayKey = (t: number) => new Date(t + 5 * 3600 * 1000).toISOString().slice(0, 10)
+    const fmtLong = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    const sorted = [...measurements].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    )
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    const now = Date.now()
+    const due = last ? new Date(last.date) : null
+    if (due) due.setMonth(due.getMonth() + 1)
+    const measDone = !!last && !!due && now < due.getTime()
+    const daysLeft = due ? Math.ceil((due.getTime() - now) / DAY) : 0
+
+    // Фотоотчёт текущего цикла: снят не раньше, чем за 2 дня до последних замеров
+    // (или до срока, если замеры уже пора делать)
+    const cycleFrom = !last
+      ? ''
+      : dayKey((measDone ? new Date(last.date).getTime() : due!.getTime()) - 2 * DAY)
+    const current = photoDays.find((d) => d.day >= cycleFrom)
+    const photoCount = current ? ANGLES.filter((a) => current.byAngle[a.key]).length : 0
+    const photoDone = photoCount === ANGLES.length
+
+    // Результат с первого замера — коротко, для подзаголовка раздела
+    const diff = (key: string) => {
+      const vals = sorted.map((m) => m[key]).filter((v) => v != null)
+      if (vals.length < 2) return null
+      return Math.round((vals[vals.length - 1] - vals[0]) * 10) / 10
+    }
+    const fmtDiff = (v: number, unit: string) =>
+      `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} ${unit}`
+    const resultParts = [
+      { v: diff('weight'), unit: 'кг', label: 'вес' },
+      { v: diff('waist'), unit: 'см', label: 'талия' },
+    ]
+      .filter((r) => r.v !== null && r.v !== 0)
+      .map((r) => ({ text: fmtDiff(r.v as number, r.unit), label: r.label }))
+
+    const nextText = due ? fmtLong(due) : ''
+    const monthOf = (d: Date) => d.toLocaleDateString('ru-RU', { month: 'long' })
+    let title = 'Всё сдано'
+    let sub = `следующий отчёт — ${nextText}, через ${daysLeft} ${pluralize(daysLeft, 'день', 'дня', 'дней')}`
+    if (!last) {
+      title = 'Начнём с точки «до»'
+      sub = 'Внеси первые замеры и сделай фото'
+    } else if (!measDone) {
+      title = 'Пора сдать отчёт'
+      sub = daysLeft < 0 ? `срок был ${nextText}` : 'срок — сегодня'
+    } else if (!photoDone) {
+      title = 'Осталось сдать фото'
+      sub = `следующий отчёт — ${nextText}`
+    }
+    return {
+      label: !last
+        ? 'Первый отчёт'
+        : `Отчёт за ${monthOf(measDone ? new Date(last.date) : new Date())}`,
+      title,
+      sub,
+      measDone,
+      measText: measDone
+        ? `сданы ${fmtLong(new Date(last.date))}`
+        : last
+          ? 'пора сделать — 6 значений'
+          : '6 значений, пара минут',
+      photoDone,
+      photoCount,
+      photoText: photoDone
+        ? `сдан ${fmtLong(new Date(current!.date))}`
+        : photoCount > 0
+          ? `загружено ${photoCount} из 4`
+          : '4 фото: спереди, с боков, сзади',
+      // куда догружать: в уже начатый отчёт этого цикла или в сегодняшний
+      photoDay: current && photoCount > 0 ? (current.day as string) : null,
+      sinceText: first ? fmtLong(new Date(first.date)) : '',
+      resultParts,
+    }
+  }, [measurements, photoDays])
+
   // Сегодняшний фотоотчёт (день по Ташкенту): его можно дополнять и заменять
   const todayKey = new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10)
   const todayPhotos: Record<string, any> =
     photoDays.find((d) => d.day === todayKey)?.byAngle || {}
-  const hasTodayPhotos = Object.keys(todayPhotos).length > 0
-  const todayIncomplete = hasTodayPhotos && ANGLES.some((a) => !todayPhotos[a.key])
   // Фотоотчёт, открытый в форме (сегодняшний или выбранный прошлый)
   const formDay = photoDay ? photoDays.find((d) => d.day === photoDay) : undefined
   const formPhotos: Record<string, any> = photoDay ? formDay?.byAngle || {} : todayPhotos
@@ -550,80 +634,91 @@ export const ProgressPage = () => {
 
       <h1 className="text-2xl font-bold text-text-primary mb-1">Мой прогресс</h1>
 
-      {/* ===== Сводка: что сделать сейчас и результат с начала ===== */}
+      {/* ===== Отчёт за месяц: что сдано и что осталось ===== */}
       {!showForm && !showPhotoForm && !showFbForm && (
         <>
-          {/* Оливковая карточка: когда следующие замеры и главная кнопка */}
-          <div className="rounded-card bg-primary text-white p-4 shadow-card">
+          <Card>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs text-white/70">
-                  {summary.first ? 'Следующие замеры' : 'Мой прогресс'}
+                <p className="text-xs text-text-secondary">{report.label}</p>
+                <p className="text-[17px] font-semibold leading-snug text-text-primary mt-0.5">
+                  {report.title}
                 </p>
-                <p className="text-[19px] font-semibold leading-snug mt-0.5">
-                  {!summary.first
-                    ? 'Начнём с точки «до»'
-                    : summary.overdue
-                      ? 'Пора сделать замеры'
-                      : summary.nextText}
-                </p>
-                <p className="text-xs text-white/70 mt-0.5">
-                  {!summary.first
-                    ? 'Внеси первые замеры и сделай фото'
-                    : summary.overdue
-                      ? `срок был ${summary.nextText}`
-                      : summary.daysLeft === 0
-                        ? 'сегодня'
-                        : `через ${summary.daysLeft} ${pluralize(summary.daysLeft, 'день', 'дня', 'дней')}`}
-                </p>
+                <p className="text-xs text-text-secondary mt-0.5">{report.sub}</p>
               </div>
-              <span className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-                <CalendarDays className="w-5 h-5" />
+              <span className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="w-5 h-5 text-primary" />
               </span>
             </div>
 
-            {/* Сколько прошло от последнего замера до следующего */}
-            {summary.first && (
-              <div className="h-1.5 rounded-full bg-white/20 mt-3 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-white"
-                  style={{ width: `${summary.progressPct}%` }}
-                />
+            <div className="mt-3 divide-y divide-gray-100 border-t border-gray-100">
+              {/* Замеры */}
+              <div className="flex items-center gap-3 py-3">
+                <span
+                  className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center ${
+                    report.measDone ? 'bg-primary text-white' : 'border-2 border-gray-300'
+                  }`}
+                >
+                  {report.measDone && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-text-primary">Замеры</p>
+                  <p className="text-xs text-text-secondary">{report.measText}</p>
+                </div>
+                {!report.measDone && (
+                  <button
+                    onClick={() => {
+                      haptic.selection()
+                      setShowForm(true)
+                    }}
+                    className="shrink-0 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
+                  >
+                    Внести
+                  </button>
+                )}
               </div>
-            )}
+              {/* Фотоотчёт */}
+              <div className="flex items-center gap-3 pt-3">
+                <span
+                  className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center ${
+                    report.photoDone ? 'bg-primary text-white' : 'border-2 border-gray-300'
+                  }`}
+                >
+                  {report.photoDone && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-text-primary">Фотоотчёт</p>
+                  <p className="text-xs text-text-secondary">{report.photoText}</p>
+                </div>
+                {!report.photoDone && (
+                  <button
+                    onClick={() => openPhotoForm(report.photoDay)}
+                    className="shrink-0 bg-primary text-white text-sm font-semibold px-4 py-2 rounded-full active:scale-95 transition-transform"
+                  >
+                    {report.photoCount > 0 ? 'Догрузить' : 'Сдать'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
 
-            <button
-              onClick={() => {
-                haptic.selection()
-                setShowForm(true)
-              }}
-              className="mt-4 w-full flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform"
-            >
-              <Plus className="w-4 h-4 shrink-0" />
-              Добавить замеры
-            </button>
-          </div>
-
-          {/* Второстепенные действия — светлые кнопки */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => openPhotoForm(null)}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
-            >
-              <Camera className="w-4 h-4 shrink-0" />
-              {todayIncomplete ? 'Догрузить фото' : 'Фотоотчёт'}
-            </button>
-            <button
-              onClick={() => {
-                haptic.selection()
-                setShowFbForm(true)
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-white text-primary-dark py-3 rounded-xl font-medium text-sm shadow-card active:scale-[0.98] transition-transform"
-            >
-              <MessageCircleHeart className="w-4 h-4 shrink-0" />
-              Впечатление
-            </button>
-          </div>
+          {/* Впечатление от тренировок — с пояснением */}
+          <button
+            onClick={() => {
+              haptic.selection()
+              setShowFbForm(true)
+            }}
+            className="w-full flex items-center gap-3 bg-white rounded-card shadow-card px-4 py-3 text-left active:scale-[0.98] transition-transform"
+          >
+            <MessageCircleHeart className="w-5 h-5 text-primary shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] text-text-primary">Впечатление от тренировок</span>
+              <span className="block text-xs text-text-secondary">
+                Напиши тренеру, как прошли тренировки
+              </span>
+            </span>
+            <ChevronDown className="w-5 h-5 text-text-secondary -rotate-90 shrink-0" />
+          </button>
         </>
       )}
 
@@ -822,26 +917,39 @@ export const ProgressPage = () => {
         </Card>
       )}
 
-      {/* Пока сравнивать не с чем — говорим, что сравнение появится позже */}
-      {!isLoading && (measurements.length === 1 || photoDays.length === 1) && (
-        <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-card px-4 py-3">
-          <ArrowLeftRight className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <p className="text-sm text-text-primary leading-snug">
-            {measurements.length === 1 && photoDays.length === 1
-              ? 'Сравнение замеров и фото «было — стало» появится здесь после следующих замеров и фотоотчёта.'
-              : measurements.length === 1
-                ? 'Сравнение замеров «было — стало» появится здесь после следующих замеров.'
-                : 'Сравнение фото «было — стало» появится здесь после следующего фотоотчёта.'}
-          </p>
-        </div>
-      )}
-
-      {/* ===== 3. Сравнить замеры ===== */}
-      {measurements.length >= 2 && (
-        <Fold
-          icon={<ArrowLeftRight className="w-5 h-5 text-primary" />}
-          title="Сравнить замеры"
-        >
+      {/* ===== Замеры: сравнение и история в одном разделе ===== */}
+      {isLoading ? (
+        <div className="animate-pulse bg-white rounded-card h-14" />
+      ) : (
+        measurements.length > 0 && (
+          <Fold
+            icon={<Ruler className="w-5 h-5 text-primary" />}
+            title="Замеры"
+            subtitle={
+              report.resultParts.length > 0 ? (
+                <>
+                  с {report.sinceText}:{' '}
+                  {report.resultParts.map((r, i) => (
+                    <span key={r.label}>
+                      {i > 0 && ', '}
+                      <span className="font-semibold text-primary-dark">{r.text}</span> {r.label}
+                    </span>
+                  ))}
+                </>
+              ) : undefined
+            }
+          >
+            <Seg
+              value={measTab}
+              onChange={setMeasTab}
+              options={[
+                ['compare', 'Сравнение'],
+                ['history', `История (${measurements.length})`],
+              ]}
+            />
+            {measTab === 'compare' ? (
+              measurements.length >= 2 ? (
+                <>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="block text-xs text-text-secondary mb-1">Было</label>
@@ -893,15 +1001,106 @@ export const ProgressPage = () => {
               ))}
             </div>
           )}
-        </Fold>
+                </>
+              ) : (
+                <p className="text-sm text-text-secondary py-3">
+                  Сравнение «было — стало» появится здесь после следующих замеров — будет
+                  видно, что изменилось.
+                </p>
+              )
+            ) : (
+              <>
+            <div className="space-y-3">
+              {measurements.map((m, i) => {
+                const prev = measurements[i + 1]
+                const filled = FIELDS.filter((f) => m[f.key] != null)
+                return (
+                  <div key={m.id} className="border border-gray-100 rounded-xl p-3">
+                    {/* Дата и удаление */}
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {fmtDate(m.date)}
+                        {m.byTrainer && (
+                          <span className="font-normal text-text-secondary"> · внёс тренер</span>
+                        )}
+                      </p>
+                      <button
+                        onClick={() => {
+                          if (confirm('Удалить этот замер?')) delMut.mutate(m.id)
+                        }}
+                        aria-label="Удалить замер"
+                        className="text-gray-300 shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {/* Ровная сетка: подпись, значение, изменение к прошлому замеру */}
+                    <div className="grid grid-cols-3 gap-x-2 gap-y-2.5">
+                      {filled.map((f) => {
+                        const v = m[f.key]
+                        const pv = prev?.[f.key]
+                        const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
+                        return (
+                          <div key={f.key} className="min-w-0">
+                            <p className="text-[11px] text-text-secondary leading-tight truncate">
+                              {f.label}
+                            </p>
+                            <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
+                              {v}
+                              <span className="text-xs font-normal text-text-secondary">
+                                {' '}
+                                {f.unit}
+                              </span>
+                              {d !== null && d !== 0 && (
+                                <span
+                                  className={`text-[11px] font-medium ml-1 ${
+                                    d < 0 ? 'text-green-600' : 'text-red-500'
+                                  }`}
+                                >
+                                  {d > 0 ? `+${d}` : `−${Math.abs(d)}`}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {m.note && <p className="text-xs text-text-secondary mt-2">{m.note}</p>}
+                  </div>
+                )
+              })}
+            </div>
+              </>
+            )}
+            <button
+              onClick={() => {
+                haptic.selection()
+                setShowForm(true)
+                window.scrollTo(0, 0)
+              }}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 bg-gray-100 text-text-primary py-2.5 rounded-xl text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить замеры
+            </button>
+          </Fold>
+        )
       )}
 
-      {/* ===== 4. Сравнить фотоотчёт ===== */}
-      {photoDays.length >= 2 && (
-        <Fold
-          icon={<Columns2 className="w-5 h-5 text-primary" />}
-          title="Сравнить фотоотчёт"
-        >
+      {/* ===== Фотоотчёты: сравнение и история в одном разделе ===== */}
+      {photoDays.length > 0 && (
+        <Fold icon={<Camera className="w-5 h-5 text-primary" />} title="Фотоотчёты">
+          <Seg
+            value={photoTab}
+            onChange={setPhotoTab}
+            options={[
+              ['compare', 'Сравнение'],
+              ['history', `История (${photoDays.length})`],
+            ]}
+          />
+          {photoTab === 'compare' ? (
+            photoDays.length >= 2 ? (
+              <>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div>
               <label className="block text-xs text-text-secondary mb-1">Было</label>
@@ -981,91 +1180,14 @@ export const ProgressPage = () => {
               )
             })}
           </div>
-        </Fold>
-      )}
-
-      {/* ===== 5. История замеров ===== */}
-      {isLoading ? (
-        <div className="animate-pulse bg-white rounded-card h-14" />
-      ) : (
-        measurements.length > 0 && (
-          <Fold
-            icon={<Ruler className="w-5 h-5 text-primary" />}
-            title="История замеров"
-            count={measurements.length}
-          >
-            <div className="space-y-3">
-              {measurements.map((m, i) => {
-                const prev = measurements[i + 1]
-                const filled = FIELDS.filter((f) => m[f.key] != null)
-                return (
-                  <div key={m.id} className="border border-gray-100 rounded-xl p-3">
-                    {/* Дата и удаление */}
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <p className="text-sm font-semibold text-text-primary">
-                        {fmtDate(m.date)}
-                        {m.byTrainer && (
-                          <span className="font-normal text-text-secondary"> · внёс тренер</span>
-                        )}
-                      </p>
-                      <button
-                        onClick={() => {
-                          if (confirm('Удалить этот замер?')) delMut.mutate(m.id)
-                        }}
-                        aria-label="Удалить замер"
-                        className="text-gray-300 shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {/* Ровная сетка: подпись, значение, изменение к прошлому замеру */}
-                    <div className="grid grid-cols-3 gap-x-2 gap-y-2.5">
-                      {filled.map((f) => {
-                        const v = m[f.key]
-                        const pv = prev?.[f.key]
-                        const d = pv != null ? Math.round((v - pv) * 10) / 10 : null
-                        return (
-                          <div key={f.key} className="min-w-0">
-                            <p className="text-[11px] text-text-secondary leading-tight truncate">
-                              {f.label}
-                            </p>
-                            <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
-                              {v}
-                              <span className="text-xs font-normal text-text-secondary">
-                                {' '}
-                                {f.unit}
-                              </span>
-                              {d !== null && d !== 0 && (
-                                <span
-                                  className={`text-[11px] font-medium ml-1 ${
-                                    d < 0 ? 'text-green-600' : 'text-red-500'
-                                  }`}
-                                >
-                                  {d > 0 ? `+${d}` : `−${Math.abs(d)}`}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {m.note && <p className="text-xs text-text-secondary mt-2">{m.note}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          </Fold>
-        )
-      )}
-
-
-      {/* ===== 6. История фотоотчётов ===== */}
-      {photoDays.length > 0 && (
-        <Fold
-          icon={<Camera className="w-5 h-5 text-primary" />}
-          title="История фотоотчётов"
-          count={photoDays.length}
-        >
+              </>
+            ) : (
+              <p className="text-sm text-text-secondary py-3">
+                Сравнение фото «было — стало» появится здесь после следующего фотоотчёта.
+              </p>
+            )
+          ) : (
+            <>
           <div className="space-y-3">
             {photoDays.map((d) => (
               <div key={d.day}>
@@ -1126,6 +1248,15 @@ export const ProgressPage = () => {
               </div>
             ))}
           </div>
+            </>
+          )}
+          <button
+            onClick={() => openPhotoForm(null)}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 bg-gray-100 text-text-primary py-2.5 rounded-xl text-sm font-medium"
+          >
+            <Camera className="w-4 h-4" />
+            Новый фотоотчёт
+          </button>
         </Fold>
       )}
 
