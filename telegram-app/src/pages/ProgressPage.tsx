@@ -520,7 +520,7 @@ export const ProgressPage = () => {
               <>
                 <p className="text-xs text-text-secondary">Следующие замеры</p>
                 <p
-                  className={`text-xl font-bold mt-0.5 ${
+                  className={`text-[17px] font-semibold leading-snug mt-0.5 ${
                     summary.overdue ? 'text-amber-600' : 'text-text-primary'
                   }`}
                 >
