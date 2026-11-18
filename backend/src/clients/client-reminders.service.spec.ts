@@ -22,7 +22,7 @@ describe('ClientRemindersService.plan', () => {
     const p = await planFor([c], '2026-11-19T06:00:00Z');
     expect(p).toHaveLength(1);
     expect(p[0]).toMatchObject({ kind: 'ONBOARDING', dueKey: '0' });
-    expect(p[0].text).toContain('Здравствуйте, Анна');
+    expect(p[0].text).toContain('Привет, Анна!');
   });
 
   it('no measurements: old client gets steps one at a time with gaps, then stops', async () => {

@@ -68,19 +68,24 @@ const addMonth = (d: Date) => {
   return r;
 };
 
+// Обращение по имени в начале фразы; если имени нет — фраза начинается с заглавной.
+const withName = (name: string, rest: string) =>
+  name ? `${name}, ${rest}` : rest.charAt(0).toUpperCase() + rest.slice(1);
+
+// Тексты от лица Елены: на «ты», по-дружески, с лёгкой подколкой.
 export const REMINDER_TEXTS = {
   onboarding: (name: string, step: number) =>
     step === 0
-      ? `Здравствуйте, ${name}! 🌿 Это Елена. Чтобы я могла отслеживать ваш результат и вовремя корректировать программу, заполните, пожалуйста, анкету, сделайте первые замеры и загрузите фото. Это займёт 5–7 минут.`
+      ? `Привет${name ? ', ' + name : ''}! 🌿 Это Елена. Давай зафиксируем твою точку «до»: заполни анкету, сделай первые замеры и загрузи фото. Это 5–7 минут — зато потом будет чем гордиться 😉`
       : step === 1
-        ? `${name}, напоминаю про анкету и стартовые замеры. Мне важно видеть вашу точку «до» — без неё мы не сможем оценить прогресс. Давайте зафиксируем её сегодня 💚`
-        : `${name}, ваш раздел «Мой прогресс» пока пуст. Заполните, пожалуйста, анкету, замеры и фото — тогда я смогу вести вас по результату, а не вслепую.`,
+        ? withName(name, 'анкета и замеры всё ещё ждут тебя — и я вместе с ними 😄 Без точки «до» мы не увидим твоё красивое «после». Давай сегодня?')
+        : withName(name, 'твой раздел «Мой прогресс» скучает в одиночестве 🙈 Заполни анкету, замеры и фото — и я смогу вести тебя по результату, а не гадать на кофейной гуще ☕'),
   monthlyPre: (name: string, date: string) =>
-    `${name}, здравствуйте! Через 2 дня, ${date}, жду от вас новые замеры и фотоотчёт. Подготовьте сантиметровую ленту 📏`,
+    withName(name, `привет! Через 2 дня, ${date}, жду твои новые замеры и фотоотчёт. Сантиметровая лента уже соскучилась 📏😉`),
   monthlyDay: (name: string) =>
-    `${name}, сегодня день замеров! Сделайте их утром натощак, добавьте фото и внесите всё в «Мой прогресс». Мне очень интересно, что изменилось за месяц 💪`,
+    withName(name, 'сегодня день замеров! 💪 Утром натощак — замеры, фото, и всё в «Мой прогресс». Мне не терпится увидеть, что изменилось за месяц!'),
   monthlyLate: (name: string) =>
-    `${name}, я пока не вижу ваших замеров за этот месяц. Найдите, пожалуйста, 5 минут сегодня — регулярные отчёты помогают мне вести вас к результату 🌿`,
+    withName(name, 'я всё вижу 👀 Замеров за этот месяц пока нет. Лента сама себя не обернёт — найди 5 минут сегодня, и я от тебя отстану 😄🌿'),
 };
 
 @Injectable()
@@ -142,7 +147,7 @@ export class ClientRemindersService implements OnModuleInit, OnModuleDestroy {
     const out: Planned[] = [];
     for (const c of clients) {
       if (!c.user?.telegramId) continue;
-      const name = (c.user.firstName || '').trim() || 'Здравствуйте';
+      const name = (c.user.firstName || '').trim();
       const base = { clientId: c.id, telegramId: c.user.telegramId, name };
       const last = c.measurements[0]?.date;
 
@@ -204,7 +209,7 @@ export class ClientRemindersService implements OnModuleInit, OnModuleDestroy {
         false,
       );
       for (const p of planned) {
-        await this.send(OWNER_TELEGRAM_ID, `🧪 Кому: ${p.name} (${p.kind})\n\n${p.text}`, true);
+        await this.send(OWNER_TELEGRAM_ID, `🧪 Кому: ${p.name || 'без имени'} (${p.kind})\n\n${p.text}`, true);
         await new Promise((r) => setTimeout(r, 300));
       }
       return;
