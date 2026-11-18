@@ -268,6 +268,12 @@ export const UsersPage = () => {
   }, [userAccessData, accessUpdatedAt, selectedUser, showAccessModal, accessLoadedFor])
 
   const users = data?.data || []
+  // Показываем список порциями: тысяча с лишним строк разом заметно тормозит страницу
+  const [limit, setLimit] = useState(50)
+  useEffect(() => {
+    setLimit(50)
+  }, [search, status, tgStatus])
+  const visibleUsers = users.slice(0, limit)
   // Доступы текущего пользователя реально загружены — только тогда можно сохранять
   const accessReady = !!userAccessData?.data && accessLoadedFor === selectedUser?.id
 
@@ -336,7 +342,15 @@ export const UsersPage = () => {
         <>
         {/* Десктоп: таблица */}
         <div className="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[150px]" />
+              <col />
+              <col className="w-[210px]" />
+              <col className="w-[190px]" />
+              <col className="w-[130px]" />
+              <col className="w-[170px]" />
+            </colgroup>
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -360,13 +374,21 @@ export const UsersPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {users.map((user: any) => (
+              {visibleUsers.map((user: any) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-900">{user.telegramId}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 text-sm text-gray-900 truncate">{user.telegramId}</td>
+                  <td
+                    className="px-6 py-4 text-sm text-gray-900 truncate"
+                    title={`${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                  >
                     {user.firstName} {user.lastName}
+                    {clientByUser.has(user.id) && (
+                      <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary-dark align-middle">
+                        клиент
+                      </span>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-500 truncate" title={user.username || ''}>
                     {user.username || '-'}
                   </td>
                   <td className="px-6 py-4">
@@ -447,7 +469,7 @@ export const UsersPage = () => {
             <p className="text-center text-gray-500 py-10">Никого не нашлось</p>
           ) : (
             <div className="bg-white rounded-2xl shadow divide-y divide-gray-100 overflow-hidden">
-              {users.map((user: any) => {
+              {visibleUsers.map((user: any) => {
                 const clientId = clientByUser.get(user.id)
                 const fullName =
                   `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Без имени'
@@ -557,6 +579,16 @@ export const UsersPage = () => {
             </div>
           )}
         </div>
+        {users.length > limit && (
+          <div className="text-center mt-4">
+            <button
+              onClick={() => setLimit((v) => v + 100)}
+              className="px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Показать ещё · осталось {users.length - limit}
+            </button>
+          </div>
+        )}
         </>
       )}
 
