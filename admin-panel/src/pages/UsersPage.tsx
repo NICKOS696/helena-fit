@@ -94,6 +94,26 @@ const UserLogModal = ({ user, onClose }: { user: any; onClose: () => void }) => 
   )
 }
 
+// Аватар: фото из Telegram, а если его нет или оно не загрузилось — буква имени
+const Avatar = ({ url, name }: { url?: string | null; name: string }) => {
+  const [failed, setFailed] = useState(false)
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        onError={() => setFailed(true)}
+        className="w-11 h-11 rounded-full shrink-0 object-cover bg-gray-100"
+      />
+    )
+  }
+  return (
+    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary-dark font-semibold flex items-center justify-center shrink-0">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Активен',
   PENDING: 'Ожидает',
@@ -267,7 +287,8 @@ export const UsersPage = () => {
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
-            type="search"
+            type="text"
+            inputMode="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Имя, @username или Telegram ID"
@@ -429,13 +450,7 @@ export const UsersPage = () => {
             return (
               <div key={user.id} className="bg-white rounded-2xl shadow p-4">
                 <div className="flex items-center gap-3">
-                  {user.photoUrl ? (
-                    <img src={user.photoUrl} alt="" className="w-11 h-11 rounded-full shrink-0 object-cover" />
-                  ) : (
-                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary-dark font-semibold flex items-center justify-center shrink-0">
-                      {fullName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <Avatar url={user.photoUrl} name={fullName} />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-gray-900 truncate">{fullName}</p>
                     <p className="text-xs text-gray-500 truncate">
